@@ -158,6 +158,13 @@ export const CITY_DEMOGRAPHICS = {
   roadNetworkKm: 2340,
 };
 
+export const URBAN_LAYERS = [
+  { id: "land_use", label: "Land Use (CKAN)", type: "geojson", url: "/api/layers/land_use", color: "#4ade80", active: false },
+  { id: "flood_risk", label: "Flood Risk (GCAP)", type: "geojson", url: "/api/layers/flood_risk", color: "#f87171", active: false },
+  { id: "drainage", label: "Drainage (OSM)", type: "geojson", url: "/api/layers/drainage", color: "#60a5fa", active: false },
+  { id: "transit", label: "Transit Network", type: "geojson", url: "/api/layers/transit", color: "#fbbf24", active: false },
+];
+
 // i18n translations
 export const TRANSLATIONS = {
   en: {
@@ -172,6 +179,8 @@ export const TRANSLATIONS = {
     commandExport: "COMMAND EXPORT", sysOperational: "SYS: OPERATIONAL",
     exchange: "Exchange // MYR", cityPulse: "City Pulse", demographics: "Demographics",
     airport: "Airport // KCH", flightTracker: "Flight Tracker",
+    landUse: "Land Use", floodRisk: "Flood Risk", drainage: "Drainage", officialStats: "Official Stats",
+    growthRing: "Growth Ring", urbanSprawl: "Urban Sprawl",
   },
   ms: {
     title: "Pusat Operasi Pintar Greater Kuching",
@@ -185,6 +194,8 @@ export const TRANSLATIONS = {
     commandExport: "EKSPORT ARAHAN", sysOperational: "SYS: BEROPERASI",
     exchange: "Tukaran // MYR", cityPulse: "Denyut Bandar", demographics: "Demografi",
     airport: "Lapangan Terbang // KCH", flightTracker: "Pengesan Penerbangan",
+    landUse: "Guna Tanah", floodRisk: "Risiko Banjir", drainage: "Saliran", officialStats: "Statistik Rasmi",
+    growthRing: "Gelang Pertumbuhan", urbanSprawl: "Serakan Bandar",
   },
   zh: {
     title: "大古晋智能运营中心",
@@ -198,6 +209,8 @@ export const TRANSLATIONS = {
     commandExport: "命令导出", sysOperational: "系统：运行中",
     exchange: "汇率 // MYR", cityPulse: "城市脉搏", demographics: "人口统计",
     airport: "机场 // KCH", flightTracker: "航班追踪",
+    landUse: "土地利用", floodRisk: "洪水风险", drainage: "排水系统", officialStats: "官方统计",
+    growthRing: "增长环", urbanSprawl: "城市扩张",
   },
 };
 

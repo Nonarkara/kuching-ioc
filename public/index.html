@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=20260411l" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   </head>
   <body>
@@ -52,7 +52,7 @@
 
       <main class="board-grid">
         <!-- Left Sidebar -->
-        <aside class="panel side-panel">
+        <aside class="panel side-panel left-rail">
           <div class="panel-inner">
             <div class="section-group">
               <div class="panel-head">
@@ -101,7 +101,7 @@
         </section>
 
         <!-- Right Sidebar -->
-        <aside class="panel side-panel">
+        <aside class="panel side-panel right-rail">
           <div class="panel-inner">
             <div class="section-group">
               <div class="panel-head">
@@ -112,17 +112,17 @@
             </div>
             <div class="section-group">
               <div class="panel-head">
+                <div class="kicker" data-i18n="cityPulse">City Pulse</div>
+                <h2>News Intake</h2>
+              </div>
+              <div id="sentimentPanel" class="sentiment-panel"></div>
+            </div>
+            <div class="section-group">
+              <div class="panel-head">
                 <div class="kicker" data-i18n="airport">Airport // KCH</div>
                 <h2 data-i18n="flightTracker">Flight Tracker</h2>
               </div>
               <div id="airportStats" class="airport-panel"></div>
-            </div>
-            <div class="section-group">
-              <div class="panel-head">
-                <div class="kicker" data-i18n="cityPulse">City Pulse</div>
-                <h2>News Sentiment</h2>
-              </div>
-              <div id="sentimentPanel" class="sentiment-panel"></div>
             </div>
             <div class="section-group">
               <div class="panel-head">
@@ -143,16 +143,15 @@
       </main>
 
       <section class="lower-grid">
-        <section class="panel">
+        <section class="panel satellite-panel">
           <div class="panel-head">
             <div class="kicker" data-i18n="orbitalView">Orbital View</div>
             <h2 data-i18n="satelliteOptic">Satellite Optic</h2>
           </div>
-          <div id="satelliteToggle" class="segmented-control sat-toggle"></div>
-          <div class="satellite-stage"><img id="satelliteImage" src="" alt="Satellite" /></div>
-          <div id="satelliteThumbs" class="satellite-thumbs"></div>
+          <div id="satelliteGrid" class="satellite-grid"></div>
+          <div id="satelliteMeta" class="satellite-meta"></div>
         </section>
-        <section class="panel">
+        <section class="panel source-panel">
           <div class="panel-head">
             <div class="kicker" data-i18n="groundTruth">Ground Truth</div>
             <h2 data-i18n="sourceStack">Source Stack</h2>
@@ -166,6 +165,6 @@
         <button id="exportSitrep" class="action-btn" data-i18n="commandExport">COMMAND EXPORT</button>
       </footer>
     </div>
-    <script src="./app.js" type="module"></script>
+    <script src="./app.js?v=20260411l" type="module"></script>
   </body>
 </html>

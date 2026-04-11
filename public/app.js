@@ -3,14 +3,15 @@ import {
   MAP_WATCHPOINTS, AIRPORT_FALLBACK_ROUTES, FALLBACK_NEWS, FALLBACK_TRENDS,
   WEATHER_FALLBACK, AIR_FALLBACK, CITY_DEMOGRAPHICS, TRANSLATIONS,
   round, aqiBand, weatherCodeLabel, kmBetween, classifyAircraft,
-  sourceRecord, buildSatelliteCards, buildMapLayers,
+  sourceRecord, buildSatelliteCards, buildMapLayers, URBAN_LAYERS
 } from "./data.js";
 
 // --- State ---
 const state = {
   map: null, boundaryLayerGroup: null, markerLayerGroup: null, labelLayerGroup: null,
+  urbanLayerGroups: new Map(),
   tileLayers: new Map(), activeLayerId: "dark", payload: null, hasInitialMapFit: false,
-  theme: "dark", lang: "en",
+  theme: "dark", lang: "en", mapResizeObserver: null,
 };
 
 // --- DOM ---
@@ -20,6 +21,21 @@ const $ = id => document.getElementById(id);
 const nowIso = () => new Date().toISOString();
 const num = (v, d = 0) => Number(v ?? 0).toLocaleString("en-MY", { maximumFractionDigits: d, minimumFractionDigits: d });
 const clockTime = tz => new Intl.DateTimeFormat("en-MY", { hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false,timeZone:tz }).format(new Date());
+const formatShortStamp = value => new Date(value).toLocaleString("en-MY", {
+  month: "short",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+function queueMapResize() {
+  if (!state.map) return;
+  window.requestAnimationFrame(() => {
+    state.map.invalidateSize(false);
+    window.setTimeout(() => state.map?.invalidateSize(false), 120);
+  });
+}
 
 async function fetchJson(url, ms = 10000) {
   const c = new AbortController();
@@ -215,7 +231,7 @@ function computeSentiment(news) {
   };
 }
 
-async function buildDashboard() {
+async function buildFallbackDashboard() {
   const [weather, air, airport, quakes, exchange] = await Promise.all([
     loadWeather(), loadAirQuality(), loadAirport(), loadEarthquakes(), loadExchangeRates(),
   ]);
@@ -245,6 +261,24 @@ async function buildDashboard() {
       sourceRecord("exchange","ExchangeRate API",exchange.status,"FX rates","https://open.er-api.com",gen),
     ],
   };
+}
+
+async function loadDashboardPayload() {
+  try {
+    const [payload, exchange] = await Promise.all([
+      fetchJson("/api/dashboard", 15000),
+      loadExchangeRates(),
+    ]);
+    return {
+      ...payload,
+      exchange,
+      sentiment: computeSentiment(payload.news?.items ?? []),
+      mapLayers: buildMapLayers(),
+    };
+  } catch (error) {
+    console.warn("IOC API unavailable, using client fallback payload.", error);
+    return buildFallbackDashboard();
+  }
 }
 
 // --- Renderers ---
@@ -291,6 +325,13 @@ function renderMap(payload) {
     });
     renderLayerToggle(layers);
     renderFocusToggle();
+    renderUrbanLayerToggle();
+
+    if (window.ResizeObserver) {
+      state.mapResizeObserver = new ResizeObserver(() => queueMapResize());
+      state.mapResizeObserver.observe(mc);
+      if (mc.parentElement) state.mapResizeObserver.observe(mc.parentElement);
+    }
   }
   state.boundaryLayerGroup.clearLayers();
   state.labelLayerGroup.clearLayers();
@@ -325,10 +366,56 @@ function renderMap(payload) {
     });
   }
 
+  // Hydrology stations (JPS Infobanjir): band-coloured circles + tooltips.
+  const hydroBandColors = { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" };
+  const hydroStations = payload.mapScene?.hydroStations || payload.infobanjir?.stations || [];
+  hydroStations.forEach(s => {
+    if (s.lat == null || s.lon == null) return;
+    const color = hydroBandColors[s.band] || "#8aa2c8";
+    const isLive = s.waterLevelM != null;
+    const radius = s.band === "danger" ? 9 : s.band === "warning" ? 8 : s.band === "alert" ? 7 : isLive ? 6 : 5;
+    window.L.circleMarker([s.lat, s.lon], {
+      radius,
+      fillColor: color,
+      fillOpacity: isLive ? 0.95 : 0.55,
+      color: "#fff",
+      weight: 1.5,
+      opacity: 0.9,
+    })
+      .bindTooltip(
+        `<strong>${s.name}</strong><br>${s.basin} · ${s.council}<br>Level: ${s.waterLevelM != null ? s.waterLevelM + " m" : "reference"}<br>Posture: <strong>${s.bandLabel}</strong><br>Thresholds A/W/D: ${s.thresholds.alert}/${s.thresholds.warning}/${s.thresholds.danger} m`,
+        { className: "marker-tooltip", direction: "top" },
+      )
+      .addTo(state.markerLayerGroup);
+  });
+  // Apims ground stations: square-ish markers via different radius/weight to distinguish.
+  const apimsStations = payload.apims?.stations || [];
+  apimsStations.forEach(s => {
+    if (s.lat == null || s.lon == null || s.status !== "live") return;
+    const tone = s.band?.tone;
+    const c = tone === "good" ? "#00ffaa" : tone === "watch" ? "#ffd000" : tone === "warn" ? "#ff7a00" : tone === "alert" || tone === "critical" ? "#ff003c" : "#8aa2c8";
+    window.L.circleMarker([s.lat, s.lon], {
+      radius: 6,
+      fillColor: c,
+      fillOpacity: 0.85,
+      color: "#fff",
+      weight: 2,
+      opacity: 0.95,
+      dashArray: "2 2",
+    })
+      .bindTooltip(
+        `<strong>APIMS · ${s.stationName}</strong><br>AQI ${s.aqi} (${s.band?.label || "—"})<br>PM2.5 ${s.pm25 ?? "—"} · PM10 ${s.pm10 ?? "—"}<br>Dominant: ${s.dominant || "—"}`,
+        { className: "marker-tooltip", direction: "top" },
+      )
+      .addTo(state.markerLayerGroup);
+  });
+
   if (!state.hasInitialMapFit) {
     state.map.setView(SITE.mapCenter, SITE.mapZoom);
     state.hasInitialMapFit = true;
   }
+
+  queueMapResize();
 }
 
 function renderLayerToggle(layers) {
@@ -346,6 +433,7 @@ function renderLayerToggle(layers) {
       else if (btn.dataset.id === "imagery") tp.style.filter = "brightness(0.8) contrast(1.2)";
       else tp.style.filter = state.theme === "dark" ? "brightness(0.6) contrast(1.3) invert(1) hue-rotate(180deg)" : "none";
     }
+    queueMapResize();
   }));
 }
 
@@ -358,6 +446,48 @@ function renderFocusToggle() {
     else state.map.setView(SITE.mapCenter,SITE.mapZoom);
     el.querySelectorAll("button").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
+    queueMapResize();
+  }));
+}
+
+function renderUrbanLayerToggle() {
+  const el = $("watchpointList");
+  if (!el) return;
+  // We repurpose the watchpoint list area or add a new one in the UI later
+  // For now, let's keep it in the map controls if possible, but the HTML doesn't have a dedicated slot
+  // I'll add a temporary container or append to map-controls
+  let container = $("urbanLayerToggle");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "urbanLayerToggle";
+    container.className = "segmented-control urban-toggle";
+    document.querySelector(".map-controls").appendChild(container);
+  }
+
+  container.innerHTML = URBAN_LAYERS.map(l => `<button data-id="${l.id}" class="${l.active ? 'active' : ''}">${t(l.id === 'land_use' ? 'landUse' : l.id === 'flood_risk' ? 'floodRisk' : l.id === 'drainage' ? 'drainage' : l.label)}</button>`).join("");
+  
+  container.querySelectorAll("button").forEach(btn => btn.addEventListener("click", async () => {
+    const layer = URBAN_LAYERS.find(l => l.id === btn.dataset.id);
+    if (!layer) return;
+    
+    layer.active = !layer.active;
+    btn.classList.toggle("active", layer.active);
+    
+    if (layer.active) {
+      if (!state.urbanLayerGroups.has(layer.id)) {
+        const group = window.L.layerGroup().addTo(state.map);
+        state.urbanLayerGroups.set(layer.id, group);
+        // Simulate fetch for now or hit dummy endpoints
+        console.log(`Loading urban layer: ${layer.label}`);
+        // In a real scenario, fetchJson(layer.url)
+      } else {
+        state.urbanLayerGroups.get(layer.id).addTo(state.map);
+      }
+    } else {
+      if (state.urbanLayerGroups.has(layer.id)) {
+        state.map.removeLayer(state.urbanLayerGroups.get(layer.id));
+      }
+    }
   }));
 }
 
@@ -393,25 +523,86 @@ function renderAirportStats(airport) {
     </div>`;
 }
 
-function renderSentiment(sentiment, news) {
+function renderNewsIntake(news) {
   const el = $("sentimentPanel");
   if (!el) return;
-  const total = news.length || 1;
+  const lanes = [
+    { code: "official", label: "Official", badge: "OFF", count: news.counts?.official ?? news.items.filter((item) => item.isOfficial).length },
+    { code: "en", label: "English", badge: "EN", count: news.counts?.en ?? news.items.filter((item) => item.language === "en").length },
+    { code: "ms", label: "Bahasa", badge: "BM", count: news.counts?.ms ?? news.items.filter((item) => item.language === "ms").length },
+    { code: "zh", label: "Chinese", badge: "ZH", count: news.counts?.zh ?? news.items.filter((item) => item.language === "zh").length },
+  ];
+  const operatorItems = news.operatorItems?.length ? news.operatorItems.slice(0, 3) : news.items.slice(0, 3);
   el.innerHTML = `
-    <div class="sentiment-bar">
-      <div class="sent-pos" style="width:${sentiment.positive}%"></div>
-      <div class="sent-neu" style="width:${sentiment.neutral}%"></div>
-      <div class="sent-neg" style="width:${sentiment.negative}%"></div>
+    <div class="news-intake-grid">
+      ${lanes.map((lane) => `
+        <div class="news-intake-card">
+          <span class="news-intake-badge">${lane.badge || lane.code.toUpperCase()}</span>
+          <strong>${lane.count}</strong>
+          <span>${lane.label}</span>
+        </div>`).join("")}
     </div>
-    <div class="sentiment-labels">
-      <span class="sent-label pos">${sentiment.positive}% positive</span>
-      <span class="sent-label">${sentiment.label}</span>
-      <span class="sent-label neg">${sentiment.negative}% negative</span>
+    <div class="news-intake-note">${news.summary || news.systemLabel || "Multilingual intake active."}</div>
+    <div class="news-intake-list">
+      ${operatorItems.map((item) => `
+        <article class="news-intake-item">
+          <div class="news-intake-item-head">
+            <span class="news-intake-badge">${item.languageBadge || (item.isOfficial ? "OFF" : "EN")}</span>
+            <strong>${item.source}</strong>
+            <span>${formatShortStamp(item.publishedAt)}</span>
+          </div>
+          <div class="news-intake-title">${item.title}</div>
+        </article>`).join("")}
     </div>`;
+}
+
+function renderSatelliteDeck(satellites) {
+  const grid = $("satelliteGrid");
+  const meta = $("satelliteMeta");
+  if (!grid || !meta || !satellites?.length) return;
+
+  const setActive = (index) => {
+    const activeIndex = Math.max(0, Math.min(index, satellites.length - 1));
+    const sat = satellites[activeIndex];
+    
+    // Custom descriptions for Greater Kuching context
+    let contextDesc = "Orbital telemetry for urban planning.";
+    if (sat.id === "true-color") contextDesc = "Surface optic // Real-time cloud and haze verification for Padawan.";
+    if (sat.id === "precipitation") contextDesc = "IMERG Rainfall Density // Critical for flood pre-emption in Batu Kawa.";
+    if (sat.id === "aerosol") contextDesc = "Aerosol Depth // Transboundary haze monitoring for Greater Kuching.";
+    if (sat.id === "night-lights") contextDesc = "Urban Luminosity // Tracking sprawl into Padawan and Bau sectors.";
+    if (sat.id === "vegetation") contextDesc = "NDVI Greyscale // Green City Action Plan (GCAP) canopy audit.";
+
+    meta.innerHTML = `
+      <div class="satellite-copy">
+        <strong>${sat.title}</strong>
+        <span>${contextDesc}</span>
+      </div>
+      <div class="satellite-stamp">
+        <strong>${sat.source || "Satellite feed"}</strong>
+        <span>${formatShortStamp(sat.updatedAt || nowIso())}</span>
+      </div>`;
+    grid.querySelectorAll(".satellite-card").forEach((node, idx) => node.classList.toggle("active", idx === activeIndex));
+  };
+
+  grid.innerHTML = satellites.map((sat, index) => `
+    <button type="button" class="satellite-card ${index === 0 ? "active" : ""}" data-idx="${index}">
+      <img src="${sat.imageUrl}" alt="${sat.title}" />
+      <span class="satellite-card-copy">
+        <strong>${sat.title}</strong>
+        <span>${sat.source || "NASA GIBS"}</span>
+      </span>
+    </button>`).join("");
+  grid.querySelectorAll(".satellite-card").forEach((card) => card.addEventListener("click", () => setActive(Number(card.dataset.idx))));
+
+  setActive(0);
 }
 
 function renderDashboard(payload) {
   state.payload = payload;
+  if (payload.site?.title) document.title = payload.site.title;
+  if (payload.site?.title) $("titleText").textContent = payload.site.title;
+  if (payload.site?.subtitle) $("subtitleText").textContent = payload.site.subtitle;
   $("summaryLead").textContent = payload.summary.headline;
   $("generatedAt").textContent = `T/${new Date(payload.generatedAt).toLocaleTimeString()} // SYNC`;
   $("mapSummary").textContent = payload.summary.detail;
@@ -421,7 +612,7 @@ function renderDashboard(payload) {
   renderMap(payload);
   renderExchange(payload.exchange);
   renderAirportStats(payload.airport);
-  renderSentiment(payload.sentiment, payload.news.items);
+  renderNewsIntake(payload.news);
 
   // Directives
   $("operationList").innerHTML = payload.operations.map(o=>`
@@ -432,47 +623,82 @@ function renderDashboard(payload) {
 
   // Ticker
   const news = payload.news.items.slice(0,8);
-  $("newsRail").innerHTML = [...news,...news].map(n=>`<span class="ticker-item"><span class="ticker-source">${n.source}</span> ${n.title}</span>`).join("");
+  $("newsRail").innerHTML = [...news,...news].map(n=>`<span class="ticker-item"><span class="ticker-source">${n.languageBadge || (n.isOfficial ? "OFF" : n.source)}</span> ${n.title}</span>`).join("");
 
   // Signals
-  $("signalCards").innerHTML = payload.metrics.slice(0,4).map(s=>`
+  const signalHtml = payload.metrics.slice(0,4).map(s=>`
     <div class="signal-card"><strong>${s.id.toUpperCase()} // ${s.label.toUpperCase()}</strong>
     <div class="val">${num(s.value,1)}<sup>${s.unit}</sup></div>
     <div class="meta">${s.context||''}</div></div>`).join("");
 
+  // Ground-truth additions: Flood Watch (JPS Infobanjir) + APIMS ground AQ.
+  const ib = payload.infobanjir;
+  const apims = payload.apims;
+  let groundHtml = "";
+  if (ib) {
+    const top = (ib.stations || [])
+      .slice()
+      .sort((a, b) => {
+        const order = { danger: 0, warning: 1, alert: 2, normal: 3, reference: 4 };
+        return (order[a.band] ?? 9) - (order[b.band] ?? 9);
+      })
+      .slice(0, 2);
+    const bandColors = { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" };
+    groundHtml += `
+      <div class="signal-card" data-band="${ib.highestBand}" style="border-left:3px solid ${bandColors[ib.highestBand]||"#8aa2c8"}">
+        <strong>FLOOD // JPS HYDRO</strong>
+        <div class="val">${ib.liveCount}<sup>/${ib.stationCount}</sup></div>
+        <div class="meta">${(ib.highestBandLabel || "Reference").toUpperCase()} · ${ib.status === "live" ? "live feed" : "reference hold"}</div>
+        ${top.map(s => `<div class="meta" style="color:${bandColors[s.band]||"#8aa2c8"}">${s.name} · ${s.waterLevelM != null ? s.waterLevelM + "m" : "—"} (${s.bandLabel})</div>`).join("")}
+      </div>`;
+  }
+  if (apims) {
+    const w = apims.worst;
+    groundHtml += `
+      <div class="signal-card" style="border-left:3px solid ${w?.band?.tone === "good" ? "#00ffaa" : w?.band?.tone === "watch" ? "#ffd000" : w?.band?.tone === "warn" ? "#ff7a00" : w?.band?.tone === "alert" || w?.band?.tone === "critical" ? "#ff003c" : "#8aa2c8"}">
+        <strong>APIMS // GROUND AQ</strong>
+        <div class="val">${w?.aqi ?? "—"}<sup>${w?.band?.label || apims.status}</sup></div>
+        <div class="meta">${apims.stations.map(s => `${s.label}: ${s.aqi ?? "—"}`).join(" · ")}</div>
+        <div class="meta">src: aqicn.org · ${apims.tokenMode} token</div>
+      </div>`;
+  }
+
+  $("signalCards").innerHTML = signalHtml + groundHtml;
+
   // Trends
-  $("trendList").innerHTML = payload.trends.items.slice(0,6).map(t=>`
-    <div class="trend-item"><strong>${t.title}</strong>
-    <div class="meta">> ${t.trafficLabel} // ${t.locality.label}</div></div>`).join("");
+  const trendItems = payload.trends.localMatches?.length ? payload.trends.localMatches.slice(0, 6) : [];
+  $("trendList").innerHTML = trendItems.length
+    ? trendItems.map(t=>`
+      <div class="trend-item ${t.locality?.score ? "" : "is-external"}"><strong>${t.title}</strong>
+      <div class="meta">> ${t.trafficLabel} // ${t.locality?.label || "Context"}</div></div>`).join("")
+    : `<div class="trend-empty"><strong>Local trend watch is quiet</strong><div class="meta">${payload.trends.summary}</div></div>`;
 
   // Jurisdictions
   $("jurisdictionCards").innerHTML = payload.jurisdictions.items.map(j=>`
     <div class="municipality-tag" style="border-color:${j.accent};color:${j.accent}">${j.code} // ${j.areaKm2}km2</div>`).join("");
 
   // Map legend
-  $("mapLegend").innerHTML = payload.jurisdictions.items.map(j=>`<span class="legend-item"><span class="legend-dot" style="background:${j.accent}"></span>${j.code}</span>`).join("") + `<span class="legend-item"><span class="legend-dot" style="background:#1e90ff"></span>River</span>`;
+  const hydroLegend = (payload.mapScene?.hydroBands || []).filter(b => b.id !== "reference").map(b => `<span class="legend-item"><span class="legend-dot" style="background:${b.color}"></span>${b.label}</span>`).join("");
+  $("mapLegend").innerHTML = payload.jurisdictions.items.map(j=>`<span class="legend-item"><span class="legend-dot" style="background:${j.accent}"></span>${j.code}</span>`).join("") + `<span class="legend-item"><span class="legend-dot" style="background:#1e90ff"></span>River</span>` + hydroLegend;
   $("watchpointList").innerHTML = MAP_WATCHPOINTS.map(w=>`<span>${w}</span>`).join("");
 
   // Satellites
-  const sats = payload.satellites;
-  if (sats?.length) {
-    $("satelliteImage").src = sats[0].imageUrl;
-    $("satelliteThumbs").innerHTML = sats.map((s,i)=>`<img src="${s.imageUrl}" alt="${s.title}" data-idx="${i}" class="${i===0?'active':''}" />`).join("");
-    $("satelliteThumbs").querySelectorAll("img").forEach(img=>img.addEventListener("click",()=>{
-      $("satelliteImage").src = sats[Number(img.dataset.idx)].imageUrl;
-      $("satelliteThumbs").querySelectorAll("img").forEach(t=>t.classList.remove("active"));
-      img.classList.add("active");
-    }));
-    $("satelliteToggle").innerHTML = sats.map((s,i)=>`<button data-idx="${i}" class="${i===0?'active':''}">${s.title}</button>`).join("");
-    $("satelliteToggle").querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>{
-      $("satelliteImage").src = sats[Number(btn.dataset.idx)].imageUrl;
-      $("satelliteToggle").querySelectorAll("button").forEach(b=>b.classList.remove("active"));
-      btn.classList.add("active");
-    }));
-  }
+  renderSatelliteDeck(payload.satellites);
 
   // Sources
-  $("sourceList").innerHTML = payload.sources.map(s=>`<div class="source-item"><span class="source-name">${s.name}</span><span class="source-status" data-status="${s.status}">${s.status}</span></div>`).join("");
+  $("sourceList").innerHTML = payload.sources.map(s=>`
+    <div class="source-item">
+      <div class="source-copy">
+        <span class="source-name">${s.name}</span>
+        <span class="source-detail">${s.detail || ""}</span>
+      </div>
+      <div class="source-meta">
+        <span class="source-status" data-status="${s.status}">${s.status}</span>
+        <span class="source-updated">${formatShortStamp(s.generatedAt || payload.generatedAt)}</span>
+      </div>
+    </div>`).join("");
+
+  queueMapResize();
 }
 
 // --- Theme Toggle ---
@@ -528,7 +754,7 @@ function setupExport() {
 // --- Boot ---
 async function boot() {
   try {
-    const payload = await buildDashboard();
+    const payload = await loadDashboardPayload();
     renderDashboard(payload);
   } catch (err) { console.error("IOC SYNC FAILURE", err); }
 }

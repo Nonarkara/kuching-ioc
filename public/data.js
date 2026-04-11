@@ -1,0 +1,286 @@
+// data.js — Constants, fallback data, and helper functions
+// Daniel's Goh Greater Kuching Intelligent Operation Center (IOC)
+
+export const SITE = {
+  title: "Greater Kuching Intelligent Operation Center",
+  titleShort: "Greater Kuching IOC",
+  subtitle: "In collaboration with depa, PMUA, Axiom, ReTL, Thailand Smart City Office & ASEAN Smart Cities Network",
+  timezone: "Asia/Kuala_Lumpur",
+  region: "Kuching, Sarawak, Malaysia",
+  airport: { code: "KCH", icao: "WBGG", name: "Kuching International Airport", lat: 1.4847, lon: 110.347 },
+  focus: { name: "Padawan", lat: 1.4475, lon: 110.3305 },
+  mapCenter: [1.53, 110.35],
+  mapZoom: 12,
+  mapBounds: { minLat: 1.29, maxLat: 1.74, minLon: 110.14, maxLon: 110.62 },
+  mapMaxBounds: [[1.15, 109.9], [1.85, 110.7]],
+  minZoom: 10,
+  maxZoom: 18,
+  partners: [
+    { name: "PMUA", asset: "./assets/pmua.jpeg" },
+    { name: "depa", asset: "./assets/depa.jpg" },
+    { name: "Axiom", asset: "./assets/axiom.png" },
+    { name: "ReTL", asset: "./assets/retl.png" },
+    { name: "Smart City Thailand", asset: "./assets/smart-city-thailand.jpg" },
+    { name: "ASCN", asset: "./assets/ascn.png" },
+  ],
+};
+
+export const JURISDICTIONS = [
+  {
+    id: "dbku", code: "DBKU", name: "Kuching North",
+    officialName: "Dewan Bandaraya Kuching Utara",
+    accent: "#0d6efd", areaKm2: 369.48, population: 235966, properties: 43575,
+    fallbackPolygons: [[[110.168,1.583],[110.213,1.651],[110.308,1.71],[110.421,1.72],[110.535,1.672],[110.59,1.605],[110.575,1.565],[110.496,1.542],[110.417,1.55],[110.34,1.565],[110.272,1.57],[110.215,1.565]]],
+  },
+  {
+    id: "mbks", code: "MBKS", name: "Kuching South",
+    officialName: "Majlis Bandaraya Kuching Selatan",
+    accent: "#6c757d", areaKm2: 61.53, population: null, properties: null,
+    fallbackPolygons: [[[110.307,1.53],[110.339,1.561],[110.372,1.564],[110.405,1.553],[110.409,1.518],[110.392,1.491],[110.346,1.485],[110.313,1.503]]],
+  },
+  {
+    id: "mpp", code: "MPP", name: "Padawan",
+    officialName: "Padawan Municipal Council",
+    accent: "#b48a00", areaKm2: 984.34, population: 260058, properties: 83744,
+    fallbackPolygons: [[[110.15,1.45],[110.215,1.51],[110.254,1.555],[110.305,1.54],[110.352,1.515],[110.39,1.49],[110.43,1.478],[110.487,1.49],[110.544,1.465],[110.603,1.416],[110.6,1.342],[110.532,1.305],[110.447,1.298],[110.361,1.322],[110.293,1.34],[110.224,1.387],[110.171,1.41]]],
+  },
+];
+
+export const LOCAL_MARKERS = [
+  { id: "waterfront", name: "Kuching Waterfront", category: "civic", lat: 1.5584, lon: 110.3445 },
+  { id: "satok", name: "Satok Market", category: "market", lat: 1.5621, lon: 110.3224 },
+  { id: "padungan", name: "Padungan", category: "urban-core", lat: 1.5496, lon: 110.3599 },
+  { id: "petra-jaya", name: "Petra Jaya", category: "north-bank", lat: 1.5843, lon: 110.3527 },
+  { id: "batu-kawa", name: "Batu Kawa", category: "growth-corridor", lat: 1.5115, lon: 110.2872 },
+  { id: "kota-padawan", name: "Kota Padawan", category: "padawan-core", lat: 1.4475, lon: 110.3305 },
+  { id: "siburan", name: "Siburan", category: "southern-edge", lat: 1.3962, lon: 110.3608 },
+  { id: "airport", name: "KCH Airport", category: "airport", lat: 1.4847, lon: 110.347 },
+  { id: "samarahan", name: "Samarahan", category: "education", lat: 1.4621, lon: 110.4321 },
+  { id: "tabuan-jaya", name: "Tabuan Jaya", category: "residential", lat: 1.5280, lon: 110.3650 },
+];
+
+export const SARAWAK_RIVER = [
+  [110.275,1.565],[110.298,1.57],[110.322,1.577],[110.347,1.572],
+  [110.366,1.566],[110.391,1.568],[110.418,1.579],[110.444,1.585],
+];
+
+export const ASEAN_CLOCKS = [
+  { id: "brunei", city: "Bandar Seri Begawan", timezone: "Asia/Brunei", offset: "UTC+8" },
+  { id: "cambodia", city: "Phnom Penh", timezone: "Asia/Phnom_Penh", offset: "UTC+7" },
+  { id: "indonesia", city: "Jakarta", timezone: "Asia/Jakarta", offset: "UTC+7" },
+  { id: "laos", city: "Vientiane", timezone: "Asia/Vientiane", offset: "UTC+7" },
+  { id: "malaysia", city: "Kuala Lumpur", timezone: "Asia/Kuala_Lumpur", offset: "UTC+8" },
+  { id: "myanmar", city: "Yangon", timezone: "Asia/Yangon", offset: "UTC+6:30" },
+  { id: "philippines", city: "Manila", timezone: "Asia/Manila", offset: "UTC+8" },
+  { id: "singapore", city: "Singapore", timezone: "Asia/Singapore", offset: "UTC+8" },
+  { id: "thailand", city: "Bangkok", timezone: "Asia/Bangkok", offset: "UTC+7" },
+  { id: "vietnam", city: "Ho Chi Minh City", timezone: "Asia/Ho_Chi_Minh", offset: "UTC+7" },
+];
+
+export const MAP_WATCHPOINTS = [
+  "Waterfront","Petra Jaya","Satok","3rd Mile","Stutong",
+  "Batu Kawa","Penrissen","Kota Padawan","Siburan","KCH Airport",
+];
+
+export const AIRPORT_FALLBACK_ROUTES = [
+  { callsign: "AK5202", origin: "Kuala Lumpur", type: "arrival", etaMinutes: 19, distanceKm: 62, altitudeM: 3100 },
+  { callsign: "MH2522", origin: "Kuala Lumpur", type: "arrival", etaMinutes: 33, distanceKm: 88, altitudeM: 4200 },
+  { callsign: "FY5354", origin: "Kuala Lumpur", type: "arrival", etaMinutes: 47, distanceKm: 111, altitudeM: 5100 },
+  { callsign: "OD1602", origin: "Johor Bahru", type: "arrival", etaMinutes: 56, distanceKm: 124, altitudeM: 6200 },
+  { callsign: "AK5433", destination: "Kuala Lumpur", type: "departure", etaMinutes: 8, distanceKm: 18, altitudeM: 1800 },
+  { callsign: "MH2804", destination: "Sibu", type: "departure", etaMinutes: 14, distanceKm: 29, altitudeM: 2600 },
+];
+
+export const FALLBACK_NEWS = [
+  { title: "MBKS rodding works clear Jalan Pecky drains while securing funds for full upgrade", source: "MBKS / DayakDaily", publishedAt: "2026-03-27T00:00:00.000Z", lane: "Drainage", sentiment: "neutral" },
+  { title: "DBKU conducts emergency drill for traffic wardens across Kuching North", source: "DBKU", publishedAt: "2026-02-11T00:00:00.000Z", lane: "Traffic", sentiment: "positive" },
+  { title: "MBKS and DBKU asked to find an ideal spot for a night market", source: "Borneo Post", publishedAt: "2026-02-12T00:00:00.000Z", lane: "Public realm", sentiment: "positive" },
+  { title: "Padawan infrastructure upgrade tenders issued for Kampung Telaga Air and Desa Wira", source: "MPP", publishedAt: "2026-03-10T00:00:00.000Z", lane: "Infrastructure", sentiment: "positive" },
+  { title: "Sarawak to build integrated waste management facility in Kuching", source: "Borneo Post", publishedAt: "2026-03-15T00:00:00.000Z", lane: "Environment", sentiment: "positive" },
+  { title: "Flash floods hit low-lying areas near Batu Kawa after heavy downpour", source: "DayakDaily", publishedAt: "2026-03-22T00:00:00.000Z", lane: "Flooding", sentiment: "negative" },
+  { title: "MPP launches community composting programme across 6 wards", source: "MPP", publishedAt: "2026-03-20T00:00:00.000Z", lane: "Sustainability", sentiment: "positive" },
+  { title: "Tourism arrivals to Kuching up 12% in Q1 compared to last year", source: "Bernama", publishedAt: "2026-04-01T00:00:00.000Z", lane: "Tourism", sentiment: "positive" },
+];
+
+export const FALLBACK_TRENDS = [
+  { id: "sarawak-day", title: "Sarawak Day 2026", trafficLabel: "200K+", trafficValue: 200000, locality: { label: "Local", tone: "focus", score: 2 } },
+  { id: "ringgit-usd", title: "Ringgit USD", trafficLabel: "100K+", trafficValue: 100000, locality: { label: "Malaysia", tone: "neutral", score: 1 } },
+  { id: "kuching-flood", title: "Kuching flood warning", trafficLabel: "50K+", trafficValue: 50000, locality: { label: "Local", tone: "focus", score: 2 } },
+  { id: "borneo-haze", title: "Borneo haze index", trafficLabel: "20K+", trafficValue: 20000, locality: { label: "Local", tone: "focus", score: 2 } },
+  { id: "malaysia-budget", title: "Malaysia Budget 2027", trafficLabel: "200K+", trafficValue: 200000, locality: { label: "Malaysia", tone: "neutral", score: 1 } },
+  { id: "epl-results", title: "EPL Results", trafficLabel: "500K+", trafficValue: 500000, locality: { label: "Global", tone: "muted", score: 0 } },
+];
+
+export const WEATHER_FALLBACK = {
+  status: "fallback",
+  current: { temperatureC: 30.8, apparentTemperatureC: 36.1, humidity: 74, windKph: 12.2, precipitationMm: 0.8, cloudCover: 64, weatherLabel: "Heat with convective rain risk", pressureHpa: 1008.4 },
+  nextHours: [
+    { time: "13:00", precipitationMm: 0.6, rainChance: 38, temperatureC: 31.1 },
+    { time: "14:00", precipitationMm: 0.8, rainChance: 44, temperatureC: 31.4 },
+    { time: "15:00", precipitationMm: 1.3, rainChance: 56, temperatureC: 30.7 },
+    { time: "16:00", precipitationMm: 2.4, rainChance: 61, temperatureC: 29.6 },
+    { time: "17:00", precipitationMm: 2.1, rainChance: 58, temperatureC: 28.9 },
+    { time: "18:00", precipitationMm: 0.9, rainChance: 40, temperatureC: 28.2 },
+  ],
+  daily: { maxC: 32.2, minC: 24.7, rainTotalMm: 11.5, uvIndexMax: 9.4, sunrise: "06:24", sunset: "18:35" },
+  history: [30.1,30.5,30.8,31.2,31.5,31.1,30.7,30.2,29.8,29.5,29.2,28.9,28.5,28.2,27.8,27.5,27.2,26.9,26.5,26.2,25.8,25.5,25.2,24.8],
+};
+
+export const AIR_FALLBACK = {
+  status: "fallback",
+  current: { aqi: 78, pm25: 24.4, pm10: 41.1, ozone: 71, no2: 12.0 },
+  nextHours: [
+    { time: "13:00", aqi: 74, pm25: 23.1 }, { time: "14:00", aqi: 76, pm25: 24.0 },
+    { time: "15:00", aqi: 79, pm25: 24.8 }, { time: "16:00", aqi: 82, pm25: 25.6 },
+    { time: "17:00", aqi: 77, pm25: 23.9 }, { time: "18:00", aqi: 71, pm25: 21.7 },
+  ],
+  history: [68,70,72,75,78,80,82,85,88,85,82,79,76,73,70,67,65,63,62,65,68,70,72,75],
+};
+
+// Kuching city demographics (trusted sources: Department of Statistics Malaysia, local council data)
+export const CITY_DEMOGRAPHICS = {
+  greaterKuchingPopulation: 800000,
+  populationGrowthRate: 2.1,
+  birthRate: 15.8, // per 1000 population (Sarawak avg)
+  medianAge: 29.4,
+  householdSize: 4.1,
+  urbanizationRate: 78.2,
+  greenCoverPct: 62.5, // percentage of land area with green cover
+  parkAreaHa: 1240, // hectares of public parks
+  waterBodiesPct: 8.3,
+  literacyRate: 96.2,
+  gdpPerCapitaUsd: 14200,
+  unemploymentPct: 3.2,
+  touristArrivals2025: 2100000,
+  dailyWaterConsumptionMld: 580, // megalitres per day
+  solidWasteTpd: 1200, // tonnes per day
+  drainageNetworkKm: 485,
+  roadNetworkKm: 2340,
+};
+
+// i18n translations
+export const TRANSLATIONS = {
+  en: {
+    title: "Greater Kuching Intelligent Operation Center",
+    subtitle: "In collaboration with depa, PMUA, Axiom, ReTL, Thailand Smart City Office & ASCN",
+    intelRail: "INTEL RAIL", atomicSync: "Atomic Sync", aseanDesks: "ASEAN Desks",
+    radar: "Radar // Greater Kuching", telemetry: "Telemetry", envSignals: "Env Signals",
+    intelligence: "Intelligence", searchPulse: "Search Pulse", tactical: "Tactical",
+    directives: "Directives", orbitalView: "Orbital View", satelliteOptic: "Satellite Optic",
+    groundTruth: "Ground Truth", sourceStack: "Source Stack", assetMap: "Asset Map",
+    jurisdictions: "Jurisdictions", allSectors: "All Sectors", padawan: "Padawan",
+    commandExport: "COMMAND EXPORT", sysOperational: "SYS: OPERATIONAL",
+    exchange: "Exchange // MYR", cityPulse: "City Pulse", demographics: "Demographics",
+    airport: "Airport // KCH", flightTracker: "Flight Tracker",
+  },
+  ms: {
+    title: "Pusat Operasi Pintar Greater Kuching",
+    subtitle: "Kerjasama bersama depa, PMUA, Axiom, ReTL, Pejabat Bandar Pintar Thailand & ASCN",
+    intelRail: "REL INTEL", atomicSync: "Sinkronisasi", aseanDesks: "Meja ASEAN",
+    radar: "Radar // Greater Kuching", telemetry: "Telemetri", envSignals: "Isyarat Alam",
+    intelligence: "Perisikan", searchPulse: "Denyut Carian", tactical: "Taktikal",
+    directives: "Arahan", orbitalView: "Pandangan Orbital", satelliteOptic: "Optik Satelit",
+    groundTruth: "Kebenaran Lapangan", sourceStack: "Sumber Data", assetMap: "Peta Aset",
+    jurisdictions: "Bidang Kuasa", allSectors: "Semua Sektor", padawan: "Padawan",
+    commandExport: "EKSPORT ARAHAN", sysOperational: "SYS: BEROPERASI",
+    exchange: "Tukaran // MYR", cityPulse: "Denyut Bandar", demographics: "Demografi",
+    airport: "Lapangan Terbang // KCH", flightTracker: "Pengesan Penerbangan",
+  },
+  zh: {
+    title: "大古晋智能运营中心",
+    subtitle: "与depa、PMUA、Axiom、ReTL、泰国智慧城市办公室及东盟智慧城市网络合作",
+    intelRail: "情报频道", atomicSync: "原子同步", aseanDesks: "东盟时区",
+    radar: "雷达 // 大古晋", telemetry: "遥测", envSignals: "环境信号",
+    intelligence: "情报", searchPulse: "搜索脉搏", tactical: "战术",
+    directives: "指令", orbitalView: "轨道视图", satelliteOptic: "卫星光学",
+    groundTruth: "地面实况", sourceStack: "数据源", assetMap: "资产地图",
+    jurisdictions: "管辖区", allSectors: "全部区域", padawan: "巴达旺",
+    commandExport: "命令导出", sysOperational: "系统：运行中",
+    exchange: "汇率 // MYR", cityPulse: "城市脉搏", demographics: "人口统计",
+    airport: "机场 // KCH", flightTracker: "航班追踪",
+  },
+};
+
+// --- Helper functions ---
+export function round(value, digits = 0) {
+  const f = 10 ** digits;
+  return Math.round(value * f) / f;
+}
+
+export function aqiBand(aqi) {
+  if (aqi <= 50) return { label: "Good", tone: "good" };
+  if (aqi <= 100) return { label: "Moderate", tone: "watch" };
+  if (aqi <= 150) return { label: "Sensitive", tone: "warn" };
+  if (aqi <= 200) return { label: "Unhealthy", tone: "alert" };
+  return { label: "Hazardous", tone: "critical" };
+}
+
+export function weatherCodeLabel(code) {
+  const labels = { 0:"Clear",1:"Mostly clear",2:"Partly cloudy",3:"Overcast",45:"Fog",51:"Drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",80:"Showers",81:"Heavy showers",95:"Thunderstorm" };
+  return labels[code] ?? "Mixed conditions";
+}
+
+export function kmBetween(lat1, lon1, lat2, lon2) {
+  const toRad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * toRad, dLon = (lon2 - lon1) * toRad;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*toRad)*Math.cos(lat2*toRad)*Math.sin(dLon/2)**2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+export function bearingBetween(lat1, lon1, lat2, lon2) {
+  const toRad = Math.PI/180, toDeg = 180/Math.PI;
+  const phi1 = lat1*toRad, phi2 = lat2*toRad, l1 = lon1*toRad, l2 = lon2*toRad;
+  const y = Math.sin(l2-l1)*Math.cos(phi2);
+  const x = Math.cos(phi1)*Math.sin(phi2) - Math.sin(phi1)*Math.cos(phi2)*Math.cos(l2-l1);
+  return (Math.atan2(y, x)*toDeg + 360) % 360;
+}
+
+function angularDiff(a, b) { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; }
+
+export function classifyAircraft(lat, lon, heading, vr, alt) {
+  const ab = bearingBetween(lat, lon, SITE.airport.lat, SITE.airport.lon);
+  const ob = bearingBetween(SITE.airport.lat, SITE.airport.lon, lat, lon);
+  if (vr < -1 || (angularDiff(heading, ab) <= 70 && alt < 4200)) return "arrival";
+  if (vr > 1 || (angularDiff(heading, ob) <= 70 && alt < 3500)) return "departure";
+  return "holding";
+}
+
+export function sourceRecord(id, name, status, detail, url, t) { return { id, name, status, detail, url, generatedAt: t }; }
+
+function satDate(off = 1) { const d = new Date(); d.setUTCDate(d.getUTCDate() - off); return d.toISOString().slice(0, 10); }
+
+function gibsUrl(layer, opts = {}) {
+  const u = new URL("https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi");
+  const b = opts.bbox ?? SITE.mapBounds, fmt = opts.format ?? "image/png";
+  u.searchParams.set("service","WMS"); u.searchParams.set("request","GetMap");
+  u.searchParams.set("version","1.3.0"); u.searchParams.set("layers",layer);
+  u.searchParams.set("styles",""); u.searchParams.set("format",fmt);
+  u.searchParams.set("transparent", fmt === "image/jpeg" ? "false" : "true");
+  u.searchParams.set("height", String(opts.height ?? 640));
+  u.searchParams.set("width", String(opts.width ?? 960));
+  u.searchParams.set("crs","EPSG:4326");
+  u.searchParams.set("bbox", [round(b.minLat,4),round(b.minLon,4),round(b.maxLat,4),round(b.maxLon,4)].join(","));
+  if (opts.time) u.searchParams.set("time", opts.time);
+  return u.toString();
+}
+
+export function buildSatelliteCards() {
+  const y = satDate(1), y2 = satDate(2);
+  return [
+    { id: "true-color", title: "VIIRS True Color", source: "NASA GIBS", updatedAt: y, imageUrl: gibsUrl("VIIRS_SNPP_CorrectedReflectance_TrueColor",{format:"image/jpeg",time:y}) },
+    { id: "terra", title: "Terra MODIS", source: "NASA GIBS", updatedAt: y, imageUrl: gibsUrl("MODIS_Terra_CorrectedReflectance_TrueColor",{format:"image/jpeg",time:y}) },
+    { id: "precipitation", title: "Precipitation", source: "NASA GIBS / IMERG", updatedAt: y, imageUrl: gibsUrl("IMERG_Precipitation_Rate",{time:y}) },
+    { id: "aerosol", title: "Aerosol Density", source: "NASA GIBS / MODIS", updatedAt: y, imageUrl: gibsUrl("MODIS_Combined_Value_Added_AOD",{time:y}) },
+    { id: "night-lights", title: "Night Lights", source: "NASA GIBS / VIIRS", updatedAt: y2, imageUrl: gibsUrl("VIIRS_SNPP_DayNightBand_At_Sensor_Radiance",{time:y2}) },
+    { id: "vegetation", title: "Vegetation Index", source: "NASA GIBS / MODIS", updatedAt: y2, imageUrl: gibsUrl("MODIS_Terra_NDVI_8Day",{time:y2}) },
+  ];
+}
+
+export function buildMapLayers() {
+  return [
+    { id: "dark", label: "Dark", url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", active: true },
+    { id: "light", label: "Light", url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", active: false },
+    { id: "street", label: "Street", url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", active: false },
+    { id: "imagery", label: "Satellite", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", active: false },
+  ];
+}

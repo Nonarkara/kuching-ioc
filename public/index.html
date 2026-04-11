@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Greater Kuching IOC</title>
+    <meta name="description" content="Daniel's Goh Greater Kuching Intelligent Operation Center" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  </head>
+  <body>
+    <div class="dashboard-shell">
+      <header class="masthead">
+        <div class="title-block">
+          <div class="eyebrow">DANIEL'S GOH // INTELLIGENT OPERATION CENTER</div>
+          <h1 id="titleText">Greater Kuching Intelligent Operation Center</h1>
+          <p id="subtitleText" class="summary-lead">In collaboration with depa, PMUA, Axiom, ReTL, Thailand Smart City Office & ASCN</p>
+        </div>
+        <div class="status-block">
+          <div class="controls-row">
+            <button id="themeToggle" class="ctrl-btn">LIGHT</button>
+            <button class="lang-btn active" data-lang="en">EN</button>
+            <button class="lang-btn" data-lang="ms">BM</button>
+            <button class="lang-btn" data-lang="zh">CN</button>
+          </div>
+          <div id="generatedAt" class="micro-badge">T/--:--:--</div>
+          <div id="sysStatus" class="status-pill">SYS: OPERATIONAL</div>
+          <div class="partner-row">
+            <img src="./assets/pmua.jpeg" alt="PMUA" title="PMUA" />
+            <img src="./assets/depa.jpg" alt="depa" title="depa" />
+            <img src="./assets/axiom.png" alt="Axiom" title="Axiom" />
+            <img src="./assets/retl.png" alt="ReTL" title="ReTL" />
+            <img src="./assets/smart-city-thailand.jpg" alt="Smart City Thailand" title="Thailand Smart City Office" />
+            <img src="./assets/ascn.png" alt="ASCN" title="ASEAN Smart Cities Network" />
+          </div>
+        </div>
+      </header>
+
+      <div class="ticker-bar">
+        <div class="section-stamp" data-i18n="intelRail">INTEL RAIL</div>
+        <div id="summaryLead" class="ticker-summary">Synchronising...</div>
+        <div class="ticker-window">
+          <div id="newsRail" class="ticker-track"></div>
+        </div>
+      </div>
+
+      <section id="metricBand" class="metric-band"></section>
+
+      <main class="board-grid">
+        <!-- Left Sidebar -->
+        <aside class="panel side-panel">
+          <div class="panel-inner">
+            <div class="section-group">
+              <div class="panel-head">
+                <div class="kicker" data-i18n="atomicSync">Atomic Sync</div>
+                <h2 data-i18n="aseanDesks">ASEAN Desks</h2>
+              </div>
+              <div id="clockGrid" class="clock-grid"></div>
+            </div>
+            <div class="section-group">
+              <div class="panel-head">
+                <div class="kicker" data-i18n="exchange">Exchange // MYR</div>
+                <h2>FX Rates</h2>
+              </div>
+              <div id="exchangeList" class="exchange-list"></div>
+            </div>
+            <div class="section-group">
+              <div class="panel-head">
+                <div class="kicker" data-i18n="assetMap">Asset Map</div>
+                <h2 data-i18n="jurisdictions">Jurisdictions</h2>
+              </div>
+              <div id="jurisdictionCards" class="jurisdiction-cards"></div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Center: Map -->
+        <section class="panel map-panel">
+          <div class="panel-head map-head">
+            <div class="title-wrap">
+              <div class="kicker" data-i18n="radar">Radar // Greater Kuching</div>
+              <div id="mapSummary" class="map-summary">Scanning sectors...</div>
+            </div>
+            <div class="map-controls">
+              <div id="layerToggle" class="segmented-control"></div>
+              <div id="focusToggle" class="segmented-control"></div>
+            </div>
+          </div>
+          <div class="map-frame">
+            <div id="mapCanvas" class="map-canvas"></div>
+            <div class="radar-scan"></div>
+          </div>
+          <footer class="map-footer">
+            <div id="mapLegend" class="map-legend"></div>
+            <div id="watchpointList" class="watchpoint-list"></div>
+          </footer>
+        </section>
+
+        <!-- Right Sidebar -->
+        <aside class="panel side-panel">
+          <div class="panel-inner">
+            <div class="section-group">
+              <div class="panel-head">
+                <div class="kicker" data-i18n="telemetry">Telemetry</div>
+                <h2 data-i18n="envSignals">Env Signals</h2>
+              </div>
+              <div id="signalCards" class="signal-cards"></div>
+            </div>
+            <div class="section-group">
+              <div class="panel-head">
+                <div class="kicker" data-i18n="airport">Airport // KCH</div>
+                <h2 data-i18n="flightTracker">Flight Tracker</h2>
+              </div>
+              <div id="airportStats" class="airport-panel"></div>
+            </div>
+            <div class="section-group">
+              <div class="panel-head">
+                <div class="kicker" data-i18n="cityPulse">City Pulse</div>
+                <h2>News Sentiment</h2>
+              </div>
+              <div id="sentimentPanel" class="sentiment-panel"></div>
+            </div>
+            <div class="section-group">
+              <div class="panel-head">
+                <div class="kicker" data-i18n="intelligence">Intelligence</div>
+                <h2 data-i18n="searchPulse">Search Pulse</h2>
+              </div>
+              <div id="trendList" class="trend-list"></div>
+            </div>
+            <div class="section-group">
+              <div class="panel-head">
+                <div class="kicker" data-i18n="tactical">Tactical</div>
+                <h2 data-i18n="directives">Directives</h2>
+              </div>
+              <div id="operationList" class="operation-list"></div>
+            </div>
+          </div>
+        </aside>
+      </main>
+
+      <section class="lower-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="kicker" data-i18n="orbitalView">Orbital View</div>
+            <h2 data-i18n="satelliteOptic">Satellite Optic</h2>
+          </div>
+          <div id="satelliteToggle" class="segmented-control sat-toggle"></div>
+          <div class="satellite-stage"><img id="satelliteImage" src="" alt="Satellite" /></div>
+          <div id="satelliteThumbs" class="satellite-thumbs"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <div class="kicker" data-i18n="groundTruth">Ground Truth</div>
+            <h2 data-i18n="sourceStack">Source Stack</h2>
+          </div>
+          <div id="sourceList" class="source-list"></div>
+        </section>
+      </section>
+
+      <footer class="bottom-bar">
+        <span>KCH-IOC // V3.0</span>
+        <button id="exportSitrep" class="action-btn" data-i18n="commandExport">COMMAND EXPORT</button>
+      </footer>
+    </div>
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>

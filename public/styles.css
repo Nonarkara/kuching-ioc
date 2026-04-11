@@ -14,9 +14,11 @@
   --line-strong: rgba(0, 243, 255, 0.5);
   --font-mono: "JetBrains Mono", "Courier New", monospace;
   --font-sans: "Manrope", "Inter", sans-serif;
+  --glow: 0 0 8px var(--cyan-glow);
+  --glow-soft: 0 0 4px var(--cyan-glow);
   --card-bg: rgba(0, 243, 255, 0.02);
   --card-hover: rgba(0, 243, 255, 0.06);
-  --grid-opacity: 0.15;
+  --grid-opacity: 0.25;
 }
 
 [data-theme="light"] {
@@ -34,7 +36,7 @@
   --line-strong: rgba(0, 119, 182, 0.35);
   --card-bg: rgba(0, 119, 182, 0.03);
   --card-hover: rgba(0, 119, 182, 0.08);
-  --grid-opacity: 0.06;
+  --grid-opacity: 0.12;
 }
 
 * { box-sizing: border-box; }
@@ -68,7 +70,7 @@ body::before {
 .title-block h1 {
   font-family: var(--font-sans); font-weight: 800; font-size: 16px;
   text-transform: uppercase; letter-spacing: 0.3em; margin: 0;
-  color: var(--cyan); text-shadow: 0 0 10px var(--cyan-glow);
+  color: var(--cyan); text-shadow: var(--glow);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .eyebrow { font-size: 9px; letter-spacing: 0.2em; color: var(--cyan); opacity: 0.8; margin-bottom: 2px; }
@@ -127,7 +129,7 @@ body::before {
 .metric-card { background: var(--hud-bg); padding: 6px 8px; border: 1px solid transparent; }
 .metric-card:hover { border-color: var(--line-strong); background: var(--card-hover); }
 .metric-label { font-size: 7px; color: var(--soft); text-transform: uppercase; letter-spacing: 0.05em; }
-.metric-value { font-size: 15px; font-weight: 700; color: var(--cyan); margin: 1px 0; text-shadow: 0 0 5px var(--cyan-glow); }
+.metric-value { font-size: 15px; font-weight: 700; color: var(--cyan); margin: 1px 0; text-shadow: var(--glow-soft); }
 .metric-unit { font-size: 8px; opacity: 0.7; }
 .metric-context { font-size: 7px; color: var(--soft); opacity: 0.9; }
 .metric-card[data-tone="warn"] .metric-value { color: var(--amber); text-shadow: 0 0 5px rgba(255,170,0,0.3); }
@@ -207,8 +209,8 @@ body::before {
 
 /* === Sidebar Components === */
 .signal-card { padding: 8px; border: 1px solid var(--line); margin-bottom: 3px; background: var(--card-bg); }
-.signal-card strong { font-size: 9px; color: var(--cyan); }
-.signal-card .val { font-size: 17px; font-weight: 800; color: var(--ink); margin: 2px 0; }
+.signal-card strong { font-size: 9px; color: var(--cyan); text-shadow: var(--glow-soft); }
+.signal-card .val { font-size: 18px; font-weight: 800; color: var(--ink); margin: 4px 0; }
 .signal-card .meta { font-size: 8px; color: var(--soft); }
 
 .trend-item { padding: 6px 8px; border-bottom: 1px dotted var(--line); }
@@ -225,8 +227,8 @@ body::before {
 /* === Clocks === */
 .clock-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--line); }
 .clock-card { padding: 6px 8px; background: var(--hud-bg); }
-.clock-card .country { font-size: 8px; color: var(--soft); }
-.clock-card .time { font-size: 12px; font-weight: 700; color: var(--cyan); text-shadow: 0 0 4px var(--cyan-glow); }
+.clock-card .country { font-size: 8px; color: var(--soft); text-transform: uppercase; }
+.clock-card .time { font-size: 13px; font-weight: 700; color: var(--cyan); text-shadow: var(--glow-soft); }
 
 /* === Exchange Rates === */
 .exchange-list { padding: 6px 8px; }

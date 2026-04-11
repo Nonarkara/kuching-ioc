@@ -342,8 +342,8 @@ function renderLayerToggle(layers) {
     // Update tile filter based on selected layer
     const tp = document.querySelector(".leaflet-tile-pane");
     if (tp) {
-      if (btn.dataset.id === "dark") tp.style.filter = "brightness(0.85) contrast(1.2) saturate(0.6)";
-      else if (btn.dataset.id === "imagery") tp.style.filter = "brightness(0.9) contrast(1.1)";
+      if (btn.dataset.id === "dark") tp.style.filter = "brightness(0.9) contrast(1.1) saturate(0.8) hue-rotate(180deg) invert(1) brightness(0.6) contrast(1.4)";
+      else if (btn.dataset.id === "imagery") tp.style.filter = "brightness(0.8) contrast(1.2)";
       else tp.style.filter = state.theme === "dark" ? "brightness(0.6) contrast(1.3) invert(1) hue-rotate(180deg)" : "none";
     }
   }));
@@ -482,7 +482,7 @@ function toggleTheme() {
   const tp = document.querySelector(".leaflet-tile-pane");
   if (tp) {
     if (state.activeLayerId === "dark") {
-      tp.style.filter = state.theme === "dark" ? "brightness(0.85) contrast(1.2) saturate(0.6)" : "brightness(1.1) contrast(1) saturate(0.8) invert(1) hue-rotate(180deg)";
+      tp.style.filter = state.theme === "dark" ? "brightness(0.9) contrast(1.1) saturate(0.8) hue-rotate(180deg) invert(1) brightness(0.6) contrast(1.4)" : "brightness(1.1) contrast(1) saturate(0.8) invert(1) hue-rotate(180deg)";
     }
   }
   const btn = $("themeToggle");

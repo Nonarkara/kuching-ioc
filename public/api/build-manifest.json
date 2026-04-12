@@ -1,0 +1,27 @@
+{
+  "builtAt": "2026-04-12T04:26:25.645Z",
+  "buildDurationMs": 25040,
+  "dashboardSizeKb": 59,
+  "layers": [
+    {
+      "id": "drainage",
+      "status": "fulfilled",
+      "features": 396
+    },
+    {
+      "id": "transit",
+      "status": "fulfilled",
+      "features": 2254
+    },
+    {
+      "id": "land_use",
+      "status": "fulfilled",
+      "features": 823
+    },
+    {
+      "id": "flood_risk",
+      "status": "fulfilled",
+      "features": 6
+    }
+  ]
+}

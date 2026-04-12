@@ -92,14 +92,14 @@ export const AIRPORT_FALLBACK_ROUTES = [
 ];
 
 export const FALLBACK_NEWS = [
-  { title: "MBKS rodding works clear Jalan Pecky drains while securing funds for full upgrade", source: "MBKS / DayakDaily", publishedAt: "2026-03-27T00:00:00.000Z", lane: "Drainage", sentiment: "neutral" },
-  { title: "DBKU conducts emergency drill for traffic wardens across Kuching North", source: "DBKU", publishedAt: "2026-02-11T00:00:00.000Z", lane: "Traffic", sentiment: "positive" },
-  { title: "MBKS and DBKU asked to find an ideal spot for a night market", source: "Borneo Post", publishedAt: "2026-02-12T00:00:00.000Z", lane: "Public realm", sentiment: "positive" },
-  { title: "Padawan infrastructure upgrade tenders issued for Kampung Telaga Air and Desa Wira", source: "MPP", publishedAt: "2026-03-10T00:00:00.000Z", lane: "Infrastructure", sentiment: "positive" },
-  { title: "Sarawak to build integrated waste management facility in Kuching", source: "Borneo Post", publishedAt: "2026-03-15T00:00:00.000Z", lane: "Environment", sentiment: "positive" },
-  { title: "Flash floods hit low-lying areas near Batu Kawa after heavy downpour", source: "DayakDaily", publishedAt: "2026-03-22T00:00:00.000Z", lane: "Flooding", sentiment: "negative" },
-  { title: "MPP launches community composting programme across 6 wards", source: "MPP", publishedAt: "2026-03-20T00:00:00.000Z", lane: "Sustainability", sentiment: "positive" },
-  { title: "Tourism arrivals to Kuching up 12% in Q1 compared to last year", source: "Bernama", publishedAt: "2026-04-01T00:00:00.000Z", lane: "Tourism", sentiment: "positive" },
+  { title: "MBKS rodding works clear Jalan Pecky drains while securing funds for full upgrade", source: "MBKS / DayakDaily", publishedAt: "2026-03-27T00:00:00.000Z", lane: "Drainage", sentiment: "neutral", isOfficial: true, language: "en", languageBadge: "OFF" },
+  { title: "DBKU conducts emergency drill for traffic wardens across Kuching North", source: "DBKU", publishedAt: "2026-02-11T00:00:00.000Z", lane: "Traffic", sentiment: "positive", isOfficial: true, language: "en", languageBadge: "OFF" },
+  { title: "MBKS and DBKU asked to find an ideal spot for a night market", source: "Borneo Post", publishedAt: "2026-02-12T00:00:00.000Z", lane: "Public realm", sentiment: "positive", isOfficial: false, language: "en", languageBadge: "EN" },
+  { title: "Padawan infrastructure upgrade tenders issued for Kampung Telaga Air and Desa Wira", source: "MPP", publishedAt: "2026-03-10T00:00:00.000Z", lane: "Infrastructure", sentiment: "positive", isOfficial: true, language: "en", languageBadge: "OFF" },
+  { title: "Sarawak to build integrated waste management facility in Kuching", source: "Borneo Post", publishedAt: "2026-03-15T00:00:00.000Z", lane: "Environment", sentiment: "positive", isOfficial: false, language: "en", languageBadge: "EN" },
+  { title: "Banjir kilat melanda kawasan rendah berhampiran Batu Kawa selepas hujan lebat", source: "DayakDaily", publishedAt: "2026-03-22T00:00:00.000Z", lane: "Flooding", sentiment: "negative", isOfficial: false, language: "ms", languageBadge: "BM" },
+  { title: "MPP launches community composting programme across 6 wards", source: "MPP", publishedAt: "2026-03-20T00:00:00.000Z", lane: "Sustainability", sentiment: "positive", isOfficial: true, language: "en", languageBadge: "OFF" },
+  { title: "Tourism arrivals to Kuching up 12% in Q1 compared to last year", source: "Bernama", publishedAt: "2026-04-01T00:00:00.000Z", lane: "Tourism", sentiment: "positive", isOfficial: false, language: "en", languageBadge: "EN" },
 ];
 
 export const FALLBACK_TRENDS = [

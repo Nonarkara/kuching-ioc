@@ -264,9 +264,22 @@ async function buildFallbackDashboard() {
 }
 
 async function loadDashboardPayload() {
+  // Three-tier fetch: live server → pre-baked static JSON → client-only fallback.
+  // Live server: works in local dev with `node server.mjs`.
+  // Static JSON: works on GitHub Pages (written by build.mjs at deploy time).
+  // Client fallback: works anywhere, even fully offline, using data.js constants.
+  async function fetchDashboardJson() {
+    try {
+      return await fetchJson("/api/dashboard", 8000);
+    } catch {
+      // Live server unavailable — try the pre-baked static snapshot.
+      return await fetchJson("./api/dashboard.json", 10000);
+    }
+  }
+
   try {
     const [payload, exchange] = await Promise.all([
-      fetchJson("/api/dashboard", 15000),
+      fetchDashboardJson(),
       loadExchangeRates(),
     ]);
     return {
@@ -276,7 +289,7 @@ async function loadDashboardPayload() {
       mapLayers: buildMapLayers(),
     };
   } catch (error) {
-    console.warn("IOC API unavailable, using client fallback payload.", error);
+    console.warn("IOC API + static snapshot unavailable, using client fallback payload.", error);
     return buildFallbackDashboard();
   }
 }
@@ -302,6 +315,54 @@ function renderMetrics(metrics) {
       <div class="metric-context">${m.context||''}</div>
       <div class="sparkline-shell">${m.history?sparkline(m.history,m.tone):''}</div>
     </article>`).join("");
+}
+
+function highlightCatchment(station, bandColor) {
+  if (!state.map || !window.L) return;
+  // Clear any prior highlight.
+  if (state.catchmentHighlightLayers?.length) {
+    state.catchmentHighlightLayers.forEach(l => state.map.removeLayer(l));
+  }
+  state.catchmentHighlightLayers = [];
+
+  const segIds = station.catchment?.segmentIds;
+  if (!segIds || segIds.length === 0) {
+    // No catchment available — flash the station marker area only.
+    const flash = window.L.circleMarker([station.lat, station.lon], {
+      radius: 22, fillColor: bandColor, fillOpacity: 0.15, color: bandColor, weight: 2, opacity: 0.6,
+    }).addTo(state.map);
+    state.catchmentHighlightLayers.push(flash);
+    setTimeout(() => { state.map.removeLayer(flash); }, 2400);
+    return;
+  }
+  const index = state.drainageFeatureIndex;
+  if (!index || index.size === 0) {
+    console.warn("Catchment requested but drainage layer not loaded; toggle the Drainage layer first.");
+    return;
+  }
+
+  // Render highlight polylines on a dedicated overlay (above the drainage geoJSON).
+  segIds.forEach((id) => {
+    const lyr = index.get(id) || index.get(String(id)) || index.get(Number(id));
+    if (!lyr) return;
+    const latlngs = lyr.getLatLngs?.();
+    if (!latlngs) return;
+    // Halo (wider, soft).
+    const halo = window.L.polyline(latlngs, {
+      color: bandColor, weight: 8, opacity: 0.18, lineCap: "round",
+    }).addTo(state.map);
+    // Core (sharp).
+    const core = window.L.polyline(latlngs, {
+      color: bandColor, weight: 3.2, opacity: 0.95, lineCap: "round",
+    }).addTo(state.map);
+    state.catchmentHighlightLayers.push(halo, core);
+  });
+
+  // Frame the catchment.
+  if (state.catchmentHighlightLayers.length > 0) {
+    const featureGroup = window.L.featureGroup(state.catchmentHighlightLayers);
+    try { state.map.fitBounds(featureGroup.getBounds().pad(0.15), { maxZoom: 14 }); } catch (e) { /* ignore */ }
+  }
 }
 
 function renderMap(payload) {
@@ -367,13 +428,31 @@ function renderMap(payload) {
   }
 
   // Hydrology stations (JPS Infobanjir): band-coloured circles + tooltips.
+  // Click → highlight catchment (BFS-walked drainage segments) in band colour.
   const hydroBandColors = { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" };
+  // Stash for the hydro card click handler.
+  state.hydroStationsByName = new Map();
+  // Reset any previously highlighted catchment.
+  if (state.catchmentHighlightLayers) {
+    state.catchmentHighlightLayers.forEach(l => state.map.removeLayer(l));
+  }
+  state.catchmentHighlightLayers = [];
+
   const hydroStations = payload.mapScene?.hydroStations || payload.infobanjir?.stations || [];
   hydroStations.forEach(s => {
     if (s.lat == null || s.lon == null) return;
+    state.hydroStationsByName.set(s.id, s);
     const color = hydroBandColors[s.band] || "#8aa2c8";
     const isLive = s.waterLevelM != null;
+    const hasCatchment = s.catchment?.status === "snapped";
     const radius = s.band === "danger" ? 9 : s.band === "warning" ? 8 : s.band === "alert" ? 7 : isLive ? 6 : 5;
+    const catchmentLine = hasCatchment
+      ? `<br><span style="color:${color}">Catchment: ${s.catchment.segmentCount} seg · ${s.catchment.totalLengthKm} km · snap ${s.catchment.snapDistanceKm} km</span><br><em>Click to highlight</em>`
+      : s.catchment?.status === "cold"
+        ? "<br><em>Toggle Drainage layer to enable catchment</em>"
+        : s.catchment?.status === "unsnapped"
+          ? "<br><em>No waterway within 2 km</em>"
+          : "";
     window.L.circleMarker([s.lat, s.lon], {
       radius,
       fillColor: color,
@@ -381,11 +460,13 @@ function renderMap(payload) {
       color: "#fff",
       weight: 1.5,
       opacity: 0.9,
+      className: hasCatchment ? "hydro-marker hydro-has-catchment" : "hydro-marker",
     })
       .bindTooltip(
-        `<strong>${s.name}</strong><br>${s.basin} · ${s.council}<br>Level: ${s.waterLevelM != null ? s.waterLevelM + " m" : "reference"}<br>Posture: <strong>${s.bandLabel}</strong><br>Thresholds A/W/D: ${s.thresholds.alert}/${s.thresholds.warning}/${s.thresholds.danger} m`,
+        `<strong>${s.name}</strong><br>${s.basin} · ${s.council}<br>Level: ${s.waterLevelM != null ? s.waterLevelM + " m" : "reference"}<br>Posture: <strong>${s.bandLabel}</strong><br>Thresholds A/W/D: ${s.thresholds.alert}/${s.thresholds.warning}/${s.thresholds.danger} m${catchmentLine}`,
         { className: "marker-tooltip", direction: "top" },
       )
+      .on("click", () => highlightCatchment(s, color))
       .addTo(state.markerLayerGroup);
   });
   // Apims ground stations: square-ish markers via different radius/weight to distinguish.
@@ -437,6 +518,45 @@ function renderLayerToggle(layers) {
   }));
 }
 
+function renderGisLegend(activeLayerIds) {
+  const el = $("mapLegend");
+  if (!el) return;
+  
+  if (!activeLayerIds || activeLayerIds.length === 0) {
+    const jurisdictions = state.payload?.jurisdictions?.items || [];
+    el.innerHTML = jurisdictions.map(j => `<span class="legend-item"><span class="legend-dot" style="background:${j.accent}"></span>${j.code}</span>`).join("") + 
+                   `<span class="legend-item"><span class="legend-dot" style="background:#1e90ff"></span>River</span>`;
+    return;
+  }
+
+  const legendMap = {
+    drainage: [
+      { label: t("drainage"), color: "#60a5fa" },
+      { label: "Main River", color: "#1e90ff" },
+    ],
+    transit: [
+      { label: "Transit", color: "#fbbf24" },
+    ],
+    land_use: [
+      { label: "Commercial", color: "#ffcc00" },
+      { label: "Residential", color: "#44ff44" },
+      { label: "Institutional", color: "#aa44ff" },
+    ],
+    flood_risk: [
+      { label: "High Risk", color: "#ff4444" },
+      { label: "Moderate", color: "#ff8800" },
+      { label: "Alert", color: "#ffaa00" },
+    ]
+  };
+
+  let html = "";
+  activeLayerIds.forEach(id => {
+    const items = legendMap[id] || [];
+    html += items.map(i => `<span class="legend-item"><span class="legend-dot" style="background:${i.color}"></span>${i.label}</span>`).join("");
+  });
+  el.innerHTML = html;
+}
+
 function renderFocusToggle() {
   const el = $("focusToggle");
   const modes = [{id:"all",label:t("allSectors")},{id:"pdw",label:t("padawan")}];
@@ -469,24 +589,110 @@ function renderUrbanLayerToggle() {
   container.querySelectorAll("button").forEach(btn => btn.addEventListener("click", async () => {
     const layer = URBAN_LAYERS.find(l => l.id === btn.dataset.id);
     if (!layer) return;
-    
+
     layer.active = !layer.active;
     btn.classList.toggle("active", layer.active);
-    
-    if (layer.active) {
-      if (!state.urbanLayerGroups.has(layer.id)) {
-        const group = window.L.layerGroup().addTo(state.map);
-        state.urbanLayerGroups.set(layer.id, group);
-        // Simulate fetch for now or hit dummy endpoints
-        console.log(`Loading urban layer: ${layer.label}`);
-        // In a real scenario, fetchJson(layer.url)
-      } else {
-        state.urbanLayerGroups.get(layer.id).addTo(state.map);
+
+    if (!layer.active) {
+      const existing = state.urbanLayerGroups.get(layer.id);
+      if (existing && state.map.hasLayer(existing)) state.map.removeLayer(existing);
+      const activeIds = URBAN_LAYERS.filter(l => l.active).map(l => l.id);
+      renderGisLegend(activeIds);
+      return;
+    }
+
+    // Cached: re-attach without refetch.
+    if (state.urbanLayerGroups.has(layer.id)) {
+      state.urbanLayerGroups.get(layer.id).addTo(state.map);
+      const activeIds = URBAN_LAYERS.filter(l => l.active).map(l => l.id);
+      renderGisLegend(activeIds);
+      return;
+    }
+
+    // Fresh load: fetch GeoJSON, style by feature kind, attach to map.
+    const originalLabel = btn.textContent;
+    btn.textContent = "…";
+    btn.disabled = true;
+    try {
+      // Try live API first, then pre-baked static JSON (GitHub Pages).
+      let res = await fetch(layer.url).catch(() => null);
+      if (!res || !res.ok) {
+        const staticUrl = `./api/layers/${layer.id}.json`;
+        res = await fetch(staticUrl);
       }
-    } else {
-      if (state.urbanLayerGroups.has(layer.id)) {
-        state.map.removeLayer(state.urbanLayerGroups.get(layer.id));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const fc = await res.json();
+      const features = fc.features || [];
+      if (features.length === 0) {
+        btn.textContent = originalLabel + " (0)";
+        btn.classList.add("layer-empty");
+        return;
       }
+
+      // Drainage: blue, weight by waterway rank (river > canal > stream > drain > ditch).
+      // Transit: amber, weight by highway rank (motorway > trunk > primary > secondary).
+      const styleFor = (props) => {
+        if (layer.id === "drainage") {
+          const rank = props.rank || 0;
+          return {
+            color: rank >= 4 ? "#1e90ff" : rank >= 3 ? "#3aa6ff" : rank >= 2 ? "#60a5fa" : "#93c5fd",
+            weight: rank >= 4 ? 3 : rank >= 3 ? 2.2 : rank >= 2 ? 1.6 : 1.1,
+            opacity: 0.85,
+            dashArray: props.intermittent ? "4 4" : null,
+          };
+        }
+        if (layer.id === "transit") {
+          const rank = props.rank || 0;
+          return {
+            color: rank >= 5 ? "#ff003c" : rank >= 4 ? "#ff7a00" : rank >= 3 ? "#ffd000" : "#fbbf24",
+            weight: rank >= 5 ? 3.2 : rank >= 4 ? 2.6 : rank >= 3 ? 2 : 1.4,
+            opacity: 0.9,
+          };
+        }
+        if (layer.id === "land_use" || layer.id === "flood_risk") {
+          return {
+            color: props.color || layer.color,
+            weight: 1.5,
+            opacity: props.opacity || 0.85,
+            fillOpacity: props.opacity || 0.45,
+          };
+        }
+        return { color: layer.color, weight: 1.5, opacity: 0.85 };
+      };
+
+      // Index sub-layers by feature id so the catchment highlighter can
+      // find specific drainage segments by id later.
+      const featureLayers = new Map();
+      const group = window.L.geoJSON(fc, {
+        style: (feat) => styleFor(feat.properties || {}),
+        onEachFeature: (feat, lyr) => {
+          const p = feat.properties || {};
+          const lines = [
+            `<strong>${p.name || `${(p.kind||'feature')} #${p.id}`}</strong>`,
+            p.kind ? `Kind: ${p.kind}` : null,
+            p.ref ? `Ref: ${p.ref}` : null,
+            p.lanes ? `Lanes: ${p.lanes}` : null,
+            p.tunnel ? `Tunnel: ${p.tunnel}` : null,
+            p.intermittent ? "Intermittent" : null,
+          ].filter(Boolean);
+          lyr.bindTooltip(lines.join("<br>"), { className: "marker-tooltip", sticky: true });
+          const fid = feat.id ?? p.id;
+          if (fid != null) featureLayers.set(fid, lyr);
+        },
+      }).addTo(state.map);
+      state.urbanLayerGroups.set(layer.id, group);
+      if (layer.id === "drainage") state.drainageFeatureIndex = featureLayers;
+      btn.textContent = `${originalLabel.replace(/ \(\d+\)$/, "")} (${features.length})`;
+    } catch (error) {
+      console.warn(`Layer ${layer.id} failed:`, error);
+      btn.textContent = originalLabel + " ✕";
+      btn.classList.add("layer-failed");
+      layer.active = false;
+      btn.classList.remove("active");
+    } finally {
+      btn.disabled = false;
+      const activeIds = URBAN_LAYERS.filter(l => l.active).map(l => l.id);
+      renderGisLegend(activeIds);
     }
   }));
 }
@@ -563,8 +769,9 @@ function renderSatelliteDeck(satellites) {
 
   const setActive = (index) => {
     const activeIndex = Math.max(0, Math.min(index, satellites.length - 1));
+    state.activeSatelliteIndex = activeIndex;
     const sat = satellites[activeIndex];
-    
+
     // Custom descriptions for Greater Kuching context
     let contextDesc = "Orbital telemetry for urban planning.";
     if (sat.id === "true-color") contextDesc = "Surface optic // Real-time cloud and haze verification for Padawan.";
@@ -581,21 +788,57 @@ function renderSatelliteDeck(satellites) {
       <div class="satellite-stamp">
         <strong>${sat.source || "Satellite feed"}</strong>
         <span>${formatShortStamp(sat.updatedAt || nowIso())}</span>
+        <a class="satellite-open" href="${sat.imageUrl}" target="_blank" rel="noopener">OPEN FULL ◹</a>
       </div>`;
     grid.querySelectorAll(".satellite-card").forEach((node, idx) => node.classList.toggle("active", idx === activeIndex));
   };
 
   grid.innerHTML = satellites.map((sat, index) => `
-    <button type="button" class="satellite-card ${index === 0 ? "active" : ""}" data-idx="${index}">
+    <button type="button" class="satellite-card ${index === 0 ? "active" : ""}" data-idx="${index}" aria-label="Activate ${sat.title}">
       <img src="${sat.imageUrl}" alt="${sat.title}" />
       <span class="satellite-card-copy">
         <strong>${sat.title}</strong>
         <span>${sat.source || "NASA GIBS"}</span>
       </span>
     </button>`).join("");
-  grid.querySelectorAll(".satellite-card").forEach((card) => card.addEventListener("click", () => setActive(Number(card.dataset.idx))));
 
-  setActive(0);
+  // Event delegation: one listener on the grid survives any future re-render of children.
+  if (!grid.dataset.bound) {
+    grid.addEventListener("click", (event) => {
+      const card = event.target.closest(".satellite-card");
+      if (!card || !grid.contains(card)) return;
+      const idx = Number(card.dataset.idx);
+      if (Number.isFinite(idx)) setActive(idx);
+    });
+    grid.dataset.bound = "1";
+  }
+
+  setActive(state.activeSatelliteIndex ?? 0);
+}
+
+function renderOfficialPulse(payload) {
+  const el = $("officialPulse");
+  if (!el || !payload.openDosmStats?.updatedAt) return;
+  const dosm = payload.openDosmStats;
+  const swk = payload.sarawakStats;
+  
+  el.innerHTML = `
+    <div class="official-pulse-block">
+      <div class="pulse-header">
+        <span class="pulse-label">Official Census Sync // ${dosm.year}</span>
+        <div class="pulse-indicator"></div>
+      </div>
+      <div class="pulse-metagrid">
+        <div class="pulse-stat">
+          <strong>${num(dosm.latestSarawakPop, 0)}</strong>
+          <span>Sarawak Pop</span>
+        </div>
+        <div class="pulse-stat">
+          <strong>${swk.datasetCount || 0}</strong>
+          <span>CKAN Datasets</span>
+        </div>
+      </div>
+    </div>`;
 }
 
 function renderDashboard(payload) {
@@ -613,6 +856,7 @@ function renderDashboard(payload) {
   renderExchange(payload.exchange);
   renderAirportStats(payload.airport);
   renderNewsIntake(payload.news);
+  renderOfficialPulse(payload);
 
   // Directives
   $("operationList").innerHTML = payload.operations.map(o=>`
@@ -644,12 +888,20 @@ function renderDashboard(payload) {
       })
       .slice(0, 2);
     const bandColors = { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" };
+    const snapped = (ib.stations || []).filter(s => s.catchment?.status === "snapped");
+    const totalCatchKm = snapped.reduce((sum, s) => sum + (s.catchment?.totalLengthKm || 0), 0);
+    const catchLine = ib.catchmentStatus === "live"
+      ? `<div class="meta" style="color:#60a5fa">Catchment: ${snapped.length} snapped · ${totalCatchKm.toFixed(1)} km routed</div>`
+      : ib.catchmentStatus === "cold"
+        ? `<div class="meta" style="color:#8aa2c8"><em>Toggle Drainage layer to route catchments</em></div>`
+        : "";
     groundHtml += `
       <div class="signal-card" data-band="${ib.highestBand}" style="border-left:3px solid ${bandColors[ib.highestBand]||"#8aa2c8"}">
         <strong>FLOOD // JPS HYDRO</strong>
         <div class="val">${ib.liveCount}<sup>/${ib.stationCount}</sup></div>
         <div class="meta">${(ib.highestBandLabel || "Reference").toUpperCase()} · ${ib.status === "live" ? "live feed" : "reference hold"}</div>
-        ${top.map(s => `<div class="meta" style="color:${bandColors[s.band]||"#8aa2c8"}">${s.name} · ${s.waterLevelM != null ? s.waterLevelM + "m" : "—"} (${s.bandLabel})</div>`).join("")}
+        ${top.map(s => `<div class="meta" style="color:${bandColors[s.band]||"#8aa2c8"}">${s.name} · ${s.waterLevelM != null ? s.waterLevelM + "m" : "—"} (${s.bandLabel})${s.catchment?.status === "snapped" ? ` · ${s.catchment.segmentCount}seg` : ""}</div>`).join("")}
+        ${catchLine}
       </div>`;
   }
   if (apims) {

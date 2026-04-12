@@ -3,6 +3,10 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  schedule:
+    # Refresh data every 6 hours so the static site stays current.
+    - cron: "0 */6 * * *"
+  workflow_dispatch: # Allow manual trigger from Actions tab.
 
 permissions:
   contents: read
@@ -19,8 +23,21 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build static data snapshot
+        run: node build.mjs
+        timeout-minutes: 5
+        env:
+          AQICN_TOKEN: ${{ secrets.AQICN_TOKEN }}
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

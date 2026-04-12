@@ -1739,6 +1739,534 @@ async function loadSarawakCkanHarvest() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// OSM Overpass — drainage + road network for Greater Kuching
+// (Free, no auth, slow. Cached aggressively. Failover between two mirrors.
+//  Returns GeoJSON FeatureCollections served on demand via /api/layers/:id.)
+// ---------------------------------------------------------------------------
+
+const OVERPASS_BBOX = { south: 1.30, west: 110.10, north: 1.75, east: 110.55 };
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.openstreetmap.fr/api/interpreter",
+];
+const osmStatus = {
+  drainage: { state: "cold", lastSuccess: null, featureCount: 0, endpoint: null, error: null },
+  transit: { state: "cold", lastSuccess: null, featureCount: 0, endpoint: null, error: null },
+  landuse: { state: "cold", lastSuccess: null, featureCount: 0, endpoint: null, error: null },
+};
+
+async function fetchOverpass(query, timeoutMs = 50000) {
+  let lastError = null;
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "secretary-goh-super-dashboard/1.0 (greater-kuching-ioc)",
+          accept: "application/json",
+        },
+        body: `data=${encodeURIComponent(query)}`,
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        lastError = new Error(`Overpass ${endpoint} HTTP ${response.status}`);
+        continue;
+      }
+      const json = await response.json();
+      return { json, endpoint };
+    } catch (error) {
+      lastError = error;
+      continue;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  throw lastError || new Error("All Overpass endpoints failed");
+}
+
+function overpassToPolygonFeatures(elements, classifyTags) {
+  if (!Array.isArray(elements)) return [];
+  const nodes = new Map();
+  for (const el of elements) {
+    if (el.type === "node" && Number.isFinite(el.lat) && Number.isFinite(el.lon)) {
+      nodes.set(el.id, [el.lon, el.lat]);
+    }
+  }
+  const features = [];
+  for (const el of elements) {
+    if (el.type !== "way" || !Array.isArray(el.nodes) || el.nodes.length < 4) continue;
+    const tags = el.tags || {};
+    const classification = classifyTags(tags);
+    if (!classification) continue;
+    const ring = [];
+    for (const id of el.nodes) {
+      const c = nodes.get(id);
+      if (c) ring.push(c);
+    }
+    if (ring.length < 4) continue;
+    // Ensure closed ring (Overpass returns closed ways with first === last for polygons).
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+    if (first[0] !== last[0] || first[1] !== last[1]) ring.push([first[0], first[1]]);
+    features.push({
+      type: "Feature",
+      id: el.id,
+      properties: {
+        id: el.id,
+        name: tags.name || null,
+        kind: classification.kind,
+        zoneClass: classification.zoneClass,
+        color: classification.color,
+        opacity: 0.45,
+        ...classification.extra,
+      },
+      geometry: { type: "Polygon", coordinates: [ring] },
+    });
+  }
+  return features;
+}
+
+function overpassToLineFeatures(elements, classifyTags) {
+  if (!Array.isArray(elements)) return [];
+  const nodes = new Map();
+  for (const el of elements) {
+    if (el.type === "node" && Number.isFinite(el.lat) && Number.isFinite(el.lon)) {
+      nodes.set(el.id, [el.lon, el.lat]);
+    }
+  }
+  const features = [];
+  for (const el of elements) {
+    if (el.type !== "way" || !Array.isArray(el.nodes) || el.nodes.length < 2) continue;
+    const coords = [];
+    for (const id of el.nodes) {
+      const c = nodes.get(id);
+      if (c) coords.push(c);
+    }
+    if (coords.length < 2) continue;
+    const tags = el.tags || {};
+    const classification = classifyTags(tags) || {};
+    features.push({
+      type: "Feature",
+      id: el.id,
+      properties: {
+        id: el.id,
+        name: tags.name || null,
+        kind: classification.kind || null,
+        rank: classification.rank || 0,
+        ...classification.extra,
+      },
+      geometry: { type: "LineString", coordinates: coords },
+    });
+  }
+  return features;
+}
+
+async function loadOsmDrainage() {
+  return cached("osm-drainage", 24 * 60 * 60 * 1000, async () => {
+    const { south, west, north, east } = OVERPASS_BBOX;
+    const query = `[out:json][timeout:50];
+      (
+        way["waterway"~"^(river|stream|canal|drain|ditch)$"](${south},${west},${north},${east});
+        way["tunnel"="culvert"]["waterway"](${south},${west},${north},${east});
+      );
+      out body;
+      >;
+      out skel qt;`;
+    try {
+      const { json, endpoint } = await fetchOverpass(query);
+      const features = overpassToLineFeatures(json.elements, (tags) => {
+        const w = tags.waterway;
+        const rankMap = { river: 4, canal: 3, stream: 2, drain: 1, ditch: 1 };
+        return {
+          kind: w || "waterway",
+          rank: rankMap[w] || 0,
+          extra: { intermittent: tags.intermittent === "yes", tunnel: tags.tunnel || null },
+        };
+      });
+      osmStatus.drainage = {
+        state: "live",
+        lastSuccess: nowIso(),
+        featureCount: features.length,
+        endpoint,
+        error: null,
+      };
+      return {
+        type: "FeatureCollection",
+        meta: { source: "OpenStreetMap via Overpass", endpoint, featureCount: features.length, fetchedAt: nowIso(), bbox: OVERPASS_BBOX },
+        features,
+      };
+    } catch (error) {
+      osmStatus.drainage = {
+        state: "offline",
+        lastSuccess: osmStatus.drainage.lastSuccess,
+        featureCount: 0,
+        endpoint: null,
+        error: error.message,
+      };
+      return {
+        type: "FeatureCollection",
+        meta: { source: "OpenStreetMap via Overpass", error: error.message, fetchedAt: nowIso(), bbox: OVERPASS_BBOX },
+        features: [],
+      };
+    }
+  });
+}
+
+async function loadOsmRoads() {
+  return cached("osm-roads", 24 * 60 * 60 * 1000, async () => {
+    const { south, west, north, east } = OVERPASS_BBOX;
+    const query = `[out:json][timeout:50];
+      (
+        way["highway"~"^(motorway|trunk|primary|secondary|motorway_link|trunk_link|primary_link)$"](${south},${west},${north},${east});
+      );
+      out body;
+      >;
+      out skel qt;`;
+    try {
+      const { json, endpoint } = await fetchOverpass(query);
+      const features = overpassToLineFeatures(json.elements, (tags) => {
+        const h = tags.highway;
+        const rankMap = { motorway: 5, trunk: 4, primary: 3, secondary: 2, motorway_link: 4, trunk_link: 3, primary_link: 2 };
+        return {
+          kind: h || "highway",
+          rank: rankMap[h] || 1,
+          extra: { ref: tags.ref || null, lanes: tags.lanes ? Number(tags.lanes) : null, oneway: tags.oneway === "yes" },
+        };
+      });
+      osmStatus.transit = {
+        state: "live",
+        lastSuccess: nowIso(),
+        featureCount: features.length,
+        endpoint,
+        error: null,
+      };
+      return {
+        type: "FeatureCollection",
+        meta: { source: "OpenStreetMap via Overpass", endpoint, featureCount: features.length, fetchedAt: nowIso(), bbox: OVERPASS_BBOX },
+        features,
+      };
+    } catch (error) {
+      osmStatus.transit = {
+        state: "offline",
+        lastSuccess: osmStatus.transit.lastSuccess,
+        featureCount: 0,
+        endpoint: null,
+        error: error.message,
+      };
+      return {
+        type: "FeatureCollection",
+        meta: { source: "OpenStreetMap via Overpass", error: error.message, fetchedAt: nowIso(), bbox: OVERPASS_BBOX },
+        features: [],
+      };
+    }
+  });
+}
+
+// Land-use polygons from OSM, classified to a Kuching-relevant palette so the
+// frontend can paint them as a zoning proxy. Authoritative source for actual
+// zoning is PLANMalaysia I-Plan; we name it in the source stack but pull from
+// OSM for the live data path so the loader is reproducible without auth.
+const LAND_USE_PALETTE = {
+  residential: { kind: "Residential", color: "#22c55e" },
+  commercial: { kind: "Commercial", color: "#fbbf24" },
+  retail: { kind: "Retail", color: "#f97316" },
+  industrial: { kind: "Industrial", color: "#a855f7" },
+  forest: { kind: "Forest / Conservation", color: "#15803d" },
+  meadow: { kind: "Meadow / Open", color: "#84cc16" },
+  farmland: { kind: "Farmland", color: "#bef264" },
+  cemetery: { kind: "Cemetery", color: "#94a3b8" },
+  recreation_ground: { kind: "Recreation", color: "#06b6d4" },
+  military: { kind: "Military", color: "#dc2626" },
+  education: { kind: "Education", color: "#3b82f6" },
+  religious: { kind: "Religious", color: "#a78bfa" },
+  construction: { kind: "Construction", color: "#fde047" },
+};
+
+async function loadOsmLandUse() {
+  return cached("osm-landuse", 24 * 60 * 60 * 1000, async () => {
+    const { south, west, north, east } = OVERPASS_BBOX;
+    const wantedLandUse = Object.keys(LAND_USE_PALETTE).join("|");
+    const query = `[out:json][timeout:50];
+      (
+        way["landuse"~"^(${wantedLandUse})$"](${south},${west},${north},${east});
+        way["amenity"~"^(school|university|college|hospital|place_of_worship)$"](${south},${west},${north},${east});
+      );
+      out body;
+      >;
+      out skel qt;`;
+    try {
+      const { json, endpoint } = await fetchOverpass(query);
+      const features = overpassToPolygonFeatures(json.elements, (tags) => {
+        const lu = tags.landuse;
+        if (lu && LAND_USE_PALETTE[lu]) {
+          return {
+            kind: LAND_USE_PALETTE[lu].kind,
+            zoneClass: lu,
+            color: LAND_USE_PALETTE[lu].color,
+            extra: {},
+          };
+        }
+        const a = tags.amenity;
+        if (a === "school" || a === "university" || a === "college") {
+          return { kind: LAND_USE_PALETTE.education.kind, zoneClass: "education", color: LAND_USE_PALETTE.education.color, extra: { amenity: a } };
+        }
+        if (a === "hospital") {
+          return { kind: "Hospital", zoneClass: "hospital", color: "#ef4444", extra: { amenity: a } };
+        }
+        if (a === "place_of_worship") {
+          return { kind: LAND_USE_PALETTE.religious.kind, zoneClass: "religious", color: LAND_USE_PALETTE.religious.color, extra: { amenity: a } };
+        }
+        return null;
+      });
+      const zoneCounts = {};
+      for (const f of features) zoneCounts[f.properties.zoneClass] = (zoneCounts[f.properties.zoneClass] || 0) + 1;
+      osmStatus.landuse = {
+        state: "live",
+        lastSuccess: nowIso(),
+        featureCount: features.length,
+        endpoint,
+        zoneCounts,
+        error: null,
+      };
+      return {
+        type: "FeatureCollection",
+        meta: {
+          source: "OpenStreetMap landuse via Overpass",
+          authoritativeSource: "PLANMalaysia I-Plan (https://iplan.planmalaysia.gov.my/public/geoportal)",
+          note: "Live data path uses OSM landuse tags as a proxy for zoning. Operators should consult I-Plan for authoritative zoning decisions.",
+          endpoint,
+          featureCount: features.length,
+          fetchedAt: nowIso(),
+          bbox: OVERPASS_BBOX,
+          zoneCounts,
+          palette: LAND_USE_PALETTE,
+        },
+        features,
+      };
+    } catch (error) {
+      osmStatus.landuse = {
+        state: "offline",
+        lastSuccess: osmStatus.landuse?.lastSuccess || null,
+        featureCount: 0,
+        endpoint: null,
+        error: error.message,
+      };
+      return {
+        type: "FeatureCollection",
+        meta: { source: "OpenStreetMap landuse via Overpass", error: error.message, fetchedAt: nowIso(), bbox: OVERPASS_BBOX },
+        features: [],
+      };
+    }
+  });
+}
+
+// Synthesised flood-risk polygons: circular buffers around hydro stations
+// scaled by current band. This is NOT a hydraulic model — it's a visual
+// proxy that links the hydrology slice to a map polygon. Replace with a
+// real GCAP flood-extent layer if/when one becomes available.
+function buildFloodRiskFromHydro(infobanjir) {
+  if (!infobanjir?.stations) return { type: "FeatureCollection", features: [] };
+  const bandRadiusKm = { danger: 3.0, warning: 2.2, alert: 1.6, normal: 0.9, reference: 0.7 };
+  const bandColor = { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" };
+  const features = [];
+  for (const s of infobanjir.stations) {
+    if (s.lat == null || s.lon == null) continue;
+    const r = bandRadiusKm[s.band] || 0.7;
+    // Circle approximation: 32 vertices.
+    const ring = [];
+    const latRad = (Math.PI / 180) * s.lat;
+    const dLat = r / 110.574;
+    const dLon = r / (111.320 * Math.cos(latRad));
+    for (let i = 0; i <= 32; i++) {
+      const angle = (i / 32) * 2 * Math.PI;
+      ring.push([s.lon + dLon * Math.cos(angle), s.lat + dLat * Math.sin(angle)]);
+    }
+    features.push({
+      type: "Feature",
+      id: `flood-${s.id}`,
+      properties: {
+        id: `flood-${s.id}`,
+        name: `${s.name} buffer`,
+        kind: `Flood buffer · ${s.bandLabel}`,
+        zoneClass: `flood-${s.band}`,
+        color: bandColor[s.band] || "#8aa2c8",
+        opacity: s.band === "normal" || s.band === "reference" ? 0.18 : 0.42,
+        radiusKm: r,
+        stationId: s.id,
+        band: s.band,
+      },
+      geometry: { type: "Polygon", coordinates: [ring] },
+    });
+  }
+  return {
+    type: "FeatureCollection",
+    meta: {
+      source: "Derived from JPS Infobanjir hydro stations + band-scaled buffers",
+      note: "Visual proxy only — radius scales with current alert band. Replace with GCAP flood extent or Sentinel-1 radar derivation when available.",
+      fetchedAt: nowIso(),
+      featureCount: features.length,
+    },
+    features,
+  };
+}
+
+function getOsmStatusSnapshot() {
+  return {
+    updatedAt: nowIso(),
+    drainage: osmStatus.drainage,
+    transit: osmStatus.transit,
+    overallStatus:
+      osmStatus.drainage.state === "live" || osmStatus.transit.state === "live"
+        ? "live"
+        : osmStatus.drainage.state === "cold" && osmStatus.transit.state === "cold"
+          ? "on-demand"
+          : "offline",
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Catchment routing — snap each hydro station to the nearest waterway
+// segment, then BFS-walk the connected drainage graph to a bounded depth.
+// Compounds the Infobanjir slice with the OSM drainage slice.
+// ---------------------------------------------------------------------------
+
+function buildDrainageGraph(features) {
+  // Index endpoints by quantised coordinate so two segments meeting at a
+  // node share an adjacency entry. Quantum ~11m at the equator (1e-4 deg).
+  const Q = 1e4;
+  const quant = (lon, lat) => `${Math.round(lon * Q)}|${Math.round(lat * Q)}`;
+  const segments = new Map();
+  const endpointIndex = new Map();
+
+  for (const f of features) {
+    if (!f || f.geometry?.type !== "LineString") continue;
+    const coords = f.geometry.coordinates;
+    if (!Array.isArray(coords) || coords.length < 2) continue;
+    const id = f.id ?? f.properties?.id;
+    if (id == null) continue;
+    let lengthKm = 0;
+    for (let i = 1; i < coords.length; i++) {
+      lengthKm += kmBetween(coords[i - 1][1], coords[i - 1][0], coords[i][1], coords[i][0]);
+    }
+    const k1 = quant(coords[0][0], coords[0][1]);
+    const k2 = quant(coords[coords.length - 1][0], coords[coords.length - 1][1]);
+    segments.set(id, {
+      id,
+      coords,
+      kind: f.properties?.kind || null,
+      rank: f.properties?.rank || 0,
+      lengthKm,
+      endpoints: [k1, k2],
+    });
+    if (!endpointIndex.has(k1)) endpointIndex.set(k1, new Set());
+    if (!endpointIndex.has(k2)) endpointIndex.set(k2, new Set());
+    endpointIndex.get(k1).add(id);
+    endpointIndex.get(k2).add(id);
+  }
+
+  const adjacency = new Map();
+  for (const [id, seg] of segments) {
+    const neighbours = new Set();
+    for (const k of seg.endpoints) {
+      const ids = endpointIndex.get(k);
+      if (!ids) continue;
+      for (const other of ids) if (other !== id) neighbours.add(other);
+    }
+    adjacency.set(id, neighbours);
+  }
+  return { segments, adjacency };
+}
+
+function snapStationToSegment(station, segments, maxKm = 2.0) {
+  let bestId = null;
+  let bestKm = Infinity;
+  for (const [id, seg] of segments) {
+    for (const [lon, lat] of seg.coords) {
+      const km = kmBetween(station.lat, station.lon, lat, lon);
+      if (km < bestKm) {
+        bestKm = km;
+        bestId = id;
+      }
+    }
+  }
+  if (bestId == null || bestKm > maxKm) return null;
+  return { segmentId: bestId, distanceKm: round(bestKm, 3) };
+}
+
+function walkConnectedSegments(startId, adjacency, segments, { maxDepth = 6, maxSegments = 80 } = {}) {
+  const visited = new Set([startId]);
+  const queue = [{ id: startId, depth: 0 }];
+  while (queue.length > 0 && visited.size < maxSegments) {
+    const { id, depth } = queue.shift();
+    if (depth >= maxDepth) continue;
+    const neighbours = adjacency.get(id);
+    if (!neighbours) continue;
+    for (const next of neighbours) {
+      if (visited.has(next)) continue;
+      visited.add(next);
+      queue.push({ id: next, depth: depth + 1 });
+      if (visited.size >= maxSegments) break;
+    }
+  }
+  let totalLengthKm = 0;
+  const kindCounts = {};
+  for (const id of visited) {
+    const seg = segments.get(id);
+    if (!seg) continue;
+    totalLengthKm += seg.lengthKm;
+    kindCounts[seg.kind || "unknown"] = (kindCounts[seg.kind || "unknown"] || 0) + 1;
+  }
+  return {
+    segmentIds: Array.from(visited),
+    segmentCount: visited.size,
+    totalLengthKm: round(totalLengthKm, 2),
+    kindCounts,
+  };
+}
+
+function enrichInfobanjirWithCatchment(infobanjir) {
+  // Only run if drainage is hot in cache; never force a fetch from the
+  // dashboard hot path. If drainage is cold, the next refresh after the
+  // operator toggles the layer will hydrate catchments.
+  const cacheRecord = cache.get("osm-drainage");
+  if (!cacheRecord || cacheRecord.expiresAt <= Date.now()) {
+    return { ...infobanjir, catchmentStatus: "cold", catchmentNote: "Toggle the Drainage layer once to hydrate station catchments." };
+  }
+  const drainage = cacheRecord.value;
+  if (!drainage?.features?.length) {
+    return { ...infobanjir, catchmentStatus: "empty", catchmentNote: "Drainage layer empty; no catchment routing available." };
+  }
+  const { segments, adjacency } = buildDrainageGraph(drainage.features);
+  const enrichedStations = infobanjir.stations.map((station) => {
+    const snap = snapStationToSegment(station, segments);
+    if (!snap) {
+      return { ...station, catchment: { status: "unsnapped", note: "No waterway within 2 km tolerance." } };
+    }
+    const walk = walkConnectedSegments(snap.segmentId, adjacency, segments);
+    return {
+      ...station,
+      catchment: {
+        status: "snapped",
+        snappedSegmentId: snap.segmentId,
+        snapDistanceKm: snap.distanceKm,
+        ...walk,
+      },
+    };
+  });
+  const snappedCount = enrichedStations.filter((s) => s.catchment?.status === "snapped").length;
+  return {
+    ...infobanjir,
+    stations: enrichedStations,
+    catchmentStatus: snappedCount > 0 ? "live" : "unsnapped",
+    catchmentNote: `${snappedCount}/${enrichedStations.length} stations snapped to drainage graph (${segments.size} segments).`,
+  };
+}
+
 async function loadUrbanInfrastructure() {
   return cached("urban-infra", 24 * 60 * 60 * 1000, async () => {
     // OSN Overpass query for Kuching urban features
@@ -2075,7 +2603,7 @@ async function buildDashboard() {
   const [
     weather, air, airport, jurisdictions, news, fires, quakes,
     padawanZoning, trends, sarawakStats, openDosmStats, officialWarnings, urbanInfra,
-    infobanjir, apims, ckanHarvest,
+    infobanjirRaw, apims, ckanHarvest,
   ] = await Promise.all([
     loadWeather(),
     loadAirQuality(),
@@ -2094,6 +2622,10 @@ async function buildDashboard() {
     loadApimsAqi(),
     loadSarawakCkanHarvest(),
   ]);
+
+  // Catchment enrichment compounds Infobanjir + OSM drainage. Pure post-process,
+  // no extra fetches — only runs if drainage cache is hot.
+  const infobanjir = enrichInfobanjirWithCatchment(infobanjirRaw);
 
   const generatedAt = nowIso();
   const satellites = buildSatelliteCards();
@@ -2124,6 +2656,7 @@ async function buildDashboard() {
     infobanjir,
     apims,
     ckanHarvest,
+    osm: getOsmStatusSnapshot(),
     operations: buildOperations(weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, officialWarnings, sarawakStats, openDosmStats, infobanjir, apims),
     sources: [
       sourceRecord(
@@ -2292,6 +2825,30 @@ async function buildDashboard() {
         ckanHarvest.portalUrl,
         ckanHarvest.updatedAt || generatedAt,
       ),
+      sourceRecord(
+        "osm-overpass",
+        "OpenStreetMap Overpass — drainage, roads, landuse",
+        getOsmStatusSnapshot().overallStatus,
+        `Drainage: ${osmStatus.drainage.state} (${osmStatus.drainage.featureCount}). Roads: ${osmStatus.transit.state} (${osmStatus.transit.featureCount}). Landuse: ${osmStatus.landuse.state} (${osmStatus.landuse.featureCount}). On-demand via /api/layers/{drainage|transit|land_use}.`,
+        "https://overpass-api.de",
+        osmStatus.drainage.lastSuccess || osmStatus.transit.lastSuccess || osmStatus.landuse.lastSuccess || generatedAt,
+      ),
+      sourceRecord(
+        "planmalaysia-iplan",
+        "PLANMalaysia I-Plan (authoritative zoning)",
+        "reference",
+        "Authoritative federal/state zoning portal. Live data path uses OSM landuse as a proxy; consult I-Plan for binding zoning decisions.",
+        "https://iplan.planmalaysia.gov.my/public/geoportal",
+        generatedAt,
+      ),
+      sourceRecord(
+        "infobanjir-catchment",
+        "Catchment routing (Infobanjir × OSM drainage)",
+        infobanjir.catchmentStatus || "cold",
+        infobanjir.catchmentNote || "Toggle the Drainage layer once to enable per-station catchment routing.",
+        "https://overpass-api.de",
+        generatedAt,
+      ),
     ],
   };
 }
@@ -2320,6 +2877,49 @@ async function serveStatic(requestPath, response) {
   }
 }
 
+async function loadMockAuthorityLayer(layerId) {
+  const isFlood = layerId === "flood_risk";
+  // Create some representative polygons for Kuching/Padawan areas
+  // Batu Kawa, Penrissen, Petra Jaya
+  const centers = [
+    { name: "Batu Kawa Sector", lat: 1.50, lon: 110.31, radius: 0.015, color: isFlood ? "#ff4444" : "#ffcc00", type: isFlood ? "High Risk" : "Commercial/Mixed" },
+    { name: "Penrissen Growth Ring", lat: 1.45, lon: 110.33, radius: 0.02, color: isFlood ? "#ff8800" : "#44ff44", type: isFlood ? "Moderate Risk" : "Residential" },
+    { name: "Petra Jaya North", lat: 1.58, lon: 110.35, radius: 0.025, color: isFlood ? "#ffaa00" : "#aa44ff", type: isFlood ? "Alert Zone" : "Institutional" },
+  ];
+
+  const features = centers.map((c, i) => {
+    // Generate a simple octagon as a polygon
+    const coords = [];
+    for (let a = 0; a < 8; a++) {
+      const angle = (a / 8) * Math.PI * 2;
+      coords.push([c.lon + Math.cos(angle) * c.radius, c.lat + Math.sin(angle) * c.radius]);
+    }
+    coords.push(coords[0]); // Close ring
+
+    return {
+      type: "Feature",
+      id: `mock-${layerId}-${i}`,
+      properties: {
+        name: c.name,
+        kind: c.type,
+        color: c.color,
+        opacity: isFlood ? 0.4 : 0.3,
+      },
+      geometry: { type: "Polygon", coordinates: [coords] },
+    };
+  });
+
+  return {
+    type: "FeatureCollection",
+    meta: { 
+      source: "Mock Authoritative // GCAP / PlanMalaysia Strategy", 
+      note: "This data is for demonstration of GIS capabilities in the current dash slice.",
+      fetchedAt: nowIso(),
+    },
+    features,
+  };
+}
+
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
 
@@ -2344,6 +2944,47 @@ const server = http.createServer(async (request, response) => {
           message: error instanceof Error ? error.message : "Unknown error",
         }),
       );
+    }
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/layers/")) {
+    const layerId = url.pathname.slice("/api/layers/".length).replace(/\/+$/, "");
+    try {
+      let collection;
+      if (layerId === "drainage") {
+        collection = await loadOsmDrainage();
+      } else if (layerId === "transit") {
+        collection = await loadOsmRoads();
+      } else if (layerId === "land_use") {
+        const live = await loadOsmLandUse();
+        if (live?.features?.length) {
+          collection = live;
+        } else {
+          const mock = await loadMockAuthorityLayer(layerId);
+          collection = { ...mock, meta: { ...(mock.meta || {}), fallback: "OSM landuse empty/offline; serving mock authority polygons.", upstreamError: live?.meta?.error || null } };
+        }
+      } else if (layerId === "flood_risk") {
+        const ib = await loadInfobanjir();
+        const derived = buildFloodRiskFromHydro(ib);
+        if (derived?.features?.length) {
+          collection = derived;
+        } else {
+          collection = await loadMockAuthorityLayer(layerId);
+        }
+      } else {
+        response.writeHead(404, { "content-type": "application/json; charset=utf-8" });
+        response.end(JSON.stringify({ message: `Unknown layer: ${layerId}` }));
+        return;
+      }
+      response.writeHead(200, {
+        "content-type": "application/geo+json; charset=utf-8",
+        "cache-control": "public, max-age=3600",
+      });
+      response.end(JSON.stringify(collection));
+    } catch (error) {
+      response.writeHead(500, { "content-type": "application/json; charset=utf-8" });
+      response.end(JSON.stringify({ message: error instanceof Error ? error.message : "Layer fetch failed" }));
     }
     return;
   }

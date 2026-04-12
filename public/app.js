@@ -118,6 +118,151 @@ function sourceStatusBucket(status) {
   return "degraded";
 }
 
+function getSatelliteNarrative(sat) {
+  if (!sat) {
+    return {
+      context: "No orbital evidence selected.",
+      technique: "Evidence pending",
+      prompt: "Select an orbital frame to anchor the scene read.",
+      disclaimer: "Visual evidence is unavailable right now.",
+    };
+  }
+
+  const notes = {
+    "true-color": {
+      context: "Best visible-light pass for cloud edge, haze smear, and river contrast over the urban core.",
+      technique: "True color",
+      prompt: "Use this to judge whether the sky looks genuinely dirty or the dashboard is just warning early.",
+    },
+    "terra-true-color": {
+      context: "Second visible-light pass for checking whether haze or cloud structure is persisting across the wider basin.",
+      technique: "True color",
+      prompt: "Use this when crews report different conditions between north bank, airport corridor, and Padawan.",
+    },
+    terra: {
+      context: "Second visible-light pass for checking whether haze or cloud structure is persisting across the wider basin.",
+      technique: "True color",
+      prompt: "Use this when crews report different conditions between north bank, airport corridor, and Padawan.",
+    },
+    precipitation: {
+      context: "Rainfall intensity field. It does not show water on the road, but it does show where nuisance can escalate fast.",
+      technique: "Rainfall field",
+      prompt: "Use this to decide where low-lying drains deserve physical eyes before complaints pile up.",
+    },
+    aerosol: {
+      context: "Aerosol depth proxy for smoke and haze load across the metro footprint.",
+      technique: "Aerosol depth",
+      prompt: "Use this to decide whether the AQI is just a number or something people will actually feel in their throat and eyes.",
+    },
+    "night-lights": {
+      context: "Night luminosity pattern for growth, roadside intensity, and where the urban footprint keeps spreading.",
+      technique: "Radiance map",
+      prompt: "Use this for land-use pressure and corridor growth, not immediate incident response.",
+    },
+    vegetation: {
+      context: "Vegetation density pass for canopy health and edge pressure at the city-growth boundary.",
+      technique: "NDVI",
+      prompt: "Use this for green-cover and watershed arguments, not minute-by-minute operations.",
+    },
+  };
+
+  const match = notes[sat.id] || {};
+  return {
+    context: sat.description || match.context || "Orbital evidence for Greater Kuching.",
+    technique: match.technique || "Orbital snapshot",
+    prompt: match.prompt || "Use this as visual evidence, then verify on the ground.",
+    disclaimer: "Orbital photo only. This is not a street camera or CCTV feed.",
+  };
+}
+
+function buildQualitativeLens(payload, activeSatellite) {
+  const weather = payload.climate?.weather || {};
+  const air = payload.climate?.air || {};
+  const airport = payload.airport || {};
+  const news = payload.news || { items: [], operatorItems: [] };
+  const rainMetric = payload.metrics.find((metric) => metric.id === "rain6h");
+  const rain6h = Number(rainMetric?.value ?? 0);
+  const degradedSources = (payload.sources || []).filter((source) => ["fallback", "offline", "reference", "curated"].includes(source.status));
+  const satellite = activeSatellite || payload.satellites?.[0] || null;
+  const satelliteNarrative = getSatelliteNarrative(satellite);
+
+  const observations = [];
+  if (weather.current?.apparentTemperatureC >= 35) {
+    observations.push(`Street feel is punishing and sticky at roughly ${weather.current.apparentTemperatureC}C apparent. Outdoor crews will fatigue before the numbers look dramatic.`);
+  } else if (weather.current?.apparentTemperatureC >= 32) {
+    observations.push(`Surface conditions feel heavy rather than dangerous. People will still slow down, especially in open asphalt corridors.`);
+  }
+  if (rain6h >= 8) {
+    observations.push(`A late rain burst can flip low-lying connectors from nuisance to blockage quickly. Batu Kawa and Penrissen deserve attention before the complaints start.`);
+  } else if (rain6h >= 4) {
+    observations.push(`Rain risk is present but still tactical. Expect ponding and messy movement rather than citywide disruption.`);
+  }
+  if (air.current?.aqi >= 85 || air.current?.pm25 >= 30) {
+    observations.push(`Air quality is in the zone where sensitive people will notice throat and eye irritation, even if the city keeps moving.`);
+  } else if (air.current?.aqi >= 70) {
+    observations.push(`Visibility and comfort are beginning to degrade. Most people will cope, but sensitive groups will feel it.`);
+  }
+  if (airport.status !== "live") {
+    observations.push("The airport strip is advisory only right now. Good for corridor awareness, not for precise sequencing or promises.");
+  } else if ((airport.movements?.arrivals || 0) >= 4) {
+    observations.push(`Inbound pulse is real: ${airport.movements.arrivals} arrivals are inside the current airspace envelope.`);
+  }
+  if (observations.length < 3 && satelliteNarrative.prompt) {
+    observations.push(satelliteNarrative.prompt);
+  }
+
+  const checks = [];
+  if (rain6h >= 6) {
+    checks.push("Put physical eyes on low points before the heaviest rain window, especially Batu Kawa, Penrissen, and feeder drains.");
+  } else {
+    checks.push("Keep one mobile crew free for a fast drainage check if rain cells thicken over the southern growth corridor.");
+  }
+  if (air.current?.aqi >= 70 || satellite?.id === "aerosol") {
+    checks.push("Use a real horizon check from the waterfront or airport corridor to confirm whether haze is operationally visible, not just numerically elevated.");
+  } else {
+    checks.push("Cross-check comfort and visibility with one field call before escalating environmental messaging.");
+  }
+  if (airport.status !== "live") {
+    checks.push("If airport timing matters, switch to the live board or a tower-side source before making traffic commitments.");
+  } else if (payload.delivery?.mode !== "live-api") {
+    checks.push("This board is not the authoritative live surface. Use the live board before making time-sensitive calls.");
+  } else {
+    checks.push("At shift handover, compare the action cards with what crews are actually seeing. People drift; the board should not.");
+  }
+
+  const sourceItems = (news.operatorItems?.length ? news.operatorItems : news.items).slice(0, 3);
+  const sourceCards = sourceItems.map((item) => ({
+    ...item,
+    badge: item.isOfficial ? "OFFICIAL" : item.languageBadge || item.languageLabel || "PRESS",
+    note: item.isOfficial
+      ? "Formal notice or direct operator-facing update."
+      : `${item.languageLabel || "Local"} press lane used as human context, not command authority.`,
+  }));
+
+  const evidenceBits = [];
+  if (satellite?.title) evidenceBits.push(`Visual anchor: ${satellite.title}`);
+  if (degradedSources.length > 0) evidenceBits.push(`${degradedSources.length} feed gap${degradedSources.length > 1 ? "s" : ""} in the stack`);
+  const modeLine = payload.delivery?.mode === "live-api"
+    ? "Same-origin live API"
+    : payload.delivery?.modeLabel || "Snapshot delivery";
+
+  const lead = [
+    rain6h >= 6 ? "The city feels one storm cell away from small-but-fast disruption." : "Conditions are readable, but they still need human verification.",
+    airport.status !== "live" ? "Airspace movement is advisory, not authoritative." : "Airspace telemetry is live on this surface.",
+    payload.delivery?.mode !== "live-api" ? "Treat this as a snapshot board, not a control surface." : "This board is suitable for live situational monitoring.",
+  ].join(" ");
+
+  return {
+    lead,
+    evidenceLine: evidenceBits.join(" · ") || "Visual anchor and qualitative reporting active.",
+    modeLine,
+    caveat: "No street-photo feed is configured yet. This scene read uses orbital imagery plus multilingual reporting as a qualitative proxy.",
+    observations: observations.slice(0, 3),
+    checks: checks.slice(0, 3),
+    sources: sourceCards,
+  };
+}
+
 function buildBoardBrief(payload) {
   const operations = payload.operations || [];
   const rainMetric = payload.metrics.find((metric) => metric.id === "rain6h");
@@ -914,6 +1059,42 @@ function renderBriefStrip(payload) {
   blindEl.innerHTML = renderItems(brief.blind);
 }
 
+function renderQualitativeLens(payload, activeSatellite) {
+  const hero = $("qualHero");
+  const observationsEl = $("qualObservations");
+  const checksEl = $("qualChecks");
+  const sourcesEl = $("qualSources");
+  if (!hero || !observationsEl || !checksEl || !sourcesEl) return;
+
+  const lens = buildQualitativeLens(payload, activeSatellite);
+  const renderList = (items) => items.map((item, index) => `
+    <div class="qualitative-item">
+      <span class="qualitative-index">0${index + 1}</span>
+      <span>${item}</span>
+    </div>`).join("");
+
+  hero.innerHTML = `
+    <div class="qual-hero-kicker">Scene Brief</div>
+    <strong>${lens.lead}</strong>
+    <div class="qual-hero-line">${lens.modeLine}</div>
+    <div class="qual-hero-line">${lens.evidenceLine}</div>
+    <div class="qual-hero-note">${lens.caveat}</div>`;
+  observationsEl.innerHTML = renderList(lens.observations);
+  checksEl.innerHTML = renderList(lens.checks);
+  sourcesEl.innerHTML = lens.sources.length
+    ? lens.sources.map((item) => `
+      <a class="qualitative-source-item" href="${item.link}" target="_blank" rel="noopener">
+        <div class="qualitative-source-head">
+          <span class="qualitative-source-badge">${item.badge}</span>
+          <span>${formatShortStamp(item.publishedAt)}</span>
+        </div>
+        <strong>${item.source}</strong>
+        <span class="qualitative-source-title">${item.title}</span>
+        <span class="qualitative-source-note">${item.note}</span>
+      </a>`).join("")
+    : `<div class="qualitative-source-empty">No linked qualitative sources in the current payload. The scene read is running on telemetry and orbital evidence only.</div>`;
+}
+
 function renderAirportStats(airport) {
   const el = $("airportStats");
   if (!el) return;
@@ -1005,25 +1186,29 @@ function renderNewsIntake(news) {
 function renderSatelliteDeck(satellites) {
   const grid = $("satelliteGrid");
   const meta = $("satelliteMeta");
-  if (!grid || !meta || !satellites?.length) return;
+  const stage = $("satelliteStage");
+  if (!grid || !meta || !stage || !satellites?.length) return;
 
   const setActive = (index) => {
     const activeIndex = Math.max(0, Math.min(index, satellites.length - 1));
     state.activeSatelliteIndex = activeIndex;
     const sat = satellites[activeIndex];
+    const narrative = getSatelliteNarrative(sat);
 
-    // Custom descriptions for Greater Kuching context
-    let contextDesc = "Orbital telemetry for urban planning.";
-    if (sat.id === "true-color") contextDesc = "Surface optic // Real-time cloud and haze verification for Padawan.";
-    if (sat.id === "precipitation") contextDesc = "IMERG Rainfall Density // Critical for flood pre-emption in Batu Kawa.";
-    if (sat.id === "aerosol") contextDesc = "Aerosol Depth // Transboundary haze monitoring for Greater Kuching.";
-    if (sat.id === "night-lights") contextDesc = "Urban Luminosity // Tracking sprawl into Padawan and Bau sectors.";
-    if (sat.id === "vegetation") contextDesc = "NDVI Greyscale // Green City Action Plan (GCAP) canopy audit.";
+    stage.innerHTML = `
+      <div class="satellite-stage-media">
+        <img src="${sat.imageUrl}" alt="${sat.title}" />
+        <div class="satellite-stage-overlay">
+          <span class="satellite-stage-tag">Orbital photo</span>
+          <span class="satellite-stage-tag">${narrative.technique}</span>
+        </div>
+      </div>
+      <div class="satellite-stage-note">${narrative.disclaimer}</div>`;
 
     meta.innerHTML = `
       <div class="satellite-copy">
         <strong>${sat.title}</strong>
-        <span>${contextDesc}</span>
+        <span>${narrative.context}</span>
       </div>
       <div class="satellite-stamp">
         <strong>${sat.source || "Satellite feed"}</strong>
@@ -1031,6 +1216,7 @@ function renderSatelliteDeck(satellites) {
         <a class="satellite-open" href="${sat.imageUrl}" target="_blank" rel="noopener">OPEN FULL ◹</a>
       </div>`;
     grid.querySelectorAll(".satellite-card").forEach((node, idx) => node.classList.toggle("active", idx === activeIndex));
+    if (state.payload) renderQualitativeLens(state.payload, sat);
   };
 
   grid.innerHTML = satellites.map((sat, index) => `
@@ -1115,11 +1301,12 @@ function renderDashboard(payload) {
   renderNewsIntake(payload.news);
   renderOfficialPulse(payload);
 
-  // Directives
+  // Directives — with human context when available
   $("operationList").innerHTML = payload.operations.map(o=>`
     <article class="operation-card" data-severity="${o.severity}">
       <div class="kicker">${o.owner}</div><strong>${o.title}</strong>
       <div class="operation-detail">${o.detail}</div>
+      ${o.humanContext ? `<div class="directive-context">${o.humanContext}</div>` : ""}
     </article>`).join("");
 
   // Ticker

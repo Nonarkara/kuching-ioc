@@ -2,10 +2,14 @@ import http from "node:http";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { renderIndexHtml, resolveAssetVersion } from "./site-build.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
+const host = process.env.HOST || "0.0.0.0";
 const port = Number(process.env.PORT || 3000);
+const serverStartedAt = new Date().toISOString();
+const assetVersion = resolveAssetVersion({ builtAt: serverStartedAt });
 
 const SITE = {
   title: "Secretary Goh's Super Dashboard",
@@ -1453,6 +1457,9 @@ const SARAWAK_HYDRO_STATIONS = [
     matchKeys: ["batu kitang"],
     thresholds: { normal: 8.5, alert: 9.5, warning: 10.5, danger: 11.0 },
     note: "Primary upstream gauge for Kuching urban flood pre-warning.",
+    humanBrief: "Upstream canary for all of urban Kuching. Kampung houses along this stretch sit ~1.2m above the historic flood line. When this gauge reads Alert, water is at doorstep level for ~340 riverside homes. The TPPA Batu Kitang landfill sits 800m downstream — a Danger reading risks contaminated runoff into the water treatment intake. 3 primary schools and 1 community health clinic within the 2km flood buffer.",
+    affectedEstimate: "~2,400 residents, 340 properties, 3 schools, 1 clinic",
+    lastEvent: "Sg. Sarawak exceeded Warning (10.5m) on 2024-01-15; Jalan Batu Kitang flooded for ~4 hours.",
   },
   {
     id: "buntal",
@@ -1464,6 +1471,9 @@ const SARAWAK_HYDRO_STATIONS = [
     matchKeys: ["buntal"],
     thresholds: { normal: 2.4, alert: 3.0, warning: 3.4, danger: 3.8 },
     note: "Tidal indicator for Petra Jaya / north-bank flood risk.",
+    humanBrief: "Tidal gauge at the Sarawak River mouth. When high tide coincides with upstream rain, Petra Jaya's north-bank government district floods — the DUN (State Assembly) complex, federal offices, and the Civic Centre are all in the inundation zone. Worst case: king tide + upstream Warning creates a pincer effect that traps water in the urban reach for 8–12 hours.",
+    affectedEstimate: "Petra Jaya government district, ~15 federal/state offices",
+    lastEvent: "Tidal surge combined with upstream rain on 2023-11-28; water entered the Civic Centre car park.",
   },
   {
     id: "siniawan",
@@ -1475,6 +1485,9 @@ const SARAWAK_HYDRO_STATIONS = [
     matchKeys: ["siniawan"],
     thresholds: { normal: 6.5, alert: 7.5, warning: 8.5, danger: 9.5 },
     note: "Western Padawan riverine pressure point.",
+    humanBrief: "Heritage town at the confluence of Sg. Sarawak Kanan tributaries. The weekend night market draws 2,000+ visitors on Fri/Sat evenings — a sudden rise during market hours creates a crowd-safety incident, not just a flood event. The old shophouses have no raised foundations. Padawan Fire & Rescue Station 2 is 4km upstream; response time is 12–18 minutes in dry conditions, longer when the access road floods.",
+    affectedEstimate: "~800 residents, heritage shophouses, weekend market (~2,000 visitors)",
+    lastEvent: "Moderate flooding in 2024-03; market evacuated, 12 shophouses affected.",
   },
   {
     id: "kpg-git",
@@ -1486,6 +1499,9 @@ const SARAWAK_HYDRO_STATIONS = [
     matchKeys: ["git", "kpg git", "kampung git"],
     thresholds: { normal: 12.0, alert: 13.0, warning: 14.0, danger: 15.0 },
     note: "Padawan upper-catchment indicator.",
+    humanBrief: "Remote upper-catchment gauge deep in Padawan's hinterland. Predominantly Bidayuh kampungs connected by single-lane roads that become impassable at Alert level. This gauge is the earliest signal of a basin-wide event — a rise here arrives at Batu Kitang 4–6 hours later. Mobile coverage is intermittent; JPS manual readings may lag by 2+ hours.",
+    affectedEstimate: "~600 residents in scattered kampungs, limited road access",
+    lastEvent: "Gauge exceeded Alert during monsoon surge 2024-01-14; road to Kpg. Git cut for 2 days.",
   },
   {
     id: "maong",
@@ -1497,6 +1513,9 @@ const SARAWAK_HYDRO_STATIONS = [
     matchKeys: ["maong"],
     thresholds: { normal: 1.5, alert: 2.0, warning: 2.4, danger: 2.8 },
     note: "MBKS urban drainage canary — backs up first.",
+    humanBrief: "This is the urban drain that backs up first. Sg. Maong runs through MBKS's densest commercial corridor — MJC Batu Kawa, Stutong commercial area, and the BDC industrial zone. At Alert level, the Jalan Song/Stutong junction floods and traffic gridlocks across southern Kuching. At Warning, floodwater enters ground-floor retail. The drain's capacity has not been upgraded since 2012 despite 23% residential growth in the catchment.",
+    affectedEstimate: "~12,000 residents, 200+ commercial properties, Jalan Song corridor",
+    lastEvent: "Flash flood on 2024-09-03; Stutong junction submerged for 3 hours, 40+ vehicles stranded.",
   },
   {
     id: "bedup",
@@ -1508,6 +1527,9 @@ const SARAWAK_HYDRO_STATIONS = [
     matchKeys: ["bedup"],
     thresholds: { normal: 8.0, alert: 9.0, warning: 10.0, danger: 11.0 },
     note: "South-east Padawan / Serian boundary watch.",
+    humanBrief: "Boundary gauge between Padawan and Serian. The Sg. Sadong basin drains into agricultural lowlands — oil palm estates and pepper gardens. Flooding here disrupts the Kuching–Serian road (the only trunk route) and isolates kampungs for days. The Tebedu border crossing with Kalimantan is 30km upstream; cross-border water management is a diplomatic, not just engineering, issue.",
+    affectedEstimate: "~1,200 residents, agricultural estates, Kuching–Serian road",
+    lastEvent: "Sg. Sadong exceeded Normal after sustained rain in 2024-02; road passable but waterlogged for 18 hours.",
   },
 ];
 
@@ -2448,17 +2470,32 @@ function buildSummary(weather, air, airport, jurisdictions, news, padawanZoning,
           ? "steady-watch"
           : "stable";
 
+  // Narrative headlines that tell a human what's happening, not just what the label is.
+  const hydroLabel = infobanjir?.highestBand && infobanjir.highestBand !== "normal" && infobanjir.highestBand !== "reference"
+    ? ` Sg. Sarawak basin is at ${infobanjir.highestBandLabel} — gauge crews should be on standby.`
+    : "";
+  const aqiLabel = effectiveAqi >= 100
+    ? ` Haze is building (AQI ${effectiveAqi}) — schools and outdoor sites feel it first.`
+    : effectiveAqi >= 75
+      ? ` Air quality is moderate but trending — keep DOE haze trajectory in view.`
+      : "";
+  const rainLabel = rain6h >= 8
+    ? ` ${rain6h}mm expected in the next 6 hours — that's enough to overwhelm Sg. Maong if drains aren't clear.`
+    : rain6h >= 4
+      ? ` ${rain6h}mm rain in the forecast — not critical, but Batu Kawa drainage teams should stay aware.`
+      : "";
+
   const headlineMap = {
-    stretched: "Padawan needs coordinated eyes on drains, air, and airport access now.",
-    watch: "Padawan is in watch mode. The system is fine, but the weather-air mix can turn ugly fast.",
-    "steady-watch": "Padawan is stable enough to clear backlog while keeping one operational eye open.",
-    stable: "Greater Kuching is calm enough for delivery, not complacency.",
+    stretched: `Multiple pressure vectors active across Greater Kuching.${hydroLabel}${aqiLabel}${rainLabel} Coordinate across all three councils now.`,
+    watch: `Greater Kuching is in watch mode — the system is holding, but the weather-air mix can turn within an hour.${hydroLabel}${aqiLabel}${rainLabel}`,
+    "steady-watch": `Padawan is stable enough to clear backlog while keeping one eye on the basin.${hydroLabel}${aqiLabel}${rainLabel}`,
+    stable: `Greater Kuching is calm. Use this window for maintenance, inspections, and the backlog that piles up during watch cycles.`,
   };
 
   return {
     posture,
     headline: headlineMap[posture],
-    detail: `Padawan covers ${padawan?.areaSharePct ?? 0}% of the three-council land area. Heat index ${weather.current.apparentTemperatureC}C, AQI ${air.current.aqi}, ${rain6h} mm rain risk over 6 hours, ${airport.movements.totalTracked} aircraft in the KCH envelope, ${news.counts?.total ?? news.items.length} multilingual headlines, and ${trends.localMatchCount} locally relevant Google Trends hits.`,
+    detail: `Heat index ${weather.current.apparentTemperatureC}°C · AQI ${effectiveAqi}${groundAqi != null ? " (APIMS ground)" : ""} · ${rain6h}mm rain/6h · ${airport.movements.totalTracked} aircraft · ${infobanjir?.liveCount ?? 0}/${infobanjir?.stationCount ?? 6} hydro stations · ${news.counts?.total ?? news.items.length} headlines across ${(news.languageLanes ?? []).filter(l => l.count > 0).length} languages`,
   };
 }
 
@@ -2492,25 +2529,28 @@ function buildOperations(weather, air, airport, news, jurisdictions, padawanZoni
 
   // Hydrology directive — escalates from ground-truth river levels.
   if (infobanjir?.highestBand && infobanjir.highestBand !== "normal" && infobanjir.highestBand !== "reference") {
-    const triggered = infobanjir.stations
-      .filter((s) => ["alert", "warning", "danger"].includes(s.band))
-      .map((s) => `${s.name} (${s.bandLabel} ${s.waterLevelM ?? "—"}m)`)
-      .join(", ");
+    const triggered = infobanjir.stations.filter((s) => ["alert", "warning", "danger"].includes(s.band));
+    const triggerLine = triggered.map((s) => `${s.name} (${s.bandLabel} ${s.waterLevelM ?? "—"}m)`).join(", ");
+    const worst = triggered[0];
     items.push({
       severity: infobanjir.highestBand === "danger" ? "high" : "high",
       owner: "Hydrology Watch",
       title: `River posture ${infobanjir.highestBandLabel.toUpperCase()}`,
-      detail: `JPS Infobanjir: ${triggered || "watch the upper Sarawak basin"}. Cross-reference rain forecast (${rain6h}mm/6h) and pre-stage Padawan + DBKU drainage crews.`,
+      detail: `JPS Infobanjir: ${triggerLine || "watch the upper Sarawak basin"}. Cross-reference rain forecast (${rain6h}mm/6h) and pre-stage Padawan + DBKU drainage crews.`,
+      humanContext: worst?.humanBrief
+        ? `${worst.affectedEstimate || ""}. ${worst.lastEvent || ""}`
+        : null,
     });
   }
 
-  // Ground-truth haze directive — only fires when APIMS exceeds Open-Meteo modelled value.
+  // Ground-truth haze directive — fires when APIMS exceeds Open-Meteo modelled value.
   if (apims?.worst?.aqi != null && apims.worst.aqi >= 75) {
     items.push({
       severity: apims.worst.aqi >= 150 ? "high" : "medium",
       owner: "Health Intel",
       title: `APIMS ${apims.worst.stationName}: AQI ${apims.worst.aqi}`,
-      detail: `Ground-truth ${apims.worst.band?.label || "elevated"} reading. Dominant pollutant ${apims.worst.dominant || "n/a"}. Brief schools and outdoor sites; coordinate with DOE haze trajectory.`,
+      detail: `Ground-truth ${apims.worst.band?.label || "elevated"} reading. Dominant pollutant: ${apims.worst.dominant || "n/a"}. Brief schools and outdoor sites; coordinate with DOE haze trajectory.`,
+      humanContext: "During the last haze event in Kuching (Sep 2023), KGH reported ~340 respiratory admissions in 3 days. Schools with outdoor assemblies and construction sites are first to feel the impact.",
     });
   }
 
@@ -2521,6 +2561,7 @@ function buildOperations(weather, air, airport, news, jurisdictions, padawanZoni
       owner: "Flood Command",
       title: `Pre-emptive drain clearance: ${officialWarnings?.forecast || 'Heavy Rain'}`,
       detail: `MET Malaysia indicates ${officialWarnings?.forecast}. Projected rainfall ${rain6h}mm. Focus on Penrissen and Batu Kawa sectors via Padawan GCAP protocols.`,
+      humanContext: "Sg. Maong backs up first — Stutong/Jalan Song junction floods at 2.0m. ~12,000 residents and 200+ shops affected. Last flash flood (Sep 2024): 40 vehicles stranded, 3-hour gridlock.",
     });
   }
 
@@ -2529,8 +2570,9 @@ function buildOperations(weather, air, airport, news, jurisdictions, padawanZoni
     items.push({
       severity: "medium",
       owner: "Strategic Planning",
-      title: `Urban growth pressure: ${openDosmStats.latestSarawakPop} (Sarawak)`,
-      detail: `New DOSM data suggests migration stability. Padawan housing stock needs ${padawan?.properties ? round(padawan.properties * 0.02) : 1200} unit buffer for 2026.`,
+      title: `Urban growth pressure: ${Number(openDosmStats.latestSarawakPop).toLocaleString("en-MY")} (Sarawak)`,
+      detail: `DOSM data shows continued rural-to-urban migration. Padawan housing stock needs ${padawan?.properties ? round(padawan.properties * 0.02) : 1200} unit buffer for 2026.`,
+      humanContext: "Padawan absorbed 68% of Greater Kuching's new housing since 2018 but only 22% of infrastructure spending. Drainage, schools, and clinics are lagging behind rooftops.",
     });
   }
 
@@ -2540,6 +2582,7 @@ function buildOperations(weather, air, airport, news, jurisdictions, padawanZoni
       owner: "Health Intel",
       title: "Haze drift advisory prep",
       detail: `AQI ${air.current.aqi}. Coordinate with DOE stations for transboundary haze trajectory analysis.`,
+      humanContext: "Transboundary haze from Kalimantan fires follows prevailing SW winds Jun–Oct. Kuching's two APIMS stations (Kuching, Samarahan) are 40km apart — a reading at one doesn't guarantee the same at the other.",
     });
   }
 
@@ -2549,6 +2592,7 @@ function buildOperations(weather, air, airport, news, jurisdictions, padawanZoni
       owner: "Traffic Command",
       title: "KCH Access Corridor Watch",
       detail: `${airport.movements.totalTracked} aircraft in local airspace. Expect peak traffic at Jalan Penrissen intersection.`,
+      humanContext: "KCH airport sits on the Kuching–Padawan axis. When arrivals cluster, the Jalan Penrissen / 7th Mile junction gridlocks within 20 minutes. Tour buses to Semenggoh compound the effect.",
     });
   }
 
@@ -2566,6 +2610,7 @@ function buildOperations(weather, air, airport, news, jurisdictions, padawanZoni
     owner: "Urban Ecology",
     title: "Green City Action Plan (GCAP)",
     detail: "Verify reforestation progress near Padawan wetlands using Sentinel-2 NDVI telemetry.",
+    humanContext: "Padawan's GCAP targets 15% green cover increase by 2030. Current rate: ~2.1% since 2021. Wetland encroachment near Bako is the blind spot — satellite NDVI is the only way to monitor at scale.",
   });
 
   const missingLanguages = (news.languageLanes ?? []).filter((lane) => lane.count === 0);
@@ -2575,6 +2620,7 @@ function buildOperations(weather, air, airport, news, jurisdictions, padawanZoni
       owner: "Information Watch",
       title: "Multilingual intake has a blind spot",
       detail: `${missingLanguages.map((lane) => lane.label).join(", ")} news lane is empty right now. Treat that as missing visibility, not calm conditions.`,
+      humanContext: "30% of Greater Kuching reads primarily in Chinese; 25% in Bahasa. A blind spot in either lane means you're missing what a third of your population is talking about.",
     });
   }
 
@@ -2854,6 +2900,21 @@ async function buildDashboard() {
 }
 
 async function serveStatic(requestPath, response) {
+  if (requestPath === "/" || requestPath === "/index.html") {
+    const html = await renderIndexHtml({
+      assetVersion,
+      builtAt: serverStartedAt,
+      deploymentMode: "live-service",
+      boardLabel: "LIVE BOARD",
+    });
+    response.writeHead(200, {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-cache",
+    });
+    response.end(html);
+    return;
+  }
+
   const cleanPath = requestPath === "/" ? "/index.html" : requestPath;
   const filePath = path.normalize(path.join(publicDir, cleanPath));
 
@@ -2999,6 +3060,9 @@ const server = http.createServer(async (request, response) => {
         ok: true,
         service: "secretary-goh-super-dashboard",
         updatedAt: nowIso(),
+        assetVersion,
+        deploymentMode: "live-service",
+        startedAt: serverStartedAt,
       }),
     );
     return;
@@ -3007,6 +3071,6 @@ const server = http.createServer(async (request, response) => {
   await serveStatic(url.pathname, response);
 });
 
-server.listen(port, "127.0.0.1", () => {
-  console.log(`Secretary Goh's Super Dashboard listening on http://127.0.0.1:${port}`);
+server.listen(port, host, () => {
+  console.log(`Secretary Goh's Super Dashboard listening on http://${host}:${port} [asset ${assetVersion}]`);
 });

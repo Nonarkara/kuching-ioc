@@ -1,7 +1,12 @@
 {
-  "builtAt": "2026-04-12T04:26:25.645Z",
-  "buildDurationMs": 25040,
+  "builtAt": "2026-04-12T09:59:25.350Z",
+  "buildDurationMs": 13989,
   "dashboardSizeKb": 59,
+  "assetVersion": "6337cc44a350",
+  "deploymentMode": "pages-static",
+  "boardLabel": "SNAPSHOT BOARD",
+  "pagesUrl": "https://nonarkara.github.io/kuching-ioc/",
+  "liveUrl": "https://nonarkara-kuching-ioc-live.fly.dev/",
   "layers": [
     {
       "id": "drainage",
@@ -11,7 +16,7 @@
     {
       "id": "transit",
       "status": "fulfilled",
-      "features": 2254
+      "features": 2276
     },
     {
       "id": "land_use",

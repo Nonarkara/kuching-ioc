@@ -6,6 +6,8 @@ import {
   sourceRecord, buildSatelliteCards, buildMapLayers, URBAN_LAYERS
 } from "./data.js";
 
+const BOOT = window.__IOC_BOOT__ || {};
+
 // --- State ---
 const state = {
   map: null, boundaryLayerGroup: null, markerLayerGroup: null, labelLayerGroup: null,
@@ -28,6 +30,122 @@ const formatShortStamp = value => new Date(value).toLocaleString("en-MY", {
   minute: "2-digit",
   hour12: false,
 });
+const formatBadgeStamp = value => value ? new Date(value).toLocaleString("en-MY", {
+  month: "short",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+}) : null;
+
+function boardModeFromBoot() {
+  if (BOOT.deploymentMode) return BOOT.deploymentMode;
+  const host = window.location.hostname;
+  if (host.endsWith("github.io")) return "pages-static";
+  return "live-service";
+}
+
+function boardLabelFromBoot() {
+  return BOOT.boardLabel || (boardModeFromBoot() === "pages-static" ? "SNAPSHOT BOARD" : "LIVE BOARD");
+}
+
+function apiUrl(pathname) {
+  const relativePath = pathname.startsWith("./") ? pathname : `.${pathname}`;
+  const basePath = window.location.pathname.endsWith("/")
+    ? window.location.pathname
+    : window.location.pathname.replace(/[^/]+$/, "");
+  return new URL(relativePath, `${window.location.origin}${basePath}`).toString();
+}
+
+function buildModeMeta(mode) {
+  if (mode === "live-api") {
+    return { label: "LIVE API", detail: "Same-origin Node telemetry", tone: "live" };
+  }
+  if (mode === "static-snapshot") {
+    return { label: "STATIC SNAPSHOT", detail: "GitHub Pages baked snapshot", tone: "snapshot" };
+  }
+  return { label: "CLIENT FALLBACK", detail: "Browser fallback telemetry", tone: "fallback" };
+}
+
+function decoratePayload(payload, { mode, manifest = null, error = null } = {}) {
+  const modeMeta = buildModeMeta(mode);
+  return {
+    ...payload,
+    delivery: {
+      mode,
+      modeLabel: modeMeta.label,
+      modeDetail: modeMeta.detail,
+      tone: modeMeta.tone,
+      boardMode: boardModeFromBoot(),
+      boardLabel: boardLabelFromBoot(),
+      boardBuiltAt: BOOT.builtAt || null,
+      pagesUrl: BOOT.pagesUrl || null,
+      liveUrl: BOOT.liveUrl || null,
+      assetVersion: manifest?.assetVersion || BOOT.assetVersion || null,
+      snapshotBuiltAt: manifest?.builtAt || null,
+      error: error ? String(error.message || error) : null,
+    },
+  };
+}
+
+function buildRuntimeDetail(delivery, payload) {
+  const parts = [];
+  const payloadStamp = formatBadgeStamp(payload.generatedAt || payload.timeSignal?.serverNow);
+  if (payloadStamp) parts.push(`<strong>Payload</strong> ${payloadStamp}`);
+
+  if (delivery.mode === "static-snapshot" && delivery.snapshotBuiltAt) {
+    parts.push(`<strong>Snapshot</strong> ${formatBadgeStamp(delivery.snapshotBuiltAt)}`);
+  } else if (delivery.mode === "live-api" && delivery.boardBuiltAt) {
+    parts.push(`<strong>Board</strong> ${formatBadgeStamp(delivery.boardBuiltAt)}`);
+  }
+
+  if (delivery.assetVersion) parts.push(`<strong>Asset</strong> ${delivery.assetVersion}`);
+  if (delivery.error && delivery.mode === "client-fallback") parts.push("<strong>Gap</strong> static snapshot unavailable");
+
+  const alternateUrl = delivery.boardMode === "pages-static" ? delivery.liveUrl : delivery.pagesUrl;
+  const alternateLabel = delivery.boardMode === "pages-static" ? "Live board" : "Snapshot board";
+  if (alternateUrl) {
+    parts.push(`<strong>Switch</strong> <a href="${alternateUrl}" target="_blank" rel="noopener">${alternateLabel}</a>`);
+  }
+
+  return parts.join(" · ");
+}
+
+function sourceStatusBucket(status) {
+  if (status === "live") return "live";
+  if (status === "official") return "official";
+  if (status === "offline") return "offline";
+  return "degraded";
+}
+
+function buildBoardBrief(payload) {
+  const operations = payload.operations || [];
+  const rainMetric = payload.metrics.find((metric) => metric.id === "rain6h");
+  const aqiMetric = payload.metrics.find((metric) => metric.id === "aqi");
+  const airportMetric = payload.metrics.find((metric) => metric.id === "airport");
+  const degradedSources = (payload.sources || []).filter((source) => ["fallback", "offline", "reference", "curated"].includes(source.status));
+
+  const now = operations.slice(0, 3).map((item) => `${item.owner}: ${item.title}`);
+  if (now.length === 0) now.push("No immediate tasking generated");
+
+  const next = [];
+  if (rainMetric) next.push(`Rain watch ${rainMetric.value}${rainMetric.unit} · ${rainMetric.context}`);
+  if (aqiMetric) next.push(`Air ${aqiMetric.value} AQI · ${aqiMetric.context}`);
+  if (payload.airport?.status === "live") {
+    next.push(`Airport ${airportMetric?.value ?? payload.airport.movements?.totalTracked ?? 0} tracked · live airspace`);
+  } else {
+    next.push(`Airport board is ${payload.airport?.status || "reference"} · treat movement counts as advisory`);
+  }
+
+  const blind = [];
+  if (payload.delivery?.mode !== "live-api") {
+    blind.push(`This URL is ${payload.delivery?.modeLabel?.toLowerCase() || "not live"} · use live board for direct API telemetry`);
+  }
+  degradedSources.slice(0, 3).forEach((source) => blind.push(`${source.name}: ${source.status}`));
+  if (blind.length === 0) blind.push("Core feeds are responding normally");
+
+  return { now: now.slice(0, 3), next: next.slice(0, 3), blind: blind.slice(0, 3) };
+}
 
 function queueMapResize() {
   if (!state.map) return;
@@ -42,6 +160,14 @@ async function fetchJson(url, ms = 10000) {
   const t = setTimeout(() => c.abort(), ms);
   try { const r = await fetch(url, { signal: c.signal }); if (!r.ok) throw new Error(`${r.status}`); return await r.json(); }
   finally { clearTimeout(t); }
+}
+
+async function fetchOptionalJson(url, ms = 5000) {
+  try {
+    return await fetchJson(url, ms);
+  } catch {
+    return null;
+  }
 }
 
 // --- i18n ---
@@ -310,33 +436,34 @@ async function buildFallbackDashboard() {
 }
 
 async function loadDashboardPayload() {
-  // Three-tier fetch: live server → pre-baked static JSON → client-only fallback.
-  // Live server: works in local dev with `node server.mjs`.
-  // Static JSON: works on GitHub Pages (written by build.mjs at deploy time).
-  // Client fallback: works anywhere, even fully offline, using data.js constants.
-  async function fetchDashboardJson() {
-    try {
-      return await fetchJson("/api/dashboard", 8000);
-    } catch {
-      // Live server unavailable — try the pre-baked static snapshot.
-      return await fetchJson("./api/dashboard.json", 10000);
-    }
-  }
-
+  const liveDashboardUrl = apiUrl("/api/dashboard");
+  const staticDashboardUrl = apiUrl("/api/dashboard.json");
+  const manifestUrl = apiUrl("/api/build-manifest.json");
   try {
-    const [payload, exchange] = await Promise.all([
-      fetchDashboardJson(),
-      loadExchangeRates(),
-    ]);
-    return {
+    const [payload, exchange] = await Promise.all([fetchJson(liveDashboardUrl, 8000), loadExchangeRates()]);
+    return decoratePayload({
       ...payload,
       exchange,
       sentiment: computeSentiment(payload.news?.items ?? []),
       mapLayers: buildMapLayers(),
-    };
-  } catch (error) {
-    console.warn("IOC API + static snapshot unavailable, using client fallback payload.", error);
-    return buildFallbackDashboard();
+    }, { mode: "live-api" });
+  } catch (liveError) {
+    try {
+      const [payload, manifest, exchange] = await Promise.all([
+        fetchJson(staticDashboardUrl, 10000),
+        fetchOptionalJson(manifestUrl, 5000),
+        loadExchangeRates(),
+      ]);
+      return decoratePayload({
+        ...payload,
+        exchange,
+        sentiment: computeSentiment(payload.news?.items ?? []),
+        mapLayers: buildMapLayers(),
+      }, { mode: "static-snapshot", manifest });
+    } catch (snapshotError) {
+      console.warn("IOC API + static snapshot unavailable, using client fallback payload.", liveError, snapshotError);
+      return decoratePayload(await buildFallbackDashboard(), { mode: "client-fallback", error: snapshotError || liveError });
+    }
   }
 }
 
@@ -661,9 +788,9 @@ function renderUrbanLayerToggle() {
     btn.disabled = true;
     try {
       // Try live API first, then pre-baked static JSON (GitHub Pages).
-      let res = await fetch(layer.url).catch(() => null);
+      let res = await fetch(apiUrl(`/api/layers/${layer.id}`)).catch(() => null);
       if (!res || !res.ok) {
-        const staticUrl = `./api/layers/${layer.id}.json`;
+        const staticUrl = apiUrl(`/api/layers/${layer.id}.json`);
         res = await fetch(staticUrl);
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -753,13 +880,54 @@ function renderExchange(exchange) {
     </div>`).join("");
 }
 
+function renderRuntimeMeta(payload) {
+  const badge = $("dataModeBadge");
+  const board = $("boardRoleBadge");
+  const detail = $("runtimeDetail");
+  const stamp = $("generatedAt");
+  if (!badge || !board || !detail || !stamp) return;
+
+  const delivery = payload.delivery || {};
+  badge.textContent = delivery.modeLabel || "UNKNOWN";
+  badge.dataset.mode = delivery.tone || "boot";
+  board.textContent = delivery.boardLabel || "BOARD";
+  board.dataset.mode = delivery.boardMode || "boot";
+  detail.innerHTML = buildRuntimeDetail(delivery, payload) || "Payload metadata unavailable.";
+  stamp.textContent = payload.generatedAt ? `PAYLOAD // ${formatBadgeStamp(payload.generatedAt)}` : "PAYLOAD // --";
+}
+
+function renderBriefStrip(payload) {
+  const nowEl = $("briefNow");
+  const nextEl = $("briefNext");
+  const blindEl = $("briefBlind");
+  if (!nowEl || !nextEl || !blindEl) return;
+
+  const brief = buildBoardBrief(payload);
+  const renderItems = (items) => items.map((item, index) => `
+    <div class="brief-item">
+      <span class="brief-index">0${index + 1}</span>
+      <span>${item}</span>
+    </div>`).join("");
+
+  nowEl.innerHTML = renderItems(brief.now);
+  nextEl.innerHTML = renderItems(brief.next);
+  blindEl.innerHTML = renderItems(brief.blind);
+}
+
 function renderAirportStats(airport) {
   const el = $("airportStats");
   if (!el) return;
   const fl = airport.liveFlights || [];
   const arrivals = fl.filter(f=>f.type==="arrival");
   const departures = fl.filter(f=>f.type==="departure");
+  const statusMap = {
+    live: { label: "Live airspace // OpenSky", tone: "live" },
+    fallback: { label: "Fallback routes // OpenSky degraded", tone: "fallback" },
+    offline: { label: "Offline // no airspace telemetry", tone: "offline" },
+  };
+  const statusMeta = statusMap[airport.status] || { label: "Reference telemetry", tone: "reference" };
   el.innerHTML = `
+    <div class="airport-feed-status" data-status="${airport.status || "reference"}">${statusMeta.label}</div>
     <div class="airport-summary">
       <div class="airport-stat"><div class="stat-val">${fl.length}</div><div class="stat-label">Tracked</div></div>
       <div class="airport-stat arrival"><div class="stat-val">${arrivals.length}</div><div class="stat-label">Arrivals</div></div>
@@ -771,8 +939,34 @@ function renderAirportStats(airport) {
         <span class="flight-type">${f.type==="arrival"?"IN":"OUT"}</span>
         <span class="flight-dist">${f.distanceKm}km</span>
         ${f.etaMinutes?`<span class="flight-eta">${f.etaMinutes}min</span>`:''}
+        ${airport.status === "fallback" ? `<span class="flight-feed-tag">REF</span>` : ""}
       </div>`).join("")}
     </div>`;
+}
+
+function renderSourceMatrix(payload) {
+  const el = $("sourceMatrix");
+  if (!el) return;
+
+  const sources = payload.sources || [];
+  const counts = { live: 0, official: 0, degraded: 0, offline: 0 };
+  sources.forEach((source) => {
+    counts[sourceStatusBucket(source.status)] += 1;
+  });
+
+  const degraded = sources.filter((source) => ["fallback", "offline", "reference", "curated"].includes(source.status)).slice(0, 4);
+  const degradedMarkup = degraded.length
+    ? degraded.map((source) => `<span class="source-chip" data-status="${source.status}">${source.name} · ${source.status}</span>`).join("")
+    : `<span class="source-chip" data-status="live">No critical feed gaps</span>`;
+
+  el.innerHTML = `
+    <div class="source-matrix-grid">
+      <div class="source-matrix-card" data-tone="live"><strong>${counts.live}</strong><span>Live</span></div>
+      <div class="source-matrix-card" data-tone="official"><strong>${counts.official}</strong><span>Official</span></div>
+      <div class="source-matrix-card" data-tone="degraded"><strong>${counts.degraded}</strong><span>Degraded</span></div>
+      <div class="source-matrix-card" data-tone="offline"><strong>${counts.offline}</strong><span>Offline</span></div>
+    </div>
+    <div class="source-chip-row">${degradedMarkup}</div>`;
 }
 
 function renderNewsIntake(news) {
@@ -862,6 +1056,23 @@ function renderSatelliteDeck(satellites) {
   setActive(state.activeSatelliteIndex ?? 0);
 }
 
+function renderPosture(payload) {
+  const el = $("postureBlock");
+  if (!el) return;
+  const posture = payload.summary?.posture || "stable";
+  const headline = payload.summary?.headline || "Awaiting posture assessment.";
+  const labels = {
+    stable: "STABLE",
+    "steady-watch": "STEADY WATCH",
+    watch: "WATCH",
+    stretched: "STRETCHED",
+  };
+  el.dataset.posture = posture;
+  el.innerHTML = `
+    <div class="posture-title">${labels[posture] || posture.toUpperCase()}</div>
+    <div class="posture-detail">${headline}</div>`;
+}
+
 function renderOfficialPulse(payload) {
   const el = $("officialPulse");
   if (!el || !payload.openDosmStats?.updatedAt) return;
@@ -893,13 +1104,13 @@ function renderDashboard(payload) {
   if (payload.site?.title) $("titleText").textContent = payload.site.title;
   if (payload.site?.subtitle) $("subtitleText").textContent = payload.site.subtitle;
   $("summaryLead").textContent = payload.summary.headline;
-  $("generatedAt").textContent = `T/${new Date(payload.generatedAt).toLocaleTimeString()} // SYNC`;
   $("mapSummary").textContent = payload.summary.detail;
+  renderRuntimeMeta(payload);
+  renderBriefStrip(payload);
 
-  renderClocks(payload.timeSignal.asean);
-  renderMetrics(payload.metrics);
+  renderPosture(payload);
+  renderMetrics(payload.metrics.slice(0, 6));
   renderMap(payload);
-  renderExchange(payload.exchange);
   renderAirportStats(payload.airport);
   renderNewsIntake(payload.news);
   renderOfficialPulse(payload);
@@ -984,6 +1195,7 @@ function renderDashboard(payload) {
   renderSatelliteDeck(payload.satellites);
 
   // Sources
+  renderSourceMatrix(payload);
   $("sourceList").innerHTML = payload.sources.map(s=>`
     <div class="source-item">
       <div class="source-copy">
@@ -1025,6 +1237,7 @@ function setLang(lang) {
   });
   // Re-render focus toggle labels
   if (state.map) renderFocusToggle();
+  if (state.payload) renderRuntimeMeta(state.payload);
   // Highlight active lang button
   document.querySelectorAll(".lang-btn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
 }

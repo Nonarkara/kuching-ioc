@@ -2499,7 +2499,7 @@ function buildSummary(weather, air, airport, jurisdictions, news, padawanZoning,
   };
 }
 
-function buildMetricCards(weather, air, airport, jurisdictions, news, padawanZoning, trends) {
+function buildMetricCards(weather, air, airport, jurisdictions, news, padawanZoning, trends, metWarnings) {
   const rain6h = round(weather.nextHours.reduce((sum, hour) => sum + hour.precipitationMm, 0), 1);
   const padawan = jurisdictions.items.find((item) => item.id === "mpp");
   const totalKnownProperties = jurisdictions.items.reduce((sum, item) => sum + (item.properties ?? 0), 0);
@@ -2518,10 +2518,11 @@ function buildMetricCards(weather, air, airport, jurisdictions, news, padawanZon
     { id: "population", label: "Known population", value: totalKnownPopulation, unit: "", tone: "neutral", context: "Official profiles where disclosed" },
     { id: "headlines", label: "Local headlines", value: news.counts?.total ?? news.items.length, unit: "", tone: (news.counts?.total ?? news.items.length) >= 10 ? "neutral" : "muted", context: "official + EN/BM/ZH lanes" },
     { id: "trends", label: "MY trend matches", value: trends.localMatchCount, unit: "", tone: trends.localMatchCount > 0 ? "focus" : "muted", context: trends.summary },
+    { id: "flood-watch", label: "Flood watch", value: metWarnings?.activeCount ?? 0, unit: "alert", tone: (metWarnings?.activeCount ?? 0) > 0 ? "warn" : "neutral", context: (metWarnings?.activeCount ?? 0) > 0 ? (metWarnings.items[0]?.heading ?? "Active MET warning") : "No active MET warnings" },
   ];
 }
 
-function buildOperations(weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, officialWarnings, sarawakStats, openDosmStats, infobanjir, apims) {
+function buildOperations(weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, officialWarnings, sarawakStats, openDosmStats, infobanjir, apims, metWarnings) {
   const rain6h = round(weather.nextHours.reduce((sum, hour) => sum + hour.precipitationMm, 0), 1);
   const padawan = jurisdictions.items.find((item) => item.id === "mpp");
 
@@ -2540,6 +2541,18 @@ function buildOperations(weather, air, airport, news, jurisdictions, padawanZoni
       humanContext: worst?.humanBrief
         ? `${worst.affectedEstimate || ""}. ${worst.lastEvent || ""}`
         : null,
+    });
+  }
+
+  // MET Malaysia active weather warnings.
+  if (metWarnings?.activeCount > 0) {
+    const w = metWarnings.items[0];
+    items.push({
+      severity: "high",
+      owner: "MET Malaysia",
+      title: w.heading || "Active Weather Warning",
+      detail: `${w.text || "Official MET warning active for Sarawak/Kuching region."} Valid until ${w.validTo ? new Date(w.validTo).toLocaleString("en-MY", { timeZone: "Asia/Kuching", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}.`,
+      humanContext: metWarnings.activeCount > 1 ? `${metWarnings.activeCount} concurrent warnings. ${metWarnings.allActiveCount - metWarnings.activeCount} additional national warnings active.` : null,
     });
   }
 
@@ -2638,6 +2651,120 @@ function buildClimatePanel(weather, air) {
   };
 }
 
+async function loadMetWarnings() {
+  return cached("met-warnings", 15 * 60 * 1000, async () => {
+    try {
+      const data = await fetchJson("https://api.data.gov.my/weather/warning/", 8000);
+      const items = Array.isArray(data) ? data : [];
+      const now = Date.now();
+      const active = items.filter((w) => {
+        const from = Date.parse(w.valid_from);
+        const to = Date.parse(w.valid_to);
+        return now >= from && now <= to;
+      });
+      const sarawak = active.filter((w) =>
+        /(sarawak|kuching|padawan|batu kawa|serian|siburan|kota samarahan|sarikei)/i.test(
+          (w.heading_en || "") + (w.text_en || "") + (w.heading_bm || "") + (w.text_bm || ""),
+        ),
+      );
+      return {
+        status: sarawak.length > 0 ? "live" : "clear",
+        updatedAt: nowIso(),
+        activeCount: sarawak.length,
+        allActiveCount: active.length,
+        items: sarawak.slice(0, 3).map((w) => ({
+          heading: w.heading_en || w.heading_bm || "Weather Warning",
+          text: w.text_en || w.text_bm || "",
+          instruction: w.instruction_en || w.instruction_bm || "",
+          validFrom: w.valid_from,
+          validTo: w.valid_to,
+        })),
+      };
+    } catch {
+      return { status: "fallback", updatedAt: nowIso(), activeCount: 0, allActiveCount: 0, items: [] };
+    }
+  });
+}
+
+async function loadFloodForecast() {
+  return cached("flood-forecast", 6 * 60 * 60 * 1000, async () => {
+    try {
+      const url =
+        "https://flood-api.open-meteo.com/v1/flood?latitude=1.5533&longitude=110.3592&daily=river_discharge&forecast_days=10&models=seamless_v4";
+      const data = await fetchJson(url, 12000);
+      const dates = data.daily?.time ?? [];
+      const discharge = data.daily?.river_discharge ?? [];
+      const valid = discharge.filter(Boolean);
+      return {
+        status: "live",
+        updatedAt: nowIso(),
+        station: "Sarawak River at Kuching",
+        units: "m³/s",
+        model: "GloFAS seamless v4 via Open-Meteo",
+        forecast: dates.map((d, i) => ({ date: d, dischargeCms: round(discharge[i] ?? null, 1) })),
+        peakCms: valid.length ? round(Math.max(...valid), 1) : null,
+        todayCms: round(discharge[0] ?? null, 1),
+      };
+    } catch {
+      return {
+        status: "fallback",
+        updatedAt: nowIso(),
+        station: "Sarawak River at Kuching",
+        units: "m³/s",
+        model: "fallback",
+        forecast: [
+          { date: "—", dischargeCms: 145 }, { date: "—", dischargeCms: 162 },
+          { date: "—", dischargeCms: 178 }, { date: "—", dischargeCms: 155 },
+          { date: "—", dischargeCms: 140 },
+        ],
+        peakCms: 178,
+        todayCms: 145,
+      };
+    }
+  });
+}
+
+function buildFloodZones() {
+  const box = (lat, lon, halfDeg = 0.003) => [[
+    [lon - halfDeg, lat - halfDeg],
+    [lon + halfDeg, lat - halfDeg],
+    [lon + halfDeg, lat + halfDeg],
+    [lon - halfDeg, lat + halfDeg],
+    [lon - halfDeg, lat - halfDeg],
+  ]];
+  const zones = [
+    { name: "Taman Desa Wira (Batu Kawa)", severity: "critical", lat: 1.4820, lon: 110.3080,
+      description: "Recurrent inundation from Sg. Batu Kawa overflow. Residential area of ~3,500 households targeted by RM 58.5M retention pond mitigation project (completion 2027).", sourceNote: "DID Sarawak; Borneo Post 2026-02" },
+    { name: "Kampung Sinar Budi Baru", severity: "critical", lat: 1.4750, lon: 110.3020,
+      description: "Adjacent to Taman Desa Wira. Part of 58-hectare mitigation zone. Kampung-level drainage regularly overwhelmed after >30mm/3h events.", sourceNote: "DID Sarawak; MPP drainage records" },
+    { name: "Matang Jaya", severity: "critical", lat: 1.5670, lon: 110.2850,
+      description: "1–2 m flood depths recorded. Low-lying relative to Sarawak River main channel. High-density residential; evacuation-prone during northeast monsoon.", sourceNote: "Frontiers in Water (2022); Sarawak Tribune" },
+    { name: "Sungai Maong Basin", severity: "critical", lat: 1.5230, lon: 110.3550,
+      description: "Sg. Maong backs up rapidly when Sarawak River level rises. Connected drainage to Jalan Satok and Jalan Green downstream reaches.", sourceNote: "MPP drainage map; DayakDaily flood reports" },
+    { name: "Jalan Satok / Stapok Corridor", severity: "high", lat: 1.5380, lon: 110.3580,
+      description: "Commercial and residential strip. Surface flooding from Sg. Maong backflow common during heavy rain coinciding with high tide.", sourceNote: "Sarawak Tribune; community reports" },
+    { name: "Pending Industrial Area", severity: "high", lat: 1.5400, lon: 110.3950,
+      description: "Low-lying industrial zone on Sarawak River estuary. Storm surge risk compounds rainfall events. Occasional road closure on Jalan Pending.", sourceNote: "Borneo Post; MBKS flood records" },
+    { name: "Jalan Astana / Waterfront", severity: "high", lat: 1.5450, lon: 110.3680,
+      description: "Heritage waterfront zone susceptible to Sarawak River high-water events. Tidal influence amplifies monsoon flood risk. Climate projections suggest 1–4 m by 2050.", sourceNote: "Frontiers in Water (2022) — SLR scenario modelling" },
+    { name: "Penrissen Road Corridor", severity: "seasonal", lat: 1.4510, lon: 110.3120,
+      description: "Seasonal road ponding on the main southern artery. Affects MPP urban-rural transition zone. Drainage widening ongoing as of 2025.", sourceNote: "MPP Public Works; community reports" },
+    { name: "Jln Kuching-Serian / Kota Padawan", severity: "seasonal", lat: 1.4300, lon: 110.2950,
+      description: "Seasonal flooding along the Kuching-Serian trunk road in Kota Padawan growth area. New developments accelerating impervious surface; drainage capacity lagging.", sourceNote: "DID Sarawak; DayakDaily" },
+    { name: "Siburan Lowlands", severity: "seasonal", lat: 1.3660, lon: 110.2600,
+      description: "Siburan river flats flood seasonally. Remote from main urban core but relevant as a Padawan growth frontier. Affected in Jan 2025 multi-district event.", sourceNote: "DID Sarawak 2025 flood records; Borneo Post" },
+  ];
+  return {
+    type: "FeatureCollection",
+    meta: { source: "DID Sarawak / Macaranga / Borneo Post / Frontiers in Water — hand-encoded historical hotspots", updatedAt: "2026-04-20" },
+    features: zones.map((z) => ({
+      type: "Feature",
+      properties: { name: z.name, severity: z.severity, description: z.description, sourceNote: z.sourceNote },
+      geometry: { type: "Polygon", coordinates: box(z.lat, z.lon) },
+    })),
+  };
+}
+
 async function loadExchangeRates() {
   return cached("exchange-rates", 30 * 60 * 1000, async () => {
     try {
@@ -2685,7 +2812,7 @@ async function buildDashboard() {
   const [
     weather, air, airport, jurisdictions, news, fires, quakes,
     padawanZoning, trends, sarawakStats, openDosmStats, officialWarnings, urbanInfra,
-    infobanjirRaw, apims, ckanHarvest, exchange,
+    infobanjirRaw, apims, ckanHarvest, exchange, metWarnings, floodForecast,
   ] = await Promise.all([
     loadWeather(),
     loadAirQuality(),
@@ -2704,6 +2831,8 @@ async function buildDashboard() {
     loadApimsAqi(),
     loadSarawakCkanHarvest(),
     loadExchangeRates(),
+    loadMetWarnings(),
+    loadFloodForecast(),
   ]);
 
   // Catchment enrichment compounds Infobanjir + OSM drainage. Pure post-process,
@@ -2720,7 +2849,7 @@ async function buildDashboard() {
     site: SITE,
     timeSignal: buildTimeSignal(),
     summary,
-    metrics: buildMetricCards(weather, air, airport, jurisdictions, news, padawanZoning, trends),
+    metrics: buildMetricCards(weather, air, airport, jurisdictions, news, padawanZoning, trends, metWarnings),
     jurisdictions,
     mapScene,
     mapLayers,
@@ -2738,8 +2867,10 @@ async function buildDashboard() {
     infobanjir,
     apims,
     ckanHarvest,
+    metWarnings,
+    floodForecast,
     osm: getOsmStatusSnapshot(),
-    operations: buildOperations(weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, officialWarnings, sarawakStats, openDosmStats, infobanjir, apims),
+    operations: buildOperations(weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, officialWarnings, sarawakStats, openDosmStats, infobanjir, apims, metWarnings),
     sources: [
       sourceRecord(
         "mpp-profile",
@@ -3069,6 +3200,8 @@ const server = http.createServer(async (request, response) => {
         } else {
           collection = await loadMockAuthorityLayer(layerId);
         }
+      } else if (layerId === "flood_zones") {
+        collection = buildFloodZones();
       } else {
         response.writeHead(404, { "content-type": "application/json; charset=utf-8" });
         response.end(JSON.stringify({ message: `Unknown layer: ${layerId}` }));

@@ -687,9 +687,8 @@ body::before {
   grid-template-columns: minmax(0, 1.18fr) minmax(340px, 0.98fr) minmax(280px, 0.84fr);
   gap: 2px;
   border-top: 1px solid var(--line-strong);
-  height: 250px;
-  min-height: 250px;
-  max-height: 250px;
+  height: 340px;
+  max-height: 340px;
   flex-shrink: 0;
 }
 .lower-grid > .panel,
@@ -867,6 +866,130 @@ body::before {
   white-space: nowrap;
 }
 [data-theme="light"] .econ-pill { background: rgba(255,255,255,0.7); }
+
+/* === Flood Forecast (River Discharge) === */
+.flood-forecast {
+  padding: 4px 0 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.flood-station {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--soft);
+}
+.flood-today {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.flood-value {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--cyan);
+  text-shadow: 0 0 6px var(--cyan-glow);
+}
+.flood-unit {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--soft);
+}
+.flood-peak-warn { color: var(--amber); }
+.flood-days {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.flood-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.flood-day-label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--soft);
+}
+.flood-day-val {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--ink);
+}
+.flood-day-val.warn { color: var(--amber); }
+.flood-model {
+  font-size: 7px;
+  color: var(--soft);
+  margin-top: 2px;
+}
+
+/* === Bypass Tracker (Sarawak River Bypass Project) === */
+.bypass-tracker {
+  border-top: 1px solid var(--line);
+  padding: 6px 8px 5px;
+  flex-shrink: 0;
+}
+.bypass-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.bypass-title {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+.bypass-budget {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  background: rgba(251, 191, 36, 0.15);
+  color: var(--amber);
+  padding: 1px 5px;
+  border: 1px solid rgba(251,191,36,0.3);
+}
+.bypass-phases {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.bypass-phase {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  align-items: center;
+  gap: 6px;
+}
+.bypass-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--soft);
+  flex-shrink: 0;
+}
+.bypass-dot.active { background: var(--green); box-shadow: 0 0 4px var(--green); }
+.bypass-phase-label {
+  font-size: 8px;
+  color: var(--ink);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.bypass-period {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--soft);
+  white-space: nowrap;
+}
+.bypass-benefit {
+  font-size: 7px;
+  color: var(--soft);
+  line-height: 1.4;
+}
 
 /* === Qualitative Panel === */
 .qualitative-body {

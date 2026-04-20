@@ -3,7 +3,7 @@ import {
   MAP_WATCHPOINTS, AIRPORT_FALLBACK_ROUTES, FALLBACK_NEWS, FALLBACK_TRENDS,
   WEATHER_FALLBACK, AIR_FALLBACK, CITY_DEMOGRAPHICS, TRANSLATIONS,
   round, aqiBand, weatherCodeLabel, kmBetween, classifyAircraft,
-  sourceRecord, buildMapLayers, URBAN_LAYERS, ECONOMY_FALLBACK
+  sourceRecord, buildMapLayers, URBAN_LAYERS, ECONOMY_FALLBACK, RIVER_BYPASS_PROJECT
 } from "./data.js";
 
 const BOOT = window.__IOC_BOOT__ || {};
@@ -563,6 +563,17 @@ async function buildFallbackDashboard() {
       catchmentNote: "Toggle the Drainage layer once to enable catchment routing.",
     },
     apims: null,
+    metWarnings: { status: "none", activeCount: 0, allActiveCount: 0, items: [] },
+    floodForecast: {
+      status: "fallback", station: "Sarawak River at Kuching", units: "m³/s",
+      model: "GloFAS seamless v4 via Open-Meteo",
+      todayCms: 148, peakCms: 175,
+      forecast: [
+        { date: null, dischargeCms: 148 }, { date: null, dischargeCms: 155 },
+        { date: null, dischargeCms: 162 }, { date: null, dischargeCms: 170 },
+        { date: null, dischargeCms: 175 },
+      ],
+    },
     mapScene: { hydroBands: defaultHydroBands },
     sources: [
       sourceRecord("mpp","MPP Council","official","Padawan data","https://mpp.sarawak.gov.my",gen),
@@ -901,7 +912,7 @@ function renderUrbanLayerToggle() {
     document.querySelector(".map-controls").appendChild(container);
   }
 
-  container.innerHTML = URBAN_LAYERS.map(l => `<button data-id="${l.id}" class="${l.active ? 'active' : ''}">${t(l.id === 'land_use' ? 'landUse' : l.id === 'flood_risk' ? 'floodRisk' : l.id === 'drainage' ? 'drainage' : l.label)}</button>`).join("");
+  container.innerHTML = URBAN_LAYERS.map(l => `<button data-id="${l.id}" class="${l.active ? 'active' : ''}">${t(l.id === 'land_use' ? 'landUse' : l.id === 'flood_risk' ? 'floodRisk' : l.id === 'drainage' ? 'drainage' : l.id === 'flood_zones' ? 'Flood Zones' : l.label)}</button>`).join("");
   
   container.querySelectorAll("button").forEach(btn => btn.addEventListener("click", async () => {
     const layer = URBAN_LAYERS.find(l => l.id === btn.dataset.id);
@@ -965,6 +976,11 @@ function renderUrbanLayerToggle() {
             weight: rank >= 5 ? 3.2 : rank >= 4 ? 2.6 : rank >= 3 ? 2 : 1.4,
             opacity: 0.9,
           };
+        }
+        if (layer.id === "flood_zones") {
+          const sevColor = { critical: "#ef4444", high: "#f97316", seasonal: "#eab308" };
+          const c = sevColor[props.severity] || layer.color;
+          return { color: c, weight: 2, opacity: 0.9, fillColor: c, fillOpacity: 0.25 };
         }
         if (layer.id === "land_use" || layer.id === "flood_risk") {
           return {
@@ -1267,6 +1283,55 @@ function renderTrendsBand(trends) {
       </div>`).join("")}`;
 }
 
+function renderFloodForecast(floodForecast) {
+  const el = $("floodForecast");
+  if (!el) return;
+  const isFallback = !floodForecast || floodForecast.status === "fallback";
+  const today = isFallback
+    ? (floodForecast?.todayCms ?? null)
+    : (floodForecast.todayCms ?? (floodForecast.forecast?.[0]?.dischargeCms ?? null));
+  const peak = floodForecast?.peakCms;
+  const next4 = (floodForecast?.forecast ?? []).slice(1, 5);
+  const warnPeak = peak != null && peak > 200;
+  el.innerHTML = `
+    <div class="flood-station">${floodForecast?.station ?? "Sarawak River"}</div>
+    <div class="flood-today">
+      <span class="flood-value ${warnPeak ? "flood-peak-warn" : ""}">${today != null ? today : "—"}</span>
+      <span class="flood-unit">m³/s${isFallback ? " est" : " now"} · peak ${peak ?? "—"} m³/s</span>
+    </div>
+    <div class="flood-days">
+      ${next4.map(d => {
+        const label = d.date && d.date !== "—" ? new Date(d.date).toLocaleDateString("en-MY", { weekday: "short" }) : "—";
+        const warn = d.dischargeCms != null && d.dischargeCms > 200;
+        return `<div class="flood-day">
+          <span class="flood-day-label">${label}</span>
+          <span class="flood-day-val ${warn ? "warn" : ""}">${d.dischargeCms ?? "—"}</span>
+        </div>`;
+      }).join("")}
+    </div>
+    <div class="flood-model">${isFallback ? "GloFAS · seasonal estimate" : (floodForecast.model ?? "GloFAS via Open-Meteo")}</div>`;
+}
+
+function renderBypassTracker() {
+  const el = $("bypassTracker");
+  if (!el) return;
+  const p = RIVER_BYPASS_PROJECT;
+  el.innerHTML = `
+    <div class="bypass-head">
+      <span class="bypass-title">${p.name}</span>
+      <span class="bypass-budget">${p.budget}</span>
+    </div>
+    <div class="bypass-phases">
+      ${p.phases.map(ph => `
+        <div class="bypass-phase">
+          <div class="bypass-dot ${ph.status === "active" ? "active" : ""}"></div>
+          <span class="bypass-phase-label">${ph.label}</span>
+          <span class="bypass-period">${ph.period}</span>
+        </div>`).join("")}
+    </div>
+    <div class="bypass-benefit">${p.benefit}</div>`;
+}
+
 function renderPosture(payload) {
   const el = $("postureBlock");
   if (!el) return;
@@ -1384,7 +1449,30 @@ function renderDashboard(payload) {
       </div>`;
   }
 
-  $("signalCards").innerHTML = signalHtml + groundHtml;
+  // MET Malaysia active warnings card
+  const met = payload.metWarnings;
+  let metHtml = "";
+  if (met) {
+    if (met.activeCount > 0) {
+      const w = met.items[0];
+      metHtml = `
+        <div class="signal-card" style="border-left:3px solid #ef4444">
+          <strong>MET // WEATHER WARNING</strong>
+          <div class="val">${met.activeCount}<sup>active</sup></div>
+          <div class="meta">${w.heading || "Active warning"}</div>
+          ${w.validTo ? `<div class="meta">Until ${new Date(w.validTo).toLocaleString("en-MY",{timeZone:"Asia/Kuching",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div>` : ""}
+        </div>`;
+    } else {
+      metHtml = `
+        <div class="signal-card" style="border-left:3px solid #8aa2c8">
+          <strong>MET // WEATHER WARNING</strong>
+          <div class="val" style="color:var(--soft)">Clear</div>
+          <div class="meta">No active warnings for Kuching/Sarawak</div>
+        </div>`;
+    }
+  }
+
+  $("signalCards").innerHTML = signalHtml + groundHtml + metHtml;
 
   // Trends
   const trendItems = payload.trends.localMatches?.length ? payload.trends.localMatches.slice(0, 6) : [];
@@ -1403,8 +1491,10 @@ function renderDashboard(payload) {
   $("mapLegend").innerHTML = payload.jurisdictions.items.map(j=>`<span class="legend-item"><span class="legend-dot" style="background:${j.accent}"></span>${j.code}</span>`).join("") + `<span class="legend-item"><span class="legend-dot" style="background:#1e90ff"></span>River</span>` + hydroLegend;
   $("watchpointList").innerHTML = MAP_WATCHPOINTS.map(w=>`<span>${w}</span>`).join("");
 
-  // Intel panel: economy + news digest + trends
+  // Intel panel: economy + news digest + trends + bypass tracker
   renderIntelPanel(payload);
+  renderFloodForecast(payload.floodForecast);
+  renderBypassTracker();
   renderQualitativeLens(payload);
 
   // Sources

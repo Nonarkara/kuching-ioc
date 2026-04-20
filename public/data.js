@@ -184,7 +184,22 @@ export const URBAN_LAYERS = [
   { id: "flood_risk", label: "Flood Risk (GCAP)", type: "geojson", url: "/api/layers/flood_risk", color: "#f87171", active: false },
   { id: "drainage", label: "Drainage (OSM)", type: "geojson", url: "/api/layers/drainage", color: "#60a5fa", active: false },
   { id: "transit", label: "Transit Network", type: "geojson", url: "/api/layers/transit", color: "#fbbf24", active: false },
+  { id: "flood_zones", label: "Flood Zones (Historical)", type: "geojson", url: "/api/layers/flood_zones", color: "#ef4444", active: false },
 ];
+
+export const RIVER_BYPASS_PROJECT = {
+  name: "Sarawak River Bypass Channel",
+  budget: "RM 2.48 billion",
+  anchor: "Batu Kawa → Salak River (South China Sea)",
+  lengthKm: 8,
+  phases: [
+    { id: 1, label: "Design & Land Acquisition", period: "2025–2026", status: "active" },
+    { id: 2, label: "Main Excavation & Lining", period: "2027–2030", status: "planned" },
+    { id: 3, label: "Commissioning & Handover", period: "2031–2033", status: "planned" },
+  ],
+  benefit: "Diverts 60% excess Sarawak River flow, protecting Batu Kawa, Matang, and Kuching South.",
+  batu_kawa_mitigation: { budget: "RM 58.5M", ponds: 4, targetHa: 58, completion: 2027 },
+};
 
 // i18n translations
 export const TRANSLATIONS = {

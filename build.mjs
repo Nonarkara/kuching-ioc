@@ -14,14 +14,32 @@
 // ---------------------------------------------------------------------------
 
 import { spawn } from "node:child_process";
-import { writeFile, mkdir } from "node:fs/promises";
+import { access, mkdir, stat, writeFile } from "node:fs/promises";
+import { constants as fsConstants } from "node:fs";
 import { join } from "node:path";
+import {
+  DEFAULT_LIVE_URL,
+  DEFAULT_PAGES_URL,
+  INDEX_OUTPUT_PATH,
+  PUBLIC_DIR,
+  resolveAssetVersion,
+  writeRenderedIndex,
+} from "./site-build.mjs";
 
 const BUILD_PORT = 9876;
-const PUBLIC_DIR = join(import.meta.dirname, "public");
 const LAYERS_DIR = join(PUBLIC_DIR, "api", "layers");
 const BASE = `http://127.0.0.1:${BUILD_PORT}`;
 const MAX_WAIT_MS = 180_000; // 3 minutes total budget for the build
+const REQUIRED_ARTIFACTS = [
+  join(PUBLIC_DIR, "api", "dashboard.json"),
+  join(PUBLIC_DIR, "api", "build-manifest.json"),
+  join(PUBLIC_DIR, "api", "layers", "drainage.json"),
+  join(PUBLIC_DIR, "api", "layers", "transit.json"),
+  join(PUBLIC_DIR, "api", "layers", "land_use.json"),
+  join(PUBLIC_DIR, "api", "layers", "flood_risk.json"),
+  join(PUBLIC_DIR, "api", "layers", "flood_zones.json"),
+  INDEX_OUTPUT_PATH,
+];
 
 async function fetchWithRetry(url, retries = 3, timeout = 120_000) {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -57,14 +75,30 @@ async function waitForServer(maxMs = 30_000) {
   throw new Error("Server did not become ready in time");
 }
 
+async function assertReadableFiles(paths) {
+  for (const filePath of paths) {
+    await access(filePath, fsConstants.R_OK);
+    const info = await stat(filePath);
+    if (!info.isFile() || info.size <= 0) {
+      throw new Error(`Required artifact missing or empty: ${filePath}`);
+    }
+  }
+}
+
 async function main() {
   const started = Date.now();
+  const buildStartedAt = new Date().toISOString();
+  const assetVersion = resolveAssetVersion({ builtAt: buildStartedAt });
   console.log("=== Greater Kuching IOC — Static Build ===");
-  console.log(`Port: ${BUILD_PORT} | Budget: ${MAX_WAIT_MS / 1000}s`);
+  console.log(`Port: ${BUILD_PORT} | Budget: ${MAX_WAIT_MS / 1000}s | Asset: ${assetVersion}`);
 
   // 1. Boot the server.
   const server = spawn(process.execPath, ["server.mjs"], {
-    env: { ...process.env, PORT: String(BUILD_PORT) },
+    env: {
+      ...process.env,
+      PORT: String(BUILD_PORT),
+      ASSET_VERSION: assetVersion,
+    },
     stdio: ["ignore", "pipe", "pipe"],
     cwd: import.meta.dirname,
   });
@@ -87,7 +121,7 @@ async function main() {
     console.log(`  → ${dashboardPath} (${(dashboard.length / 1024).toFixed(1)} KB, ${parsed.sources?.length || "?"} sources)`);
 
     // 3. Fetch all GIS layers in parallel.
-    const layerIds = ["drainage", "transit", "land_use", "flood_risk"];
+    const layerIds = ["drainage", "transit", "land_use", "flood_risk", "flood_zones"];
     await mkdir(LAYERS_DIR, { recursive: true });
     console.log(`Fetching ${layerIds.length} GIS layers...`);
     const results = await Promise.allSettled(
@@ -107,10 +141,16 @@ async function main() {
     }
 
     // 4. Write a build manifest so the client can show "data as of...".
+    const builtAt = new Date().toISOString();
     const manifest = {
-      builtAt: new Date().toISOString(),
+      builtAt,
       buildDurationMs: Date.now() - started,
       dashboardSizeKb: Math.round(dashboard.length / 1024),
+      assetVersion,
+      deploymentMode: "pages-static",
+      boardLabel: "SNAPSHOT BOARD",
+      pagesUrl: process.env.PAGES_PUBLIC_URL || DEFAULT_PAGES_URL,
+      liveUrl: process.env.LIVE_IOC_URL || DEFAULT_LIVE_URL,
       layers: results.map((r, i) => ({
         id: layerIds[i],
         status: r.status,
@@ -120,6 +160,21 @@ async function main() {
     const manifestPath = join(PUBLIC_DIR, "api", "build-manifest.json");
     await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
     console.log(`  → ${manifestPath}`);
+
+    // 5. Render the static entrypoint with the current asset version and route metadata.
+    await writeRenderedIndex({
+      assetVersion,
+      builtAt,
+      deploymentMode: "pages-static",
+      boardLabel: "SNAPSHOT BOARD",
+      pagesUrl: process.env.PAGES_PUBLIC_URL || DEFAULT_PAGES_URL,
+      liveUrl: process.env.LIVE_IOC_URL || DEFAULT_LIVE_URL,
+    });
+    console.log(`  → ${INDEX_OUTPUT_PATH}`);
+
+    // 6. Hard fail if the Pages contract is incomplete.
+    await assertReadableFiles(REQUIRED_ARTIFACTS);
+    console.log(`  → contract ok (${REQUIRED_ARTIFACTS.length} required artifacts)`);
 
     console.log(`\n✓ Build complete in ${((Date.now() - started) / 1000).toFixed(1)}s`);
   } catch (error) {

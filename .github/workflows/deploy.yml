@@ -38,6 +38,17 @@ jobs:
         env:
           AQICN_TOKEN: ${{ secrets.AQICN_TOKEN }}
 
+      - name: Verify Pages artifact contract
+        run: |
+          test -s public/index.html
+          test -s public/api/dashboard.json
+          test -s public/api/build-manifest.json
+          test -s public/api/layers/drainage.json
+          test -s public/api/layers/transit.json
+          test -s public/api/layers/land_use.json
+          test -s public/api/layers/flood_risk.json
+          test -s public/api/layers/flood_zones.json
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

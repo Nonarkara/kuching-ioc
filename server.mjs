@@ -2638,6 +2638,42 @@ function buildClimatePanel(weather, air) {
   };
 }
 
+async function loadExchangeRates() {
+  return cached("exchange-rates", 30 * 60 * 1000, async () => {
+    try {
+      const p = await fetchJson("https://open.er-api.com/v6/latest/MYR", 8000);
+      const rates = p.rates ?? {};
+      return {
+        status: "live", updatedAt: nowIso(), base: "MYR",
+        pairs: [
+          { code: "USD", rate: Math.round((rates.USD ?? 0.2174) * 10000) / 10000, label: "US Dollar" },
+          { code: "SGD", rate: Math.round((rates.SGD ?? 0.2891) * 10000) / 10000, label: "Singapore Dollar" },
+          { code: "THB", rate: Math.round((rates.THB ?? 7.42) * 100) / 100, label: "Thai Baht" },
+          { code: "IDR", rate: Math.round(rates.IDR ?? 3380), label: "Indonesian Rupiah" },
+          { code: "CNY", rate: Math.round((rates.CNY ?? 1.58) * 10000) / 10000, label: "Chinese Yuan" },
+          { code: "JPY", rate: Math.round((rates.JPY ?? 32.8) * 100) / 100, label: "Japanese Yen" },
+          { code: "GBP", rate: Math.round((rates.GBP ?? 0.172) * 10000) / 10000, label: "British Pound" },
+          { code: "EUR", rate: Math.round((rates.EUR ?? 0.199) * 10000) / 10000, label: "Euro" },
+        ],
+      };
+    } catch {
+      return {
+        status: "fallback", updatedAt: nowIso(), base: "MYR",
+        pairs: [
+          { code: "USD", rate: 0.2174, label: "US Dollar" },
+          { code: "SGD", rate: 0.2891, label: "Singapore Dollar" },
+          { code: "THB", rate: 7.42, label: "Thai Baht" },
+          { code: "IDR", rate: 3380, label: "Indonesian Rupiah" },
+          { code: "CNY", rate: 1.58, label: "Chinese Yuan" },
+          { code: "JPY", rate: 32.8, label: "Japanese Yen" },
+          { code: "GBP", rate: 0.172, label: "British Pound" },
+          { code: "EUR", rate: 0.199, label: "Euro" },
+        ],
+      };
+    }
+  });
+}
+
 function buildTimeSignal() {
   return {
     serverNow: nowIso(),
@@ -2649,7 +2685,7 @@ async function buildDashboard() {
   const [
     weather, air, airport, jurisdictions, news, fires, quakes,
     padawanZoning, trends, sarawakStats, openDosmStats, officialWarnings, urbanInfra,
-    infobanjirRaw, apims, ckanHarvest,
+    infobanjirRaw, apims, ckanHarvest, exchange,
   ] = await Promise.all([
     loadWeather(),
     loadAirQuality(),
@@ -2667,6 +2703,7 @@ async function buildDashboard() {
     loadInfobanjir(),
     loadApimsAqi(),
     loadSarawakCkanHarvest(),
+    loadExchangeRates(),
   ]);
 
   // Catchment enrichment compounds Infobanjir + OSM drainage. Pure post-process,
@@ -2674,7 +2711,6 @@ async function buildDashboard() {
   const infobanjir = enrichInfobanjirWithCatchment(infobanjirRaw);
 
   const generatedAt = nowIso();
-  const satellites = buildSatelliteCards();
   const mapLayers = buildMapLayers();
   const summary = buildSummary(weather, air, airport, jurisdictions, news, padawanZoning, trends, infobanjir, apims);
   const mapScene = buildMapScene(jurisdictions, padawanZoning, infobanjir);
@@ -2692,7 +2728,7 @@ async function buildDashboard() {
     airport,
     news,
     trends,
-    satellites,
+    exchange,
     fires,
     quakes,
     sarawakStats,

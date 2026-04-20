@@ -3,7 +3,7 @@ import {
   MAP_WATCHPOINTS, AIRPORT_FALLBACK_ROUTES, FALLBACK_NEWS, FALLBACK_TRENDS,
   WEATHER_FALLBACK, AIR_FALLBACK, CITY_DEMOGRAPHICS, TRANSLATIONS,
   round, aqiBand, weatherCodeLabel, kmBetween, classifyAircraft,
-  sourceRecord, buildSatelliteCards, buildMapLayers, URBAN_LAYERS
+  sourceRecord, buildMapLayers, URBAN_LAYERS, ECONOMY_FALLBACK
 } from "./data.js";
 
 const BOOT = window.__IOC_BOOT__ || {};
@@ -539,7 +539,7 @@ async function buildFallbackDashboard() {
     metrics: buildMetrics(weather, air, airport, jurisdictions, enrichedNews, padawanZoning, trends),
     jurisdictions, mapLayers: buildMapLayers(), climate: { weather, air },
     airport, news: enrichedNews, trends, exchange,
-    satellites: buildSatelliteCards(), fires, quakes,
+    fires, quakes,
     sentiment: computeSentiment(enrichedNews.items),
     demographics: CITY_DEMOGRAPHICS,
     operations: buildOperations(weather, air, airport, enrichedNews, jurisdictions, padawanZoning, trends, fires, quakes),
@@ -572,7 +572,6 @@ async function buildFallbackDashboard() {
       sourceRecord("aqi","Open-Meteo AQI",air.status,"AQI, PM2.5, PM10","https://open-meteo.com",gen),
       sourceRecord("opensky","OpenSky",airport.status,"Live airspace KCH","https://opensky-network.org",gen),
       sourceRecord("usgs","USGS",quakes.status,"Regional seismic","https://earthquake.usgs.gov",gen),
-      sourceRecord("gibs","NASA GIBS","live","Orbital imagery","https://earthdata.nasa.gov",gen),
       sourceRecord("exchange","ExchangeRate API",exchange.status,"FX rates","https://open.er-api.com",gen),
       sourceRecord("dosm","DOSM Census","reference","Sarawak demographics","https://open.dosm.gov.my",gen),
       sourceRecord("jps-infobanjir","JPS Infobanjir","reference","Hydro stations (client fallback)","https://publicinfobanjir.water.gov.my",gen),
@@ -1183,63 +1182,89 @@ function renderNewsIntake(news) {
     </div>`;
 }
 
-function renderSatelliteDeck(satellites) {
-  const grid = $("satelliteGrid");
-  const meta = $("satelliteMeta");
-  const stage = $("satelliteStage");
-  if (!grid || !meta || !stage || !satellites?.length) return;
+function renderIntelPanel(payload) {
+  renderEconBand(payload.exchange);
+  renderNewsDigest(payload.news);
+  renderTrendsBand(payload.trends);
+}
 
-  const setActive = (index) => {
-    const activeIndex = Math.max(0, Math.min(index, satellites.length - 1));
-    state.activeSatelliteIndex = activeIndex;
-    const sat = satellites[activeIndex];
-    const narrative = getSatelliteNarrative(sat);
+function renderEconBand(exchange) {
+  const el = $("econBand");
+  if (!el) return;
+  const data = exchange ?? ECONOMY_FALLBACK;
+  const fxPairs = (data.pairs ?? []).filter(p => ["USD","SGD","GBP","EUR"].includes(p.code));
+  const macro = [
+    { value: `${(data.macro?.gdpGrowthPct ?? ECONOMY_FALLBACK.macro.gdpGrowthPct).toFixed(1)}%`, label: "MY GDP Growth" },
+    { value: `RM ${(data.macro?.sarawakGdpBnMyr ?? ECONOMY_FALLBACK.macro.sarawakGdpBnMyr)}B`, label: "Sarawak GDP" },
+    { value: `${(data.macro?.cpiInflationPct ?? ECONOMY_FALLBACK.macro.cpiInflationPct).toFixed(1)}%`, label: "CPI Inflation" },
+  ];
+  el.innerHTML = [
+    ...fxPairs.map(p => `
+      <div class="econ-pill">
+        <span class="econ-pill-value">${p.rate}</span>
+        <span class="econ-pill-label">MYR/${p.code}</span>
+      </div>`),
+    ...macro.map(m => `
+      <div class="econ-pill econ-macro">
+        <span class="econ-pill-value">${m.value}</span>
+        <span class="econ-pill-label">${m.label}</span>
+      </div>`),
+  ].join("");
+}
 
-    stage.innerHTML = `
-      <div class="satellite-stage-media">
-        <img src="${sat.imageUrl}" alt="${sat.title}" />
-        <div class="satellite-stage-overlay">
-          <span class="satellite-stage-tag">Orbital photo</span>
-          <span class="satellite-stage-tag">${narrative.technique}</span>
-        </div>
-      </div>
-      <div class="satellite-stage-note">${narrative.disclaimer}</div>`;
+function renderNewsDigest(news) {
+  const el = $("newsDigest");
+  if (!el || !news) return;
+  const tabs = [
+    { code: "en",  label: "EN" },
+    { code: "ms",  label: "BM" },
+    { code: "zh",  label: "ZH" },
+  ];
 
-    meta.innerHTML = `
-      <div class="satellite-copy">
-        <strong>${sat.title}</strong>
-        <span>${narrative.context}</span>
-      </div>
-      <div class="satellite-stamp">
-        <strong>${sat.source || "Satellite feed"}</strong>
-        <span>${formatShortStamp(sat.updatedAt || nowIso())}</span>
-        <a class="satellite-open" href="${sat.imageUrl}" target="_blank" rel="noopener">OPEN FULL ◹</a>
-      </div>`;
-    grid.querySelectorAll(".satellite-card").forEach((node, idx) => node.classList.toggle("active", idx === activeIndex));
-    if (state.payload) renderQualitativeLens(state.payload, sat);
+  const renderTab = (code) => {
+    const items = (news.items ?? []).filter(i => i.language === code).slice(0, 5);
+    el.querySelector(".news-digest-list").innerHTML = items.length
+      ? items.map(i => `
+          <div class="news-digest-item">
+            <span class="news-digest-badge">${i.source?.slice(0, 12) ?? code.toUpperCase()}</span>
+            <span class="news-digest-title">${i.title}</span>
+            <span class="news-digest-time">${formatShortStamp(i.publishedAt)}</span>
+          </div>`).join("")
+      : `<div class="news-digest-item"><span class="news-digest-title" style="color:var(--soft)">No ${code.toUpperCase()} items in this cycle.</span></div>`;
+    el.querySelectorAll(".news-digest-tab").forEach(btn => btn.classList.toggle("active", btn.dataset.lang === code));
   };
 
-  grid.innerHTML = satellites.map((sat, index) => `
-    <button type="button" class="satellite-card ${index === 0 ? "active" : ""}" data-idx="${index}" aria-label="Activate ${sat.title}">
-      <img src="${sat.imageUrl}" alt="${sat.title}" />
-      <span class="satellite-card-copy">
-        <strong>${sat.title}</strong>
-        <span>${sat.source || "NASA GIBS"}</span>
-      </span>
-    </button>`).join("");
+  el.innerHTML = `
+    <div class="news-digest-tabs">
+      ${tabs.map(t => `<button class="news-digest-tab${t.code === "en" ? " active" : ""}" data-lang="${t.code}">${t.label}</button>`).join("")}
+    </div>
+    <div class="news-digest-list"></div>`;
 
-  // Event delegation: one listener on the grid survives any future re-render of children.
-  if (!grid.dataset.bound) {
-    grid.addEventListener("click", (event) => {
-      const card = event.target.closest(".satellite-card");
-      if (!card || !grid.contains(card)) return;
-      const idx = Number(card.dataset.idx);
-      if (Number.isFinite(idx)) setActive(idx);
+  renderTab("en");
+
+  if (!el.dataset.bound) {
+    el.addEventListener("click", (event) => {
+      const btn = event.target.closest(".news-digest-tab");
+      if (!btn) return;
+      renderTab(btn.dataset.lang);
     });
-    grid.dataset.bound = "1";
+    el.dataset.bound = "1";
   }
+}
 
-  setActive(state.activeSatelliteIndex ?? 0);
+function renderTrendsBand(trends) {
+  const el = $("trendsBand");
+  if (!el) return;
+  const items = (trends?.items ?? []).slice(0, 5);
+  if (!items.length) { el.innerHTML = ""; return; }
+  el.innerHTML = `
+    <div class="trends-band-head">Google Trends · Kuching / Malaysia</div>
+    ${items.map((t, i) => `
+      <div class="trend-row ${(t.locality?.score ?? 0) >= 2 ? "local" : ""}">
+        <span class="trend-rank">${i + 1}</span>
+        <span class="trend-term">${t.title}</span>
+        <span class="trend-traffic">${t.trafficLabel ?? ""}</span>
+      </div>`).join("")}`;
 }
 
 function renderPosture(payload) {
@@ -1378,8 +1403,9 @@ function renderDashboard(payload) {
   $("mapLegend").innerHTML = payload.jurisdictions.items.map(j=>`<span class="legend-item"><span class="legend-dot" style="background:${j.accent}"></span>${j.code}</span>`).join("") + `<span class="legend-item"><span class="legend-dot" style="background:#1e90ff"></span>River</span>` + hydroLegend;
   $("watchpointList").innerHTML = MAP_WATCHPOINTS.map(w=>`<span>${w}</span>`).join("");
 
-  // Satellites
-  renderSatelliteDeck(payload.satellites);
+  // Intel panel: economy + news digest + trends
+  renderIntelPanel(payload);
+  renderQualitativeLens(payload);
 
   // Sources
   renderSourceMatrix(payload);

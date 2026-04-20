@@ -111,6 +111,27 @@ export const FALLBACK_TRENDS = [
   { id: "epl-results", title: "EPL Results", trafficLabel: "500K+", trafficValue: 500000, locality: { label: "Global", tone: "muted", score: 0 } },
 ];
 
+export const ECONOMY_FALLBACK = {
+  status: "fallback",
+  base: "MYR",
+  pairs: [
+    { code: "USD", rate: 0.2174, label: "US Dollar" },
+    { code: "SGD", rate: 0.2891, label: "Singapore Dollar" },
+    { code: "GBP", rate: 0.1720, label: "British Pound" },
+    { code: "EUR", rate: 0.1990, label: "Euro" },
+    { code: "CNY", rate: 1.5800, label: "Chinese Yuan" },
+    { code: "THB", rate: 7.4200, label: "Thai Baht" },
+    { code: "IDR", rate: 3380,   label: "Indonesian Rupiah" },
+    { code: "JPY", rate: 32.80,  label: "Japanese Yen" },
+  ],
+  macro: {
+    gdpGrowthPct: 4.4,
+    sarawakGdpBnMyr: 138.2,
+    cpiInflationPct: 1.8,
+    unemploymentPct: 3.3,
+  },
+};
+
 export const WEATHER_FALLBACK = {
   status: "fallback",
   current: { temperatureC: 30.8, apparentTemperatureC: 36.1, humidity: 74, windKph: 12.2, precipitationMm: 0.8, cloudCover: 64, weatherLabel: "Heat with convective rain risk", pressureHpa: 1008.4 },

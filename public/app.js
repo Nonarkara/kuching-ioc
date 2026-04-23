@@ -1656,29 +1656,17 @@ function renderLocalityList(items) {
     return;
   }
   target.innerHTML = visible.map(it => {
-    const total = (it.residential || 0) + (it.commercial || 0) + (it.industrial || 0) + (it.exempted || 0);
-    const seg = (n, cls) => total > 0 && n > 0
-      ? `<span class="property-seg ${cls}" style="flex:${n}" title="${cls} ${n}"></span>` : "";
     const color = WARD_COLOR_MAP[it.wardCode] || "#8aa2c8";
     return `
       <article class="locality-row" data-ward="${escapeHtml(it.wardCode || "")}" style="border-left-color:${color}">
-        <div class="locality-code">${escapeHtml(it.code)}</div>
-        <div class="locality-body">
-          <div class="locality-name">${escapeHtml(it.name)}</div>
-          <div class="locality-meta">
-            <span class="locality-const">${escapeHtml(localityConstituencyBadge(it))}</span>
-            <span class="locality-sep">·</span>
-            <span>${num(it.residential)} res</span>
-            <span>${num(it.commercial)} com</span>
-            <span>${num(it.industrial)} ind</span>
-          </div>
-          <div class="property-bar">
-            ${seg(it.residential, "residential")}
-            ${seg(it.commercial,  "commercial")}
-            ${seg(it.industrial,  "industrial")}
-            ${seg(it.exempted,    "exempted")}
-          </div>
-        </div>
+        <span class="locality-code">${escapeHtml(it.code)}</span>
+        <span class="locality-name">${escapeHtml(it.name)}</span>
+        <span class="locality-const">${escapeHtml(localityConstituencyBadge(it))}</span>
+        <span class="locality-counts">
+          <span class="c-res" title="Residential">${num(it.residential)}R</span>
+          <span class="c-com" title="Commercial">${num(it.commercial)}C</span>
+          <span class="c-ind" title="Industrial">${num(it.industrial)}I</span>
+        </span>
       </article>`;
   }).join("");
 

@@ -14,6 +14,9 @@ const state = {
   urbanLayerGroups: new Map(),
   tileLayers: new Map(), activeLayerId: "dark", payload: null, hasInitialMapFit: false,
   theme: "dark", lang: "en", mapResizeObserver: null,
+  activeWard: null,
+  localityFilter: { ward: null, stateCode: null, parliamentCode: null, propertyType: null, search: "" },
+  wardFeatures: null, wardLayerGroup: null, wardHighlightLayer: null,
 };
 
 // --- DOM ---
@@ -575,6 +578,31 @@ async function buildFallbackDashboard() {
       ],
     },
     mapScene: { hydroBands: defaultHydroBands },
+    // MPP governance — sample stubs so the councillor + locality panels
+    // render meaningfully even in pure client-fallback mode (no server, no snapshot).
+    mppCouncillors: {
+      status: "fallback", updatedAt: gen, term: "2025–2028",
+      chairman: { title: "Cr.", name: "Tan Kai", phone: "013-8095165", role: "Chairman", coverage: "All zones" },
+      deputy: { title: "Cr.", name: "Mahmud Bin Dato Sri Haji Ibrahim", phone: "012-8087997", role: "Deputy Chairman", coverage: "All zones" },
+      wards: [
+        { code: "A", codeGroup: ["A"], label: "Ward 1", area: "Upper Padawan", councillorCount: 2,
+          councillors: [{ title: "Cr.", name: "Mark Kellon anak Awo", phone: "016-8922060" }] },
+        { code: "FG", codeGroup: ["F","G"], label: "Ward 4", area: "Kota Padawan, Kuap, Landeh & Batu 10-15 Kuching-Serian Road", councillorCount: 4,
+          councillors: [{ title: "Cr.", name: "Lim Lian Kee", phone: "019-8185350" }] },
+      ],
+      totals: { wards: 10, councillors: 32 },
+    },
+    mppLocalities: {
+      status: "fallback", updatedAt: gen,
+      items: [
+        { no: 1, code: "A001", name: "PANGKALAN EMPAT", letter: "A", wardCode: "A",
+          constituency: { raw: "N.19 Mambong under P.198 Puncak Borneo",
+            parsed: [{ stateCode: "N.19", stateName: "Mambong", parliamentCode: "P.198", parliamentName: "Puncak Borneo" }], compound: false },
+          residential: 13, commercial: 0, industrial: 0, exempted: 0 },
+      ],
+      totals: { localities: 525, residential: 77015, commercial: 5780, industrial: 1805, exempted: 1, stateConstituencies: 9, parliamentConstituencies: 5 },
+      breakdowns: { byWard: { A:20, B:16, D:17, FG:76, H:75, I:56, JL:101, K:84, M:42, NPQ:27, X:11 } },
+    },
     sources: [
       sourceRecord("mpp","MPP Council","official","Padawan data","https://mpp.sarawak.gov.my",gen),
       sourceRecord("mbks","MBKS","official","Kuching South","https://mbks.sarawak.gov.my",gen),
@@ -715,6 +743,7 @@ function renderMap(payload) {
     renderLayerToggle(layers);
     renderFocusToggle();
     renderUrbanLayerToggle();
+    loadWardFeatures();
 
     if (window.ResizeObserver) {
       state.mapResizeObserver = new ResizeObserver(() => queueMapResize());
@@ -982,6 +1011,18 @@ function renderUrbanLayerToggle() {
           const c = sevColor[props.severity] || layer.color;
           return { color: c, weight: 2, opacity: 0.9, fillColor: c, fillOpacity: 0.25 };
         }
+        if (layer.id === "mpp_wards") {
+          const c = props.color || WARD_COLOR_MAP[props.wardCode] || layer.color;
+          const active = state.activeWard === props.wardCode;
+          return {
+            color: c,
+            weight: active ? 3 : 1.6,
+            opacity: 0.95,
+            fillColor: c,
+            fillOpacity: active ? 0.3 : 0.12,
+            dashArray: active ? null : "4 4",
+          };
+        }
         if (layer.id === "land_use" || layer.id === "flood_risk") {
           return {
             color: props.color || layer.color,
@@ -1000,6 +1041,12 @@ function renderUrbanLayerToggle() {
         style: (feat) => styleFor(feat.properties || {}),
         onEachFeature: (feat, lyr) => {
           const p = feat.properties || {};
+          if (layer.id === "mpp_wards") {
+            const tooltip = `<strong>Ward ${p.wardCode}${p.wardLabel ? " // " + p.wardLabel : ""}</strong><br>${p.area || ""}<br><em>Click to filter councillors + localities</em>`;
+            lyr.bindTooltip(tooltip, { className: "marker-tooltip", sticky: true });
+            lyr.on("click", () => setActiveWard(state.activeWard === p.wardCode ? null : p.wardCode));
+            return;
+          }
           const lines = [
             `<strong>${p.name || `${(p.kind||'feature')} #${p.id}`}</strong>`,
             p.kind ? `Kind: ${p.kind}` : null,
@@ -1015,6 +1062,10 @@ function renderUrbanLayerToggle() {
       }).addTo(state.map);
       state.urbanLayerGroups.set(layer.id, group);
       if (layer.id === "drainage") state.drainageFeatureIndex = featureLayers;
+      if (layer.id === "mpp_wards") {
+        state.wardFeatures = fc.features || [];
+        state.wardLayerGroup = group;
+      }
       btn.textContent = `${originalLabel.replace(/ \(\d+\)$/, "")} (${features.length})`;
     } catch (error) {
       console.warn(`Layer ${layer.id} failed:`, error);
@@ -1374,6 +1425,325 @@ function renderOfficialPulse(payload) {
     </div>`;
 }
 
+// --- MPP governance: councillor roster + locality explorer -------------------
+// Ward code ↔ locality-code-prefix join lives here. Clicks flow through
+// state.activeWard so councillor chips, the locality list, and the ward polygon
+// on the map all react to the same signal.
+
+const WARD_CODE_ORDER = ["A", "B", "D", "FG", "H", "I", "JL", "K", "M", "NPQ"];
+const WARD_COLOR_MAP = {
+  A: "#a78bfa", B: "#c084fc", D: "#d946ef", FG: "#f472b6", H: "#fb7185",
+  I: "#fb923c", JL: "#fbbf24", K: "#84cc16", M: "#22d3ee", NPQ: "#38bdf8",
+};
+
+function escapeHtml(str) {
+  return String(str ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+}
+
+function renderCouncillorCard(person, { role, coverage, accentColor } = {}) {
+  const color = accentColor || "var(--cyan)";
+  const badge = role ? `<div class="councillor-role">${escapeHtml(role)}</div>` : "";
+  const scope = coverage ? `<div class="councillor-scope">${escapeHtml(coverage)}</div>` : "";
+  const phoneClean = (person.phone || "").replace(/[^0-9+]/g, "");
+  return `
+    <article class="councillor-card" style="border-left-color:${color}">
+      ${badge}
+      <div class="councillor-name">${escapeHtml([person.title, person.name].filter(Boolean).join(" "))}</div>
+      ${scope}
+      <a class="councillor-phone" href="tel:${phoneClean}">${escapeHtml(person.phone || "—")}</a>
+    </article>`;
+}
+
+function renderMppCouncillors(payload) {
+  const target = $("councillorPanel");
+  if (!target) return;
+  const data = payload.mppCouncillors;
+  if (!data || !data.wards?.length) {
+    target.innerHTML = `<div class="panel-empty">Councillor roster unavailable.</div>`;
+    return;
+  }
+  const wardsByCode = new Map(data.wards.map(w => [w.code, w]));
+  const localityCounts = payload.mppLocalities?.breakdowns?.byWard || {};
+
+  const chairmanHtml = data.chairman ? renderCouncillorCard(data.chairman, {
+    role: "Chairman",
+    coverage: data.chairman.coverage || "All zones",
+    accentColor: "var(--cyan)",
+  }) : "";
+  const deputyHtml = data.deputy ? renderCouncillorCard(data.deputy, {
+    role: "Deputy",
+    coverage: data.deputy.coverage || "All zones",
+    accentColor: "var(--cyan)",
+  }) : "";
+
+  const wardChips = WARD_CODE_ORDER.map(code => {
+    const w = wardsByCode.get(code);
+    if (!w) return "";
+    const localityCount = localityCounts[code] ?? 0;
+    const color = WARD_COLOR_MAP[code] || "#a78bfa";
+    const active = state.activeWard === code ? "true" : "false";
+    return `
+      <button class="ward-chip" data-ward="${code}" data-active="${active}" style="--ward-color:${color}">
+        <div class="ward-chip-code">${escapeHtml(code)}</div>
+        <div class="ward-chip-area">${escapeHtml(w.area)}</div>
+        <div class="ward-chip-stats">
+          <span>${w.councillorCount} councillor${w.councillorCount === 1 ? "" : "s"}</span>
+          <span>·</span>
+          <span>${localityCount} localit${localityCount === 1 ? "y" : "ies"}</span>
+        </div>
+      </button>`;
+  }).filter(Boolean).join("");
+
+  // Detail panel for the active ward (or a hint if none selected).
+  const active = state.activeWard && wardsByCode.get(state.activeWard);
+  const detailHtml = active ? `
+    <div class="ward-detail" data-ward="${escapeHtml(active.code)}" style="border-left-color:${WARD_COLOR_MAP[active.code]}">
+      <div class="ward-detail-head">
+        <div class="ward-detail-label">${escapeHtml(active.label)} · ${escapeHtml(active.code)}</div>
+        <div class="ward-detail-area">${escapeHtml(active.area)}</div>
+      </div>
+      <div class="ward-detail-roster">
+        ${active.councillors.map(c => renderCouncillorCard(c, { accentColor: WARD_COLOR_MAP[active.code] })).join("")}
+      </div>
+    </div>
+  ` : `<div class="ward-hint">Tap a ward to see its councillors and filter localities.</div>`;
+
+  target.innerHTML = `
+    <div class="councillor-leaders">${chairmanHtml}${deputyHtml}</div>
+    <div class="ward-chip-grid">${wardChips}</div>
+    ${detailHtml}
+    <div class="councillor-term">Term ${escapeHtml(data.term || "2025–2028")} · ${data.totals?.councillors ?? 0} councillors · ${data.totals?.wards ?? 0} wards</div>
+  `;
+
+  // Wire up ward-chip clicks.
+  target.querySelectorAll(".ward-chip").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const code = btn.dataset.ward;
+      setActiveWard(state.activeWard === code ? null : code);
+    });
+  });
+}
+
+// --- Locality Explorer -------------------------------------------------------
+
+const LOCALITY_PAGE_SIZE = 60;
+
+function localityConstituencyBadge(item) {
+  const first = item.constituency?.parsed?.[0];
+  if (!first?.stateCode) return "—";
+  const badge = `${first.stateCode} ${first.stateName}`;
+  return item.constituency.compound ? `${badge} · +${item.constituency.parsed.length - 1}` : badge;
+}
+
+function filterLocalities(items, f) {
+  const q = (f.search || "").trim().toUpperCase();
+  return items.filter(it => {
+    if (f.ward && it.wardCode !== f.ward) return false;
+    if (f.stateCode) {
+      const codes = (it.constituency?.parsed || []).map(p => p.stateCode);
+      if (!codes.includes(f.stateCode)) return false;
+    }
+    if (f.parliamentCode) {
+      const codes = (it.constituency?.parsed || []).map(p => p.parliamentCode);
+      if (!codes.includes(f.parliamentCode)) return false;
+    }
+    if (f.propertyType === "residential" && !(it.residential > 0)) return false;
+    if (f.propertyType === "commercial"  && !(it.commercial  > 0)) return false;
+    if (f.propertyType === "industrial"  && !(it.industrial  > 0)) return false;
+    if (f.propertyType === "exempted"    && !(it.exempted    > 0)) return false;
+    if (q) {
+      const hay = `${it.code} ${it.name}`.toUpperCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderLocalityKpis(totals) {
+  const target = $("localityKpis");
+  if (!target) return;
+  const tile = (label, value, unit = "") => `
+    <article class="metric-card" data-tone="neutral">
+      <div class="metric-label">${escapeHtml(label)}</div>
+      <div class="metric-value">${num(value, 0)}<span class="metric-unit">${escapeHtml(unit)}</span></div>
+    </article>`;
+  target.innerHTML = [
+    tile(t("totalLocalities"), totals.localities),
+    tile(t("residential"),     totals.residential),
+    tile(t("commercial"),      totals.commercial),
+    tile(t("industrial"),      totals.industrial),
+    tile(t("stateSeats"),      totals.stateConstituencies),
+    tile(t("parliamentSeats"), totals.parliamentConstituencies),
+  ].join("");
+}
+
+function renderLocalityFilters(payload) {
+  const target = $("localityFilters");
+  if (!target) return;
+  const f = state.localityFilter;
+  const wards = WARD_CODE_ORDER.filter(c => (payload.mppLocalities?.breakdowns?.byWard?.[c] ?? 0) > 0);
+  const stateSeats = payload.mppLocalities?.breakdowns?.byState || {};
+  const parlSeats  = payload.mppLocalities?.breakdowns?.byParliament || {};
+
+  const wardOpts = `<option value="">${t("allWards")}</option>` +
+    wards.map(c => `<option value="${c}" ${f.ward === c ? "selected" : ""}>${c}</option>`).join("");
+  const stateOpts = `<option value="">${t("allConstituencies")} (${t("stateConstituency")})</option>` +
+    Object.entries(stateSeats).sort().map(([code, v]) =>
+      `<option value="${code}" ${f.stateCode === code ? "selected" : ""}>${code} ${escapeHtml(v.name)} (${v.count})</option>`
+    ).join("");
+  const parlOpts = `<option value="">${t("allConstituencies")} (${t("parliamentConstituency")})</option>` +
+    Object.entries(parlSeats).sort().map(([code, v]) =>
+      `<option value="${code}" ${f.parliamentCode === code ? "selected" : ""}>${code} ${escapeHtml(v.name)} (${v.count})</option>`
+    ).join("");
+  const propOpts = [
+    ["", t("allPropertyTypes")],
+    ["residential", t("residential")],
+    ["commercial",  t("commercial")],
+    ["industrial",  t("industrial")],
+    ["exempted",    t("exempted")],
+  ].map(([v, label]) => `<option value="${v}" ${f.propertyType === v ? "selected" : ""}>${label}</option>`).join("");
+
+  target.innerHTML = `
+    <select class="locality-filter" data-filter="ward">${wardOpts}</select>
+    <select class="locality-filter" data-filter="stateCode">${stateOpts}</select>
+    <select class="locality-filter" data-filter="parliamentCode">${parlOpts}</select>
+    <select class="locality-filter" data-filter="propertyType">${propOpts}</select>
+    <input type="search" class="locality-search" placeholder="${t("searchLocality")}" value="${escapeHtml(f.search || "")}" data-filter="search" />
+    <button type="button" class="locality-reset" data-action="reset-locality-filter">Reset</button>
+  `;
+  target.querySelectorAll("[data-filter]").forEach(el => {
+    const evt = el.tagName === "SELECT" ? "change" : "input";
+    el.addEventListener(evt, () => {
+      const key = el.dataset.filter;
+      state.localityFilter = { ...state.localityFilter, [key]: el.value || null };
+      if (key === "ward") state.activeWard = el.value || null;
+      renderMppLocalities(state.payload);
+      renderMppCouncillors(state.payload);
+      if (state.activeWard) highlightWard(state.activeWard);
+    });
+  });
+  target.querySelector("[data-action=reset-locality-filter]")?.addEventListener("click", () => {
+    state.localityFilter = { ward: null, stateCode: null, parliamentCode: null, propertyType: null, search: "" };
+    state.activeWard = null;
+    renderMppLocalities(state.payload);
+    renderMppCouncillors(state.payload);
+    clearWardHighlight();
+  });
+}
+
+function renderLocalityList(items) {
+  const target = $("localityList");
+  const statusEl = $("localityStatus");
+  if (!target) return;
+  const visible = items.slice(0, LOCALITY_PAGE_SIZE);
+  if (statusEl) {
+    statusEl.textContent = `${t("showingResults")} ${visible.length} ${t("of")} ${num(items.length)}`;
+  }
+  if (!visible.length) {
+    target.innerHTML = `<div class="panel-empty">No localities match the current filters.</div>`;
+    return;
+  }
+  target.innerHTML = visible.map(it => {
+    const total = (it.residential || 0) + (it.commercial || 0) + (it.industrial || 0) + (it.exempted || 0);
+    const seg = (n, cls) => total > 0 && n > 0
+      ? `<span class="property-seg ${cls}" style="flex:${n}" title="${cls} ${n}"></span>` : "";
+    const color = WARD_COLOR_MAP[it.wardCode] || "#8aa2c8";
+    return `
+      <article class="locality-row" data-ward="${escapeHtml(it.wardCode || "")}" style="border-left-color:${color}">
+        <div class="locality-code">${escapeHtml(it.code)}</div>
+        <div class="locality-body">
+          <div class="locality-name">${escapeHtml(it.name)}</div>
+          <div class="locality-meta">
+            <span class="locality-const">${escapeHtml(localityConstituencyBadge(it))}</span>
+            <span class="locality-sep">·</span>
+            <span>${num(it.residential)} res</span>
+            <span>${num(it.commercial)} com</span>
+            <span>${num(it.industrial)} ind</span>
+          </div>
+          <div class="property-bar">
+            ${seg(it.residential, "residential")}
+            ${seg(it.commercial,  "commercial")}
+            ${seg(it.industrial,  "industrial")}
+            ${seg(it.exempted,    "exempted")}
+          </div>
+        </div>
+      </article>`;
+  }).join("");
+
+  target.querySelectorAll(".locality-row").forEach(row => {
+    row.addEventListener("click", () => {
+      const w = row.dataset.ward;
+      if (w) setActiveWard(w);
+    });
+  });
+}
+
+function renderMppLocalities(payload) {
+  const data = payload?.mppLocalities;
+  if (!data) return;
+  if (!state.localityFilter) {
+    state.localityFilter = { ward: null, stateCode: null, parliamentCode: null, propertyType: null, search: "" };
+  }
+  if (state.activeWard && state.localityFilter.ward !== state.activeWard) {
+    state.localityFilter = { ...state.localityFilter, ward: state.activeWard };
+  }
+  if (!state.activeWard && state.localityFilter.ward) {
+    // Keep explicit filter even without activeWard (e.g. user picked dropdown).
+  }
+  renderLocalityKpis(data.totals || {});
+  renderLocalityFilters(payload);
+  const filtered = filterLocalities(data.items || [], state.localityFilter);
+  renderLocalityList(filtered);
+}
+
+// --- Shared cross-panel state: activeWard drives map + councillors + localities
+
+function setActiveWard(code) {
+  state.activeWard = code || null;
+  state.localityFilter = {
+    ...(state.localityFilter || { ward: null, stateCode: null, parliamentCode: null, propertyType: null, search: "" }),
+    ward: code || null,
+  };
+  renderMppCouncillors(state.payload);
+  renderMppLocalities(state.payload);
+  if (code) highlightWard(code);
+  else clearWardHighlight();
+}
+
+function clearWardHighlight() {
+  if (state.wardHighlightLayer && state.map) {
+    state.map.removeLayer(state.wardHighlightLayer);
+  }
+  state.wardHighlightLayer = null;
+}
+
+function highlightWard(code) {
+  if (!state.map || !window.L || !state.wardFeatures) return;
+  const feat = state.wardFeatures.find(f => f?.properties?.wardCode === code);
+  if (!feat) return;
+  clearWardHighlight();
+  const color = feat.properties.color || WARD_COLOR_MAP[code] || "#a78bfa";
+  const layer = window.L.geoJSON(feat, {
+    style: { color, weight: 3, opacity: 1, fillColor: color, fillOpacity: 0.28, dashArray: "4 4" },
+  }).addTo(state.map);
+  state.wardHighlightLayer = layer;
+  try { state.map.fitBounds(layer.getBounds().pad(0.2), { maxZoom: 14 }); } catch (_) { /* ignore */ }
+}
+
+async function loadWardFeatures() {
+  if (state.wardFeatures?.length) return;
+  try {
+    let res = await fetch(apiUrl("/api/layers/mpp_wards")).catch(() => null);
+    if (!res || !res.ok) res = await fetch(apiUrl("/api/layers/mpp_wards.json"));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const fc = await res.json();
+    state.wardFeatures = fc.features || [];
+  } catch (error) {
+    console.warn("Ward boundaries unavailable:", error);
+    state.wardFeatures = [];
+  }
+}
+
 function renderDashboard(payload) {
   state.payload = payload;
   if (payload.site?.title) document.title = payload.site.title;
@@ -1390,6 +1760,8 @@ function renderDashboard(payload) {
   renderAirportStats(payload.airport);
   renderNewsIntake(payload.news);
   renderOfficialPulse(payload);
+  renderMppCouncillors(payload);
+  renderMppLocalities(payload);
 
   // Directives — with human context when available
   $("operationList").innerHTML = payload.operations.map(o=>`

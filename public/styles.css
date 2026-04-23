@@ -45,7 +45,8 @@ html, body {
   height: 100%; margin: 0;
   background: var(--bg); color: var(--ink);
   font-family: var(--font-mono); font-size: 11px;
-  overflow: hidden; -webkit-font-smoothing: antialiased;
+  overflow-x: hidden; overflow-y: auto;
+  -webkit-font-smoothing: antialiased;
 }
 
 body::before {
@@ -61,8 +62,6 @@ body::before {
   flex-direction: column;
   min-height: 100vh;
   min-height: 100svh;
-  height: 100vh;
-  height: 100svh;
 }
 
 /* === Masthead === */
@@ -271,7 +270,10 @@ body::before {
   display: grid;
   grid-template-columns: minmax(0, 2.4fr) minmax(300px, 1fr);
   grid-template-areas: "center situation";
-  flex: 1; min-height: 0; background: var(--bg);
+  flex: 0 0 auto;
+  height: calc(100vh - 260px);
+  min-height: 540px;
+  background: var(--bg);
 }
 
 /* === Panels === */
@@ -1382,4 +1384,265 @@ body::before {
     flex-wrap: wrap;
     gap: 8px;
   }
+}
+
+/* === MPP governance: Councillor roster === */
+.councillor-panel { padding: 6px; display: flex; flex-direction: column; gap: 8px; }
+.councillor-leaders { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+.councillor-card {
+  padding: 8px 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--cyan);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.councillor-role {
+  font-size: 8px;
+  color: var(--cyan);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  text-shadow: var(--glow-soft);
+}
+.councillor-name { font-size: 11px; color: var(--ink); font-weight: 700; line-height: 1.25; }
+.councillor-scope { font-size: 8px; color: var(--soft); letter-spacing: 0.3px; }
+.councillor-phone {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: var(--cyan);
+  text-decoration: none;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+.councillor-phone:hover { text-shadow: var(--glow-soft); }
+
+.ward-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px;
+}
+.ward-chip {
+  padding: 6px 4px;
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--ward-color, var(--line-strong));
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+  font-family: inherit;
+  color: var(--ink);
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+.ward-chip:hover { background: var(--card-hover); border-color: var(--line-strong); }
+.ward-chip[data-active="true"] {
+  background: rgba(0,243,255,0.08);
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px rgba(0,243,255,0.25);
+}
+.ward-chip-code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.5px;
+}
+.ward-chip-area { font-size: 7px; color: var(--soft); line-height: 1.15; min-height: 16px; }
+.ward-chip-stats { font-size: 7px; color: var(--cyan); letter-spacing: 0.3px; display: flex; gap: 2px; justify-content: center; flex-wrap: wrap; }
+
+.ward-detail {
+  padding: 8px 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--cyan);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ward-detail-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.ward-detail-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: var(--cyan);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.ward-detail-area { font-size: 8px; color: var(--soft); }
+.ward-detail-roster { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.ward-detail-roster .councillor-card {
+  padding: 6px 8px;
+  border-left-width: 2px;
+  background: rgba(255,255,255,0.02);
+}
+.ward-detail-roster .councillor-name { font-size: 10px; }
+.ward-detail-roster .councillor-phone { font-size: 9px; }
+
+.ward-hint {
+  padding: 8px 10px;
+  font-size: 9px;
+  color: var(--soft);
+  border: 1px dashed var(--line);
+  background: rgba(255,255,255,0.02);
+  letter-spacing: 0.5px;
+}
+.councillor-term {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 8px;
+  color: var(--soft);
+  letter-spacing: 0.5px;
+  padding-top: 3px;
+  border-top: 1px dotted var(--line);
+}
+
+/* === MPP governance: Locality Explorer === */
+.locality-panel { padding: 12px 16px; }
+.locality-kpis {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.locality-kpis .metric-card {
+  background: var(--hud-bg);
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--cyan);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.locality-kpis .metric-label {
+  font-size: 8px;
+  color: var(--cyan);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.locality-kpis .metric-value {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  text-shadow: var(--glow-soft);
+}
+.locality-kpis .metric-unit { font-size: 9px; color: var(--soft); margin-left: 3px; }
+
+.locality-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+.locality-filter,
+.locality-search {
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  padding: 5px 6px;
+  min-width: 140px;
+}
+.locality-filter:focus,
+.locality-search:focus {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px rgba(0,243,255,0.3);
+}
+.locality-search { flex: 1; min-width: 180px; }
+.locality-reset {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--soft);
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+.locality-reset:hover { color: var(--cyan); border-color: var(--cyan); }
+
+.locality-status {
+  font-size: 9px;
+  color: var(--soft);
+  margin-bottom: 6px;
+  font-family: "JetBrains Mono", monospace;
+  letter-spacing: 0.5px;
+}
+
+.locality-list {
+  max-height: 540px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--line);
+  padding: 4px;
+  background: var(--hud-bg);
+}
+.locality-list::-webkit-scrollbar { width: 6px; }
+.locality-list::-webkit-scrollbar-track { background: transparent; }
+.locality-list::-webkit-scrollbar-thumb { background: var(--line-strong); }
+
+.locality-row {
+  padding: 6px 8px;
+  background: var(--card-bg);
+  border-left: 2px solid var(--line-strong);
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 10px;
+  align-items: center;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+.locality-row:hover { background: var(--card-hover); }
+.locality-code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: var(--cyan);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.locality-body { display: flex; flex-direction: column; gap: 3px; }
+.locality-name { font-size: 10px; color: var(--ink); letter-spacing: 0.2px; }
+.locality-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 8px;
+  color: var(--soft);
+}
+.locality-const { color: var(--cyan); letter-spacing: 0.5px; }
+.locality-sep { opacity: 0.5; }
+
+.property-bar {
+  display: flex;
+  height: 4px;
+  background: rgba(255,255,255,0.04);
+  overflow: hidden;
+  margin-top: 2px;
+}
+.property-seg { display: block; height: 100%; }
+.property-seg.residential { background: var(--green); }
+.property-seg.commercial { background: var(--amber); }
+.property-seg.industrial { background: var(--red); }
+.property-seg.exempted { background: var(--soft); opacity: 0.55; }
+
+.panel-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 960px) {
+  .ward-chip-grid { grid-template-columns: repeat(3, 1fr); }
+  .councillor-leaders { grid-template-columns: 1fr; }
+  .locality-kpis { grid-template-columns: repeat(3, 1fr); }
+  .ward-detail-roster { grid-template-columns: 1fr; }
 }

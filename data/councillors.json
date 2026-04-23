@@ -1,0 +1,291 @@
+{
+  "generatedAt": "2026-04-23T04:44:46.156292Z",
+  "source": "MPP Resident Councillors System 2025-2028",
+  "sourceFile": "MPP RESIDENT COUNCILLORS SYSTEM 2025.docx",
+  "term": "2025-2028",
+  "chairman": {
+    "title": "Cr.",
+    "name": "Tan Kai",
+    "phone": "013-8095165",
+    "role": "Chairman",
+    "coverage": "All zones"
+  },
+  "deputy": {
+    "title": "Cr.",
+    "name": "Mahmud Bin Dato Sri Haji Ibrahim",
+    "phone": "012-8087997",
+    "role": "Deputy Chairman",
+    "coverage": "All zones"
+  },
+  "wards": [
+    {
+      "code": "A",
+      "codeGroup": [
+        "A"
+      ],
+      "label": "Ward 1",
+      "area": "Upper Padawan",
+      "councillorCount": 2,
+      "councillors": [
+        {
+          "title": "Cr.",
+          "name": "Mark Kellon anak Awo",
+          "phone": "016-8922060"
+        },
+        {
+          "title": "Cr.",
+          "name": "Stephen Jatu anak Sawet",
+          "phone": "019-4592366"
+        }
+      ]
+    },
+    {
+      "code": "B",
+      "codeGroup": [
+        "B"
+      ],
+      "label": "Ward 2",
+      "area": "Upper Padawan: Biperoh & Bengoh",
+      "councillorCount": 4,
+      "councillors": [
+        {
+          "title": "Cr.",
+          "name": "Felix Ngui",
+          "phone": "016-8548070"
+        },
+        {
+          "title": "Cr.",
+          "name": "Tito Grabo anak Teyok",
+          "phone": "011-33203700"
+        },
+        {
+          "title": "Cr.",
+          "name": "Niput anak Ahip",
+          "phone": "019-7658166"
+        },
+        {
+          "title": "Cr.",
+          "name": "Roselin anak Lasek",
+          "phone": "010-9752611"
+        }
+      ]
+    },
+    {
+      "code": "D",
+      "codeGroup": [
+        "D"
+      ],
+      "label": "Ward 3",
+      "area": "Mambong & Puncak Borneo",
+      "councillorCount": 2,
+      "councillors": [
+        {
+          "title": "Cr.",
+          "name": "Walter anak Suhai",
+          "phone": "010-4087717"
+        },
+        {
+          "title": "Lt. Kol.",
+          "name": "Monday anak Juhid",
+          "phone": "013-8036477"
+        }
+      ]
+    },
+    {
+      "code": "FG",
+      "codeGroup": [
+        "F",
+        "G"
+      ],
+      "label": "Ward 4",
+      "area": "Kota Padawan, Kuap, Landeh & Batu 10-15 Kuching-Serian Road",
+      "councillorCount": 4,
+      "councillors": [
+        {
+          "title": "Cr.",
+          "name": "Lim Lian Kee",
+          "phone": "019-8185350"
+        },
+        {
+          "title": "Cr.",
+          "name": "Shamsudin bin Unai",
+          "phone": "013-9065805"
+        },
+        {
+          "title": "Cr.",
+          "name": "Norolhadi bin Dolla Sabari",
+          "phone": "019-8747445"
+        },
+        {
+          "title": "Cr.",
+          "name": "Wilarmy Geniron Jebron",
+          "phone": "011-29109925"
+        }
+      ]
+    },
+    {
+      "code": "H",
+      "codeGroup": [
+        "H"
+      ],
+      "label": "Ward 5",
+      "area": "3rd Mile Maong Bazaar, Arang, Semeba & Kung Phin",
+      "councillorCount": 3,
+      "councillors": [
+        {
+          "title": "Cr.",
+          "name": "Gerald Goh Teck Joo",
+          "phone": "019-8165368"
+        },
+        {
+          "title": "Cr.",
+          "name": "Alvin Chong Nyuk Fah",
+          "phone": "012-8442885"
+        },
+        {
+          "title": "Cr.",
+          "name": "Leng Chai anak Mendu",
+          "phone": "011-14567777"
+        }
+      ]
+    },
+    {
+      "code": "I",
+      "codeGroup": [
+        "I"
+      ],
+      "label": "Ward 6",
+      "area": "Kota Sentosa & Batu Kitang",
+      "councillorCount": 3,
+      "councillors": [
+        {
+          "title": "Sr. Cr.",
+          "name": "Chen Chee Joong",
+          "phone": "019-8130636"
+        },
+        {
+          "title": "Cr.",
+          "name": "Philip Liaw Kian Sin",
+          "phone": "016-8611233"
+        },
+        {
+          "title": "Cr.",
+          "name": "Mohamad Fauzi bin Ali",
+          "phone": "016-8565626"
+        }
+      ]
+    },
+    {
+      "code": "JL",
+      "codeGroup": [
+        "J",
+        "L"
+      ],
+      "label": "Ward 7",
+      "area": "Batu Kawah & Datuk Stephen Yong Road",
+      "councillorCount": 4,
+      "councillors": [
+        {
+          "title": "Cr.",
+          "name": "Samsudin bin Sapri",
+          "phone": "019-8916606"
+        },
+        {
+          "title": "Cr.",
+          "name": "Gary Yeo Shin Huat",
+          "phone": "010-7922988"
+        },
+        {
+          "title": "Cr.",
+          "name": "Phang Kit Lung",
+          "phone": "013-9406228"
+        },
+        {
+          "title": "Cr.",
+          "name": "Bassiron bin Haji Latep",
+          "phone": "011-53355255"
+        }
+      ]
+    },
+    {
+      "code": "K",
+      "codeGroup": [
+        "K"
+      ],
+      "label": "Ward 8",
+      "area": "Matang",
+      "councillorCount": 3,
+      "councillors": [
+        {
+          "title": "Cr.",
+          "name": "Jamilah binti Rakim",
+          "phone": "016-8741442"
+        },
+        {
+          "title": "Cr.",
+          "name": "Madhi bin Tomi",
+          "phone": "019-9707411"
+        },
+        {
+          "title": "Cr.",
+          "name": "Lee Yen Huei",
+          "phone": "010-7878162"
+        }
+      ]
+    },
+    {
+      "code": "M",
+      "codeGroup": [
+        "M"
+      ],
+      "label": "Ward 9",
+      "area": "Batu Kawah Township, Stapok & Sunny Hill Batu Kawah",
+      "councillorCount": 3,
+      "councillors": [
+        {
+          "title": "Ir. Dr. Cr.",
+          "name": "Jackie Sim Hui Hui",
+          "phone": "010-2227751"
+        },
+        {
+          "title": "Cr.",
+          "name": "Aaron Tay Kok Tung",
+          "phone": "012-8885065"
+        },
+        {
+          "title": "Cr.",
+          "name": "Ronnie Hii Ru Wei",
+          "phone": "012-8860505"
+        }
+      ]
+    },
+    {
+      "code": "NPQ",
+      "codeGroup": [
+        "N",
+        "P",
+        "Q"
+      ],
+      "label": "Ward 10",
+      "area": "Telaga Air, Sibu Laut & Kawasan Kpg. Tg. Bako",
+      "councillorCount": 2,
+      "councillors": [
+        {
+          "title": "Cr.",
+          "name": "Sebeki bin Jen",
+          "phone": "019-8763231"
+        },
+        {
+          "title": "Cr.",
+          "name": "Othman bin Ibrahim",
+          "phone": "010-9765149"
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "wards": 10,
+    "councillors": 32
+  },
+  "notes": "Ward codes align 1:1 with the prefixes used in the MPP Locality Listing (A, B, D, F+G, H, I, J+L, K, M, N+P+Q). Chairman and Deputy cover all zones."
+}

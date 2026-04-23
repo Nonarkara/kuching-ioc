@@ -4,8 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:static": "node build.mjs",
     "dev": "node server.mjs",
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "archive:sheets": "node scripts/sheets-archive.mjs"
   },
   "engines": {
     "node": ">=20"

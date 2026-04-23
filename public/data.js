@@ -185,6 +185,7 @@ export const URBAN_LAYERS = [
   { id: "drainage", label: "Drainage (OSM)", type: "geojson", url: "/api/layers/drainage", color: "#60a5fa", active: false },
   { id: "transit", label: "Transit Network", type: "geojson", url: "/api/layers/transit", color: "#fbbf24", active: false },
   { id: "flood_zones", label: "Flood Zones (Historical)", type: "geojson", url: "/api/layers/flood_zones", color: "#ef4444", active: false },
+  { id: "mpp_wards", label: "MPP Wards (Governance)", type: "geojson", url: "/api/layers/mpp_wards", color: "#a78bfa", active: false },
 ];
 
 export const RIVER_BYPASS_PROJECT = {
@@ -217,6 +218,16 @@ export const TRANSLATIONS = {
     airport: "Airport // KCH", flightTracker: "Flight Tracker",
     landUse: "Land Use", floodRisk: "Flood Risk", drainage: "Drainage", officialStats: "Official Stats",
     growthRing: "Growth Ring", urbanSprawl: "Urban Sprawl",
+    governance: "Municipal Governance", councillors: "Councillors // MPP 2025–2028",
+    chairman: "Chairman", deputy: "Deputy Chairman", ward: "Ward", portfolio: "Portfolio",
+    phone: "Contact", allZones: "All Zones",
+    localityExplorer: "Locality Explorer // Padawan", locality: "Locality", code: "Code",
+    stateConstituency: "State Seat", parliamentConstituency: "Parliament Seat",
+    residential: "Residential", commercial: "Commercial", industrial: "Industrial", exempted: "Exempted",
+    totalLocalities: "Total Localities", stateSeats: "State Seats", parliamentSeats: "Parliament Seats",
+    filterBy: "Filter by", searchLocality: "Search locality or code…",
+    allWards: "All Wards", allConstituencies: "All Constituencies", allPropertyTypes: "All Types",
+    showingResults: "Showing", of: "of",
   },
   ms: {
     title: "Pusat Operasi Pintar Greater Kuching",
@@ -232,6 +243,16 @@ export const TRANSLATIONS = {
     airport: "Lapangan Terbang // KCH", flightTracker: "Pengesan Penerbangan",
     landUse: "Guna Tanah", floodRisk: "Risiko Banjir", drainage: "Saliran", officialStats: "Statistik Rasmi",
     growthRing: "Gelang Pertumbuhan", urbanSprawl: "Serakan Bandar",
+    governance: "Tadbir Urus Perbandaran", councillors: "Ahli Majlis // MPP 2025–2028",
+    chairman: "Pengerusi", deputy: "Timbalan Pengerusi", ward: "Zon", portfolio: "Portfolio",
+    phone: "Hubungan", allZones: "Semua Zon",
+    localityExplorer: "Penjelajah Kawasan // Padawan", locality: "Kawasan", code: "Kod",
+    stateConstituency: "DUN", parliamentConstituency: "Parlimen",
+    residential: "Kediaman", commercial: "Komersial", industrial: "Perindustrian", exempted: "Dikecualikan",
+    totalLocalities: "Jumlah Kawasan", stateSeats: "Kerusi DUN", parliamentSeats: "Kerusi Parlimen",
+    filterBy: "Tapis mengikut", searchLocality: "Cari kawasan atau kod…",
+    allWards: "Semua Zon", allConstituencies: "Semua Kawasan", allPropertyTypes: "Semua Jenis",
+    showingResults: "Menunjukkan", of: "daripada",
   },
   zh: {
     title: "大古晋智能运营中心",
@@ -247,6 +268,16 @@ export const TRANSLATIONS = {
     airport: "机场 // KCH", flightTracker: "航班追踪",
     landUse: "土地利用", floodRisk: "洪水风险", drainage: "排水系统", officialStats: "官方统计",
     growthRing: "增长环", urbanSprawl: "城市扩张",
+    governance: "市政治理", councillors: "议员名录 // MPP 2025–2028",
+    chairman: "主席", deputy: "副主席", ward: "选区", portfolio: "职务",
+    phone: "联络", allZones: "全部选区",
+    localityExplorer: "地点浏览 // 巴达旺", locality: "地点", code: "代码",
+    stateConstituency: "州议席", parliamentConstituency: "国会议席",
+    residential: "住宅", commercial: "商业", industrial: "工业", exempted: "豁免",
+    totalLocalities: "地点总数", stateSeats: "州议席", parliamentSeats: "国会议席",
+    filterBy: "筛选", searchLocality: "搜索地点或代码…",
+    allWards: "全部选区", allConstituencies: "全部选区", allPropertyTypes: "全部类型",
+    showingResults: "显示", of: "共",
   },
 };
 

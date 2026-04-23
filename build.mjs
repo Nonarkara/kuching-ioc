@@ -121,7 +121,7 @@ async function main() {
     console.log(`  → ${dashboardPath} (${(dashboard.length / 1024).toFixed(1)} KB, ${parsed.sources?.length || "?"} sources)`);
 
     // 3. Fetch all GIS layers in parallel.
-    const layerIds = ["drainage", "transit", "land_use", "flood_risk", "flood_zones"];
+    const layerIds = ["drainage", "transit", "land_use", "flood_risk", "flood_zones", "mpp_wards"];
     await mkdir(LAYERS_DIR, { recursive: true });
     console.log(`Fetching ${layerIds.length} GIS layers...`);
     const results = await Promise.allSettled(

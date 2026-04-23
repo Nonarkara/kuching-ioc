@@ -2808,11 +2808,72 @@ function buildTimeSignal() {
   };
 }
 
+// --- MPP governance: councillor roster + locality listing + ward polygons ---
+// Source-of-truth JSON/GeoJSON lives under /data/ (committed to repo).
+// Files are tiny, change only on term rollover, so we read them on demand
+// with a long cache TTL rather than wiring a network loader.
+
+const DATA_DIR = path.join(__dirname, "data");
+
+async function loadMppCouncillors() {
+  return cached("mpp-councillors", 3600_000, async () => {
+    const raw = await fs.readFile(path.join(DATA_DIR, "councillors.json"), "utf-8");
+    const doc = JSON.parse(raw);
+    return {
+      status: "official",
+      updatedAt: doc.generatedAt || nowIso(),
+      term: doc.term,
+      source: doc.source,
+      chairman: doc.chairman,
+      deputy: doc.deputy,
+      wards: doc.wards,
+      totals: doc.totals,
+      notes: doc.notes,
+    };
+  }).catch((error) => ({
+    status: "error",
+    updatedAt: nowIso(),
+    error: error instanceof Error ? error.message : String(error),
+    wards: [],
+    totals: { wards: 0, councillors: 0 },
+  }));
+}
+
+async function loadMppLocalities() {
+  return cached("mpp-localities", 3600_000, async () => {
+    const raw = await fs.readFile(path.join(DATA_DIR, "localities.json"), "utf-8");
+    const doc = JSON.parse(raw);
+    return {
+      status: "official",
+      updatedAt: doc.generatedAt || nowIso(),
+      source: doc.source,
+      items: doc.items,
+      totals: doc.totals,
+      breakdowns: doc.breakdowns,
+    };
+  }).catch((error) => ({
+    status: "error",
+    updatedAt: nowIso(),
+    error: error instanceof Error ? error.message : String(error),
+    items: [],
+    totals: { localities: 0, residential: 0, commercial: 0, industrial: 0, exempted: 0 },
+    breakdowns: { byWard: {}, byState: {}, byParliament: {} },
+  }));
+}
+
+async function loadMppWardBoundaries() {
+  return cached("mpp-ward-boundaries", 3600_000, async () => {
+    const raw = await fs.readFile(path.join(DATA_DIR, "ward_boundaries.geojson"), "utf-8");
+    return JSON.parse(raw);
+  }).catch(() => ({ type: "FeatureCollection", features: [] }));
+}
+
 async function buildDashboard() {
   const [
     weather, air, airport, jurisdictions, news, fires, quakes,
     padawanZoning, trends, sarawakStats, openDosmStats, officialWarnings, urbanInfra,
     infobanjirRaw, apims, ckanHarvest, exchange, metWarnings, floodForecast,
+    mppCouncillors, mppLocalities,
   ] = await Promise.all([
     loadWeather(),
     loadAirQuality(),
@@ -2833,6 +2894,8 @@ async function buildDashboard() {
     loadExchangeRates(),
     loadMetWarnings(),
     loadFloodForecast(),
+    loadMppCouncillors(),
+    loadMppLocalities(),
   ]);
 
   // Catchment enrichment compounds Infobanjir + OSM drainage. Pure post-process,
@@ -2869,6 +2932,8 @@ async function buildDashboard() {
     ckanHarvest,
     metWarnings,
     floodForecast,
+    mppCouncillors,
+    mppLocalities,
     osm: getOsmStatusSnapshot(),
     operations: buildOperations(weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, officialWarnings, sarawakStats, openDosmStats, infobanjir, apims, metWarnings),
     sources: [
@@ -3062,6 +3127,22 @@ async function buildDashboard() {
         "https://overpass-api.de",
         generatedAt,
       ),
+      sourceRecord(
+        "mpp-councillors",
+        "MPP Resident Councillors System 2025–2028",
+        mppCouncillors.status,
+        `${mppCouncillors?.totals?.councillors ?? 0} councillors across ${mppCouncillors?.totals?.wards ?? 0} wards. Term: ${mppCouncillors?.term ?? "—"}.`,
+        "https://mpp.sarawak.gov.my/",
+        mppCouncillors.updatedAt || generatedAt,
+      ),
+      sourceRecord(
+        "mpp-localities",
+        "MPP Locality Listing & Property Usage",
+        mppLocalities.status,
+        `${mppLocalities?.totals?.localities ?? 0} localities · ${mppLocalities?.totals?.residential?.toLocaleString?.() ?? 0} residential / ${mppLocalities?.totals?.commercial?.toLocaleString?.() ?? 0} commercial / ${mppLocalities?.totals?.industrial?.toLocaleString?.() ?? 0} industrial properties across ${mppLocalities?.totals?.stateConstituencies ?? 0} state + ${mppLocalities?.totals?.parliamentConstituencies ?? 0} parliament constituencies.`,
+        "https://mpp.sarawak.gov.my/",
+        mppLocalities.updatedAt || generatedAt,
+      ),
     ],
   };
 }
@@ -3202,6 +3283,8 @@ const server = http.createServer(async (request, response) => {
         }
       } else if (layerId === "flood_zones") {
         collection = buildFloodZones();
+      } else if (layerId === "mpp_wards") {
+        collection = await loadMppWardBoundaries();
       } else {
         response.writeHead(404, { "content-type": "application/json; charset=utf-8" });
         response.end(JSON.stringify({ message: `Unknown layer: ${layerId}` }));

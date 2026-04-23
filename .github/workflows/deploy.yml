@@ -48,6 +48,14 @@ jobs:
           test -s public/api/layers/land_use.json
           test -s public/api/layers/flood_risk.json
           test -s public/api/layers/flood_zones.json
+          test -s public/api/layers/mpp_wards.json
+
+      - name: Archive snapshot to Google Sheets
+        continue-on-error: true
+        run: node scripts/sheets-archive.mjs
+        env:
+          GOOGLE_SHEETS_ID: ${{ secrets.GOOGLE_SHEETS_ID }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

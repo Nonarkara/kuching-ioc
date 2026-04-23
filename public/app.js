@@ -517,6 +517,59 @@ function computeSentiment(news) {
   };
 }
 
+const GROUND_PULSE_LANES = [
+  { key: "kuching", label: "Kuching", intent: "What the city is being talked about right now.",
+    match: /kuching|古晋|kch\b|wbgg|batu kawa|petra jaya|satok|padungan|waterfront|stutong|pending/i },
+  { key: "padawan", label: "Padawan", intent: "What residents and councils say about MPP country.",
+    match: /padawan|巴达旺|kota padawan|mpp\b|siburan|matang|penrissen|beratok|kuap|tapah|sungai maong/i },
+  { key: "sarawak", label: "Sarawak", intent: "State-wide signals that touch Greater Kuching.",
+    match: /sarawak|砂拉越|sarawakian|dbku|mbks|premier\s+of\s+sarawak|chief\s+minister\s+sarawak|\bcms\b|\bsdec\b|\bdewan\s+undangan\s+negeri\b/i },
+];
+
+function buildClientGroundPulse(news, trends) {
+  const items = Array.isArray(news?.items) ? news.items : [];
+  const trendItems = Array.isArray(trends?.items) ? trends.items : [];
+  const dayFloor = Date.now() - 24 * 60 * 60 * 1000;
+  const gen = nowIso();
+
+  const lanes = GROUND_PULSE_LANES.map((lane) => {
+    const matched = items.filter((item) => lane.match.test(`${item.title || ""} ${item.source || ""}`));
+    const last24h = matched.filter((item) => Date.parse(item.publishedAt || 0) >= dayFloor);
+    const headlines = matched.slice(0, 3).map((item) => ({
+      title: item.title, source: item.source, url: item.link,
+      publishedAt: item.publishedAt, language: item.language,
+      languageBadge: item.languageBadge, isOfficial: Boolean(item.isOfficial),
+    }));
+    const trendMatches = trendItems
+      .filter((t) => lane.match.test(`${t.title || ""} ${t.newsTitle || ""} ${t.primarySource || ""}`))
+      .slice(0, 3)
+      .map((t) => ({ term: t.title, trafficLabel: t.trafficLabel || null, link: t.link || null,
+        newsTitle: t.newsTitle || null, newsSource: t.primarySource || null }));
+    const top = headlines[0];
+    const narrative = top
+      ? `${top.source || "Local press"} · ${top.title}`
+      : trendMatches[0]
+        ? `Search surge: ${trendMatches[0].term}`
+        : `No fresh ${lane.label} coverage in the 24-hour window — the lane is quiet.`;
+    return { key: lane.key, label: lane.label, intent: lane.intent,
+      mentionCount: matched.length, last24hCount: last24h.length,
+      headlines, trendMatches, narrative };
+  });
+
+  const totalMentions = lanes.reduce((s, l) => s + l.mentionCount, 0);
+  const totalLast24h = lanes.reduce((s, l) => s + l.last24hCount, 0);
+  return {
+    generatedAt: gen,
+    status: totalMentions > 0 ? "live" : "fallback",
+    systemLabel: "Ground Pulse // per-city mention rollup from Google News lanes + Google Trends local matches",
+    summary: totalMentions > 0
+      ? `${totalMentions} total mentions across Kuching / Padawan / Sarawak lanes, ${totalLast24h} from the last 24 hours.`
+      : "Ground pulse is quiet — no matching mentions in the current news or trends window.",
+    totals: { mentions: totalMentions, last24h: totalLast24h },
+    lanes,
+  };
+}
+
 async function buildFallbackDashboard() {
   const [weather, air, airport, quakes, exchange] = await Promise.all([
     loadWeather(), loadAirQuality(), loadAirport(), loadEarthquakes(), loadExchangeRates(),
@@ -553,7 +606,9 @@ async function buildFallbackDashboard() {
     summary: buildSummary(weather, air, airport, jurisdictions, enrichedNews, padawanZoning, trends),
     metrics: buildMetrics(weather, air, airport, jurisdictions, enrichedNews, padawanZoning, trends),
     jurisdictions, mapLayers: buildMapLayers(), climate: { weather, air },
-    airport, news: enrichedNews, trends, exchange,
+    airport, news: enrichedNews, trends,
+    groundPulse: buildClientGroundPulse(enrichedNews, trends),
+    exchange,
     fires, quakes,
     sentiment: computeSentiment(enrichedNews.items),
     demographics: CITY_DEMOGRAPHICS,
@@ -1263,6 +1318,7 @@ function renderNewsIntake(news) {
 
 function renderIntelPanel(payload) {
   renderEconBand(payload.exchange);
+  renderGroundPulse(payload.groundPulse);
   renderNewsDigest(payload.news);
   renderTrendsBand(payload.trends);
 }
@@ -1344,6 +1400,54 @@ function renderTrendsBand(trends) {
         <span class="trend-term">${t.title}</span>
         <span class="trend-traffic">${t.trafficLabel ?? ""}</span>
       </div>`).join("")}`;
+}
+
+function renderGroundPulse(groundPulse) {
+  const el = $("groundPulse");
+  if (!el) return;
+  if (!groundPulse || !Array.isArray(groundPulse.lanes) || groundPulse.lanes.length === 0) {
+    el.innerHTML = "";
+    return;
+  }
+  const totals = groundPulse.totals || { mentions: 0, last24h: 0 };
+  const laneCards = groundPulse.lanes.map((lane) => {
+    const headlines = (lane.headlines || []).map((h) => {
+      const stamp = formatShortStamp(h.publishedAt) || "";
+      const badge = h.isOfficial ? "OFFICIAL" : (h.languageBadge || (h.language || "EN").toUpperCase());
+      const safeTitle = escapeHtml(h.title || "").slice(0, 140);
+      const href = h.url ? `href="${escapeHtml(h.url)}" target="_blank" rel="noopener"` : "";
+      return `
+        <li class="gp-item">
+          <span class="gp-badge">${escapeHtml(badge)}</span>
+          <a class="gp-title" ${href}>${safeTitle}</a>
+          <span class="gp-meta">${escapeHtml(h.source || "")}${stamp ? ` · ${stamp}` : ""}</span>
+        </li>`;
+    }).join("");
+
+    const trendChips = (lane.trendMatches || []).map((t) => {
+      const label = t.trafficLabel ? `${t.term} · ${t.trafficLabel}` : t.term;
+      return `<span class="gp-trend" title="${escapeHtml(t.newsTitle || "")}">${escapeHtml(label)}</span>`;
+    }).join("");
+
+    const empty = !(lane.headlines || []).length && !(lane.trendMatches || []).length;
+    return `
+      <article class="gp-lane" data-lane="${lane.key}">
+        <header class="gp-lane-head">
+          <span class="gp-lane-label">${escapeHtml(lane.label)}</span>
+          <span class="gp-lane-count">${lane.last24hCount || 0}<span class="gp-unit">·24h</span> / ${lane.mentionCount || 0}<span class="gp-unit">·14d</span></span>
+        </header>
+        <div class="gp-narrative">${escapeHtml(lane.narrative || lane.intent || "")}</div>
+        ${trendChips ? `<div class="gp-trends">${trendChips}</div>` : ""}
+        ${empty ? "" : `<ul class="gp-list">${headlines}</ul>`}
+      </article>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="gp-head">
+      <div class="gp-kicker">GROUND PULSE · WHY THIS MATTERS TODAY</div>
+      <div class="gp-totals">${totals.last24h} mentions in last 24h · ${totals.mentions} in 14d window</div>
+    </div>
+    <div class="gp-lanes">${laneCards}</div>`;
 }
 
 function renderFloodForecast(floodForecast) {

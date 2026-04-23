@@ -578,6 +578,97 @@ function summarizeLanguageLane(items, language) {
   };
 }
 
+const GROUND_PULSE_LANES = [
+  {
+    key: "kuching",
+    label: "Kuching",
+    narrative: "What the city is being talked about right now.",
+    match: /kuching|古晋|kch\b|wbgg|batu kawa|petra jaya|satok|padungan|waterfront|stutong|pending/i,
+  },
+  {
+    key: "padawan",
+    label: "Padawan",
+    narrative: "What residents and councils say about MPP country.",
+    match: /padawan|巴达旺|kota padawan|mpp\b|siburan|matang|penrissen|beratok|kuap|tapah|sungai maong/i,
+  },
+  {
+    key: "sarawak",
+    label: "Sarawak",
+    narrative: "State-wide signals that touch Greater Kuching.",
+    match: /sarawak|砂拉越|sarawakian|dbku|mbks|premier\s+of\s+sarawak|chief\s+minister\s+sarawak|\bcms\b|\bsdec\b|\bdewan\s+undangan\s+negeri\b/i,
+  },
+];
+
+function buildGroundPulse(news, trends) {
+  const items = Array.isArray(news?.items) ? news.items : [];
+  const trendItems = Array.isArray(trends?.items) ? trends.items : [];
+  const generatedAt = nowIso();
+  const dayFloor = Date.now() - 24 * 60 * 60 * 1000;
+
+  const lanes = GROUND_PULSE_LANES.map((lane) => {
+    const matchedNews = items.filter((item) => {
+      const merged = `${item.title || ""} ${item.source || ""}`;
+      return lane.match.test(merged);
+    });
+    const last24h = matchedNews.filter((item) => Date.parse(item.publishedAt || 0) >= dayFloor);
+    const headlines = sortNewsItems(matchedNews).slice(0, 3).map((item) => ({
+      title: item.title,
+      source: item.source,
+      url: item.link,
+      publishedAt: item.publishedAt,
+      language: item.language,
+      languageBadge: item.languageBadge,
+      isOfficial: Boolean(item.isOfficial),
+    }));
+
+    const trendMatches = trendItems
+      .filter((trend) => {
+        const merged = `${trend.title || ""} ${trend.newsTitle || ""} ${trend.primarySource || ""}`;
+        return lane.match.test(merged);
+      })
+      .slice(0, 3)
+      .map((trend) => ({
+        term: trend.title,
+        trafficLabel: trend.trafficLabel || null,
+        link: trend.link || null,
+        newsTitle: trend.newsTitle || null,
+        newsSource: trend.primarySource || null,
+      }));
+
+    const topHeadline = headlines[0] || null;
+    const narrative = topHeadline
+      ? `${topHeadline.source || "Local press"} · ${topHeadline.title}`
+      : trendMatches[0]
+        ? `Search surge: ${trendMatches[0].term}`
+        : `No fresh ${lane.label} coverage in the 24-hour window — the lane is quiet.`;
+
+    return {
+      key: lane.key,
+      label: lane.label,
+      intent: lane.narrative,
+      mentionCount: matchedNews.length,
+      last24hCount: last24h.length,
+      headlines,
+      trendMatches,
+      narrative,
+    };
+  });
+
+  const totalMentions = lanes.reduce((sum, lane) => sum + lane.mentionCount, 0);
+  const totalLast24h = lanes.reduce((sum, lane) => sum + lane.last24hCount, 0);
+
+  return {
+    generatedAt,
+    status: totalMentions > 0 ? "live" : (news?.status === "fallback" ? "fallback" : "offline"),
+    systemLabel: "Ground Pulse // per-city mention rollup from Google News lanes + Google Trends local matches",
+    summary: totalMentions > 0
+      ? `${totalMentions} total mentions across Kuching / Padawan / Sarawak lanes, ${totalLast24h} from the last 24 hours.`
+      : "Ground pulse is quiet — no matching mentions in the current news or trends window.",
+    totals: { mentions: totalMentions, last24h: totalLast24h },
+    lanes,
+  };
+}
+
 function sortNewsItems(items) {
   return [...items].sort((left, right) => {
     const priorityDelta = (right.priorityScore ?? 0) - (left.priorityScore ?? 0);
@@ -2920,6 +3011,7 @@ async function buildDashboard() {
     airport,
     news,
     trends,
+    groundPulse: buildGroundPulse(news, trends),
     exchange,
     fires,
     quakes,

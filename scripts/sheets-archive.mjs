@@ -187,6 +187,22 @@ function buildStreams(payload) {
     ]],
   };
 
+  // ground_pulse — Kuching / Padawan / Sarawak mention rollup (one row per lane)
+  const gp = payload.groundPulse || {};
+  streams.ground_pulse = {
+    header: ["ts", "lane", "mentions_14d", "mentions_24h", "top_headline", "top_source", "top_trend", "narrative"],
+    rows: (gp.lanes || []).map((lane) => [
+      ts,
+      str(lane.label),
+      num(lane.mentionCount),
+      num(lane.last24hCount),
+      str(lane.headlines?.[0]?.title),
+      str(lane.headlines?.[0]?.source),
+      str(lane.trendMatches?.[0]?.term),
+      str(lane.narrative),
+    ]),
+  };
+
   // earthquakes — regional USGS events
   streams.earthquakes = {
     header: ["ts", "event_id", "magnitude", "place", "depth_km", "event_time"],

@@ -1,8 +1,8 @@
 {
-  "builtAt": "2026-04-23T13:39:14.385Z",
-  "buildDurationMs": 22273,
-  "dashboardSizeKb": 249,
-  "assetVersion": "8c63e8a40c50-133852",
+  "builtAt": "2026-04-23T17:06:31.876Z",
+  "buildDurationMs": 7749,
+  "dashboardSizeKb": 250,
+  "assetVersion": "90574397338a-170624",
   "deploymentMode": "pages-static",
   "boardLabel": "SNAPSHOT BOARD",
   "pagesUrl": "https://nonarkara.github.io/kuching-ioc/",
@@ -21,7 +21,7 @@
     {
       "id": "land_use",
       "status": "fulfilled",
-      "features": 3
+      "features": 824
     },
     {
       "id": "flood_risk",

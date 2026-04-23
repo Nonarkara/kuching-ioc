@@ -51,7 +51,19 @@ export function resolveAssetVersion({ env = process.env, builtAt = new Date().to
       stdio: ["ignore", "pipe", "ignore"],
     }).trim();
     const normalized = compactAssetToken(gitSha);
-    if (normalized) return normalized;
+    if (normalized) {
+      try {
+        const dirty = execFileSync("git", ["status", "--porcelain", "public", "server.mjs", "data.js"], {
+          cwd: ROOT_DIR,
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "ignore"],
+        }).trim();
+        if (dirty) {
+          return compactAssetToken(`${normalized}-${timestampToken(builtAt).slice(-6)}`);
+        }
+      } catch {}
+      return normalized;
+    }
   } catch {
     // Fall back to a timestamp when git metadata is unavailable.
   }

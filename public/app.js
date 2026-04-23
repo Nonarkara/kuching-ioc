@@ -8,6 +8,15 @@ import {
 
 const BOOT = window.__IOC_BOOT__ || {};
 
+const SOURCE_STATUS_LABEL = {
+  live: "live",
+  official: "official",
+  fallback: "backup feed",
+  offline: "offline",
+  reference: "cached",
+  curated: "hand-curated",
+};
+
 // --- State ---
 const state = {
   map: null, boundaryLayerGroup: null, markerLayerGroup: null, labelLayerGroup: null,
@@ -57,7 +66,9 @@ function apiUrl(pathname) {
   const basePath = window.location.pathname.endsWith("/")
     ? window.location.pathname
     : window.location.pathname.replace(/[^/]+$/, "");
-  return new URL(relativePath, `${window.location.origin}${basePath}`).toString();
+  const url = new URL(relativePath, `${window.location.origin}${basePath}`);
+  if (BOOT.assetVersion) url.searchParams.set("v", BOOT.assetVersion);
+  return url.toString();
 }
 
 function buildModeMeta(mode) {
@@ -277,20 +288,21 @@ function buildBoardBrief(payload) {
   if (now.length === 0) now.push("No immediate tasking generated");
 
   const next = [];
-  if (rainMetric) next.push(`Rain watch ${rainMetric.value}${rainMetric.unit} · ${rainMetric.context}`);
-  if (aqiMetric) next.push(`Air ${aqiMetric.value} AQI · ${aqiMetric.context}`);
+  if (rainMetric) next.push(`Rain watch · ${rainMetric.value}${rainMetric.unit} today · ${rainMetric.context}`);
+  if (aqiMetric) next.push(`Air quality · AQI ${aqiMetric.value} · ${aqiMetric.context}`);
   if (payload.airport?.status === "live") {
-    next.push(`Airport ${airportMetric?.value ?? payload.airport.movements?.totalTracked ?? 0} tracked · live airspace`);
+    next.push(`Airspace · ${airportMetric?.value ?? payload.airport.movements?.totalTracked ?? 0} aircraft tracked live`);
   } else {
-    next.push(`Airport board is ${payload.airport?.status || "reference"} · treat movement counts as advisory`);
+    next.push(`Airspace · flight feed reduced · numbers indicative only`);
   }
 
   const blind = [];
   if (payload.delivery?.mode !== "live-api") {
-    blind.push(`This URL is ${payload.delivery?.modeLabel?.toLowerCase() || "not live"} · use live board for direct API telemetry`);
+    blind.push(`Static snapshot · refreshes every 6 hours · live board streams real-time`);
   }
-  degradedSources.slice(0, 3).forEach((source) => blind.push(`${source.name}: ${source.status}`));
-  if (blind.length === 0) blind.push("Core feeds are responding normally");
+  const actionableBlind = degradedSources.filter((source) => ["fallback", "offline"].includes(source.status));
+  actionableBlind.slice(0, 3).forEach((source) => blind.push(`${source.name} · ${SOURCE_STATUS_LABEL[source.status] || source.status}`));
+  if (blind.length === 0) blind.push("All feeds responding normally");
 
   return { now: now.slice(0, 3), next: next.slice(0, 3), blind: blind.slice(0, 3) };
 }
@@ -1158,7 +1170,7 @@ function renderQualitativeLens(payload, activeSatellite) {
         <span class="qualitative-source-title">${item.title}</span>
         <span class="qualitative-source-note">${item.note}</span>
       </a>`).join("")
-    : `<div class="qualitative-source-empty">No linked qualitative sources in the current payload. The scene read is running on telemetry and orbital evidence only.</div>`;
+    : `<div class="qualitative-source-empty">Scene read is running on telemetry only — no field sources in this cycle.</div>`;
 }
 
 function renderAirportStats(airport) {
@@ -1168,9 +1180,9 @@ function renderAirportStats(airport) {
   const arrivals = fl.filter(f=>f.type==="arrival");
   const departures = fl.filter(f=>f.type==="departure");
   const statusMap = {
-    live: { label: "Live airspace // OpenSky", tone: "live" },
-    fallback: { label: "Fallback routes // OpenSky degraded", tone: "fallback" },
-    offline: { label: "Offline // no airspace telemetry", tone: "offline" },
+    live: { label: "Live airspace · OpenSky feed", tone: "live" },
+    fallback: { label: "Flight tracker reduced · OpenSky feed patchy", tone: "fallback" },
+    offline: { label: "Airspace offline · no flight telemetry", tone: "offline" },
   };
   const statusMeta = statusMap[airport.status] || { label: "Reference telemetry", tone: "reference" };
   el.innerHTML = `
@@ -1203,7 +1215,7 @@ function renderSourceMatrix(payload) {
 
   const degraded = sources.filter((source) => ["fallback", "offline", "reference", "curated"].includes(source.status)).slice(0, 4);
   const degradedMarkup = degraded.length
-    ? degraded.map((source) => `<span class="source-chip" data-status="${source.status}">${source.name} · ${source.status}</span>`).join("")
+    ? degraded.map((source) => `<span class="source-chip" data-status="${source.status}">${source.name} · ${SOURCE_STATUS_LABEL[source.status] || source.status}</span>`).join("")
     : `<span class="source-chip" data-status="live">No critical feed gaps</span>`;
 
   el.innerHTML = `
@@ -1261,15 +1273,15 @@ function renderEconBand(exchange) {
   const data = exchange ?? ECONOMY_FALLBACK;
   const fxPairs = (data.pairs ?? []).filter(p => ["USD","SGD","GBP","EUR"].includes(p.code));
   const macro = [
-    { value: `${(data.macro?.gdpGrowthPct ?? ECONOMY_FALLBACK.macro.gdpGrowthPct).toFixed(1)}%`, label: "MY GDP Growth" },
-    { value: `RM ${(data.macro?.sarawakGdpBnMyr ?? ECONOMY_FALLBACK.macro.sarawakGdpBnMyr)}B`, label: "Sarawak GDP" },
-    { value: `${(data.macro?.cpiInflationPct ?? ECONOMY_FALLBACK.macro.cpiInflationPct).toFixed(1)}%`, label: "CPI Inflation" },
+    { value: `${(data.macro?.gdpGrowthPct ?? ECONOMY_FALLBACK.macro.gdpGrowthPct).toFixed(1)}%`, label: "MY GDP Growth · FY2026" },
+    { value: `RM ${(data.macro?.sarawakGdpBnMyr ?? ECONOMY_FALLBACK.macro.sarawakGdpBnMyr)}B`, label: "Sarawak GDP · 2024" },
+    { value: `${(data.macro?.cpiInflationPct ?? ECONOMY_FALLBACK.macro.cpiInflationPct).toFixed(1)}%`, label: "CPI Inflation · Mar 2026" },
   ];
   el.innerHTML = [
     ...fxPairs.map(p => `
       <div class="econ-pill">
-        <span class="econ-pill-value">${p.rate}</span>
-        <span class="econ-pill-label">MYR/${p.code}</span>
+        <span class="econ-pill-value">${p.code} ${p.rate}</span>
+        <span class="econ-pill-label">per 1 MYR</span>
       </div>`),
     ...macro.map(m => `
       <div class="econ-pill econ-macro">

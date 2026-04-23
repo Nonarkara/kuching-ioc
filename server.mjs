@@ -12,8 +12,8 @@ const serverStartedAt = new Date().toISOString();
 const assetVersion = resolveAssetVersion({ builtAt: serverStartedAt });
 
 const SITE = {
-  title: "Secretary Goh's Super Dashboard",
-  subtitle: "Greater Kuching operating picture with Padawan in focus",
+  title: "Greater Kuching Intelligent Operation Center",
+  subtitle: "Operating picture for Padawan and the Greater Kuching metro",
   timezone: "Asia/Kuala_Lumpur",
   region: "Kuching, Sarawak, Malaysia",
   officeAddress: "Majlis Perbandaran Padawan, Jalan Penrissen, Pasar Batu 10, 93250 Kuching, Sarawak",
@@ -2613,7 +2613,7 @@ function buildOperations(weather, air, airport, news, jurisdictions, padawanZoni
     items.push({
       severity: "low",
       owner: "Open Data Watch",
-      title: `Sarawak Data Sync: ${sarawakStats.datasetCount} sets`,
+      title: `Sarawak Data Sync: ${sarawakStats.datasetCount} ${sarawakStats.datasetCount === 1 ? "dataset" : "datasets"}`,
       detail: `Latest update: ${sarawakStats.recentDatasets[0]?.title}. Land use compliance audit pending for Ward G.`,
     });
   }
@@ -3324,5 +3324,5 @@ const server = http.createServer(async (request, response) => {
 });
 
 server.listen(port, host, () => {
-  console.log(`Secretary Goh's Super Dashboard listening on http://${host}:${port} [asset ${assetVersion}]`);
+  console.log(`Greater Kuching IOC listening on http://${host}:${port} [asset ${assetVersion}]`);
 });

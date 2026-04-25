@@ -920,10 +920,20 @@ body::before {
 }
 .gp-lane-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 6px;
+  min-width: 0;
 }
+.gp-lane-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
+.gp-lane-trend:empty { display: none; }
 .gp-lane-label {
   font-family: var(--font-display);
   font-size: 10px;
@@ -944,6 +954,26 @@ body::before {
   margin-left: 1px;
   margin-right: 3px;
 }
+.gp-spark {
+  color: var(--cyan);
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+.gp-spark.is-peak {
+  color: var(--amber);
+  opacity: 1;
+}
+.gp-delta {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.05em;
+  padding: 1px 4px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.gp-delta.is-up { color: var(--amber); }
+.gp-delta.is-down { color: var(--green); }
+.gp-delta.is-flat { color: var(--soft); }
 .gp-narrative {
   font-size: 9px;
   line-height: 1.35;

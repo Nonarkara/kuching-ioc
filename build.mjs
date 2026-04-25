@@ -25,6 +25,7 @@ import {
   resolveAssetVersion,
   writeRenderedIndex,
 } from "./site-build.mjs";
+import { fetchGroundPulseHistory } from "./scripts/sheets-read.mjs";
 
 const BUILD_PORT = 9876;
 const LAYERS_DIR = join(PUBLIC_DIR, "api", "layers");
@@ -119,6 +120,30 @@ async function main() {
     await writeFile(dashboardPath, dashboard);
     const parsed = JSON.parse(dashboard);
     console.log(`  → ${dashboardPath} (${(dashboard.length / 1024).toFixed(1)} KB, ${parsed.sources?.length || "?"} sources)`);
+
+    // 2.5. Enrich Ground Pulse with the rolling archive from Google Sheets.
+    // Skips cleanly when creds aren't set or the tab is empty (first runs).
+    try {
+      const history = await fetchGroundPulseHistory({
+        sheetId: process.env.GOOGLE_SHEETS_ID,
+        saJson: process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+        daysBack: 14,
+      });
+      const lanes = parsed.groundPulse?.lanes || [];
+      if (history && lanes.length) {
+        for (const lane of lanes) {
+          lane.history = history[lane.label] || [];
+        }
+        await writeFile(dashboardPath, JSON.stringify(parsed));
+        console.log(
+          `  → ground pulse history: ${lanes.map((l) => `${l.label}=${l.history.length}`).join(" ")}`,
+        );
+      } else {
+        console.log("  → ground pulse history: skipped (no sheets creds or empty archive)");
+      }
+    } catch (err) {
+      console.warn(`  → ground pulse history: ${err.message}`);
+    }
 
     // 3. Fetch all GIS layers in parallel.
     const layerIds = ["drainage", "transit", "land_use", "flood_risk", "flood_zones", "mpp_wards"];

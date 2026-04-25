@@ -1402,6 +1402,38 @@ function renderTrendsBand(trends) {
       </div>`).join("")}`;
 }
 
+function renderGroundPulseSparkline(history) {
+  // Need at least 3 points to draw a meaningful trend.
+  if (!Array.isArray(history) || history.length < 3) return "";
+  const values = history.map((h) => Number(h.mentions24h) || 0);
+  const max = Math.max(1, ...values);
+  const w = 40;
+  const h = 12;
+  const step = w / Math.max(1, values.length - 1);
+  const points = values
+    .map((v, i) => `${(i * step).toFixed(1)},${(h - (v / max) * h).toFixed(1)}`)
+    .join(" ");
+  const last = values[values.length - 1];
+  const peak = last >= max * 0.66 && max > 0;
+  return `<svg class="gp-spark ${peak ? "is-peak" : ""}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none" aria-hidden="true">
+    <polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1" />
+  </svg>`;
+}
+
+function renderGroundPulseDelta(history, current) {
+  // Compare current 24h count to ~24h ago (5 points back at 6h cadence) or
+  // fall back to first point in window. Returns a styled chip or "".
+  if (!Array.isArray(history) || history.length < 2) return "";
+  const lookback = history[Math.max(0, history.length - 5)];
+  const past = Number(lookback?.mentions24h) || 0;
+  const now = Number(current) || 0;
+  const diff = now - past;
+  if (diff === 0) return `<span class="gp-delta is-flat" title="Flat vs ~24h ago">±0</span>`;
+  const sign = diff > 0 ? "+" : "";
+  const tone = diff > 0 ? "up" : "down";
+  return `<span class="gp-delta is-${tone}" title="vs ~24h ago (${past} → ${now})">${sign}${diff}</span>`;
+}
+
 function renderGroundPulse(groundPulse) {
   const el = $("groundPulse");
   if (!el) return;
@@ -1430,10 +1462,13 @@ function renderGroundPulse(groundPulse) {
     }).join("");
 
     const empty = !(lane.headlines || []).length && !(lane.trendMatches || []).length;
+    const spark = renderGroundPulseSparkline(lane.history);
+    const delta = renderGroundPulseDelta(lane.history, lane.last24hCount);
     return `
       <article class="gp-lane" data-lane="${lane.key}">
         <header class="gp-lane-head">
           <span class="gp-lane-label">${escapeHtml(lane.label)}</span>
+          <span class="gp-lane-trend">${spark}${delta}</span>
           <span class="gp-lane-count">${lane.last24hCount || 0}<span class="gp-unit">·24h</span> / ${lane.mentionCount || 0}<span class="gp-unit">·14d</span></span>
         </header>
         <div class="gp-narrative">${escapeHtml(lane.narrative || lane.intent || "")}</div>

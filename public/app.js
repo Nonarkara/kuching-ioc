@@ -915,6 +915,68 @@ function renderMap(payload) {
       .addTo(state.markerLayerGroup);
   });
 
+  // Coordinate HUD — lat/lng overlay with one-tap copy for field ops.
+  // Created once per map init; click snaps the coord, COPY button writes to clipboard.
+  const mapFrame = mc.closest('.map-frame');
+  if (mapFrame && !mapFrame.querySelector('.map-coord-hud')) {
+    const hud = document.createElement('div');
+    hud.className = 'map-coord-hud';
+    hud.innerHTML = `
+      <span class="coord-label">LAT / LNG</span>
+      <span class="coord-value" id="coordValue">—</span>
+      <button class="coord-copy" id="coordCopy">COPY</button>`;
+    mapFrame.appendChild(hud);
+
+    let lastCoord = null;
+
+    state.map.on('mousemove', (e) => {
+      const { lat, lng } = e.latlng;
+      lastCoord = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      hud.querySelector('#coordValue').textContent = lastCoord;
+      hud.classList.add('is-active');
+    });
+
+    state.map.on('mouseout', () => {
+      if (!hud.classList.contains('is-snapped')) hud.classList.remove('is-active');
+    });
+
+    // Click / touch: snap the coordinate and keep the HUD visible.
+    state.map.on('click', (e) => {
+      const { lat, lng } = e.latlng;
+      lastCoord = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      hud.querySelector('#coordValue').textContent = lastCoord;
+      hud.classList.add('is-active', 'is-snapped');
+      hud.classList.remove('is-copied');
+    });
+
+    hud.querySelector('#coordCopy').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (!lastCoord) return;
+      const flash = () => {
+        const btn = hud.querySelector('#coordCopy');
+        btn.textContent = 'COPIED!';
+        hud.classList.add('is-copied');
+        setTimeout(() => {
+          btn.textContent = 'COPY';
+          hud.classList.remove('is-copied');
+        }, 1600);
+      };
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(lastCoord).then(flash).catch(flash);
+      } else {
+        // Fallback for non-HTTPS or older browsers.
+        const ta = document.createElement('textarea');
+        ta.value = lastCoord;
+        ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (_) { /* best effort */ }
+        document.body.removeChild(ta);
+        flash();
+      }
+    });
+  }
+
   if (!state.hasInitialMapFit) {
     state.map.setView(SITE.mapCenter, SITE.mapZoom);
     state.hasInitialMapFit = true;

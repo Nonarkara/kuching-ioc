@@ -338,6 +338,61 @@ body::before {
 .map-controls { display: flex; gap: 6px; }
 .map-frame { position: relative; flex: 1; min-height: 0; background: #000; overflow: hidden; }
 .map-canvas { width: 100%; height: 100%; }
+
+/* === Map coordinate HUD === */
+.map-coord-hud {
+  position: absolute;
+  bottom: 12px;
+  left: 10px;
+  z-index: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(1, 2, 3, 0.88);
+  border: 1px solid var(--cyan);
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease, border-color 120ms ease;
+}
+.map-coord-hud.is-active { opacity: 1; pointer-events: all; }
+.map-coord-hud.is-snapped { border-color: var(--amber); }
+.map-coord-hud.is-copied { border-color: var(--green); }
+.coord-label {
+  font-size: 7px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--soft);
+  white-space: nowrap;
+}
+.coord-value {
+  font-size: 10px;
+  color: var(--cyan);
+  text-shadow: 0 0 4px var(--cyan-glow);
+  letter-spacing: 0.04em;
+  min-width: 168px;
+  white-space: nowrap;
+}
+.map-coord-hud.is-snapped .coord-value { color: var(--amber); text-shadow: none; }
+.map-coord-hud.is-copied .coord-value { color: var(--green); text-shadow: none; }
+.coord-copy {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  background: transparent;
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  padding: 2px 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 80ms ease, color 80ms ease;
+}
+.coord-copy:hover { background: var(--cyan); color: #010203; }
+.map-coord-hud.is-snapped .coord-copy { border-color: var(--amber); color: var(--amber); }
+.map-coord-hud.is-snapped .coord-copy:hover { background: var(--amber); color: #010203; }
+.map-coord-hud.is-copied .coord-copy { border-color: var(--green); color: var(--green); }
+
 .leaflet-container { background: #000 !important; }
 [data-theme="light"] .leaflet-container { background: #e0e5ec !important; }
 .leaflet-tile-pane { filter: brightness(0.85) contrast(1.2) saturate(0.6); }

@@ -55,6 +55,55 @@ const formatBadgeStamp = value => value ? new Date(value).toLocaleString("en-MY"
   hour12: false,
 }) : null;
 
+// --- Pass 1: Control-room helpers (delta digest, directive state, glyph status) ---
+const SNAPSHOT_KEY = "kch_ioc_snapshot_v1";
+const VISIT_KEY    = "kch_ioc_last_visit_v1";
+const DIRECTIVE_STATE_KEY = "kch_ioc_directive_state_v1";
+
+// djb2-ish small hash; stable, fast, no crypto needed.
+function hashStr(s) {
+  let h = 5381;
+  const str = String(s ?? "");
+  for (let i = 0; i < str.length; i++) h = (h * 33) ^ str.charCodeAt(i);
+  return (h >>> 0).toString(36);
+}
+
+// Map a status string to a HUD glyph (▰ live, ▱ cached, ◐ degraded, ✕ offline).
+function statusGlyph(status) {
+  const map = {
+    live: "▰", ok: "▰",
+    cached: "▱", reference: "▱", curated: "▱",
+    degraded: "◐", fallback: "◐", warn: "◐",
+    offline: "✕", error: "✕",
+  };
+  return map[String(status || "").toLowerCase()] || "⊙";
+}
+function statusTone(status) {
+  const s = String(status || "").toLowerCase();
+  if (s === "live" || s === "ok") return "ok";
+  if (s === "offline" || s === "error") return "alert";
+  if (s === "degraded" || s === "fallback" || s === "warn") return "warn";
+  return "muted";
+}
+function glyphHTML(status, label) {
+  const g = statusGlyph(status);
+  const tone = statusTone(status);
+  const txt = label != null ? `<span>${label}</span>` : "";
+  return `<span class="glyph" data-tone="${tone}" title="${status}">${g}</span>${txt}`;
+}
+
+function safeStorage() {
+  try { return window.localStorage; } catch (_) { return null; }
+}
+function readJson(key) {
+  const ls = safeStorage(); if (!ls) return null;
+  try { const v = ls.getItem(key); return v ? JSON.parse(v) : null; } catch (_) { return null; }
+}
+function writeJson(key, value) {
+  const ls = safeStorage(); if (!ls) return;
+  try { ls.setItem(key, JSON.stringify(value)); } catch (_) { /* quota / disabled */ }
+}
+
 function boardModeFromBoot() {
   if (BOOT.deploymentMode) return BOOT.deploymentMode;
   const host = window.location.hostname;
@@ -1230,6 +1279,208 @@ function renderExchange(exchange) {
     </div>`).join("");
 }
 
+// --- Pass 1.1: Delta digest --- "what changed since you last looked"
+function captureSnapshot(p) {
+  const ops = (p?.operations || []).map(o => hashStr((o.owner || "") + "|" + (o.title || "")));
+  const news = (p?.news?.items || []).slice(0, 12).map(i => hashStr(i.title || ""));
+  return {
+    t: Date.now(),
+    apimsAqi: p?.apims?.worst?.aqi ?? null,
+    aqi: p?.climate?.air?.current?.aqi ?? null,
+    hydroBand: p?.infobanjir?.highestBand ?? null,
+    hydroWorstName: p?.infobanjir?.stations?.[0]?.name ?? null,
+    hydroWorstLevel: p?.infobanjir?.stations?.[0]?.waterLevelM ?? null,
+    metActive: p?.metWarnings?.activeCount ?? 0,
+    metHeading: p?.metWarnings?.items?.[0]?.heading ?? null,
+    rain6h: p?.metrics?.find(m => m.id === "rain6h")?.value ?? null,
+    floodPeak: p?.floodForecast?.peakCms ?? null,
+    posture: p?.summary?.posture ?? null,
+    operationHashes: ops,
+    newsHashes: news,
+  };
+}
+
+function diffSnapshots(prev, curr) {
+  if (!prev) return [];
+  const lines = [];
+
+  if (prev.apimsAqi != null && curr.apimsAqi != null && Math.abs(curr.apimsAqi - prev.apimsAqi) >= 8) {
+    const up = curr.apimsAqi > prev.apimsAqi;
+    lines.push({ glyph: up ? "↑" : "↓",
+      text: `APIMS AQI ${prev.apimsAqi}→${curr.apimsAqi}`,
+      tone: up ? "warn" : "cool" });
+  }
+  if (prev.posture && curr.posture && prev.posture !== curr.posture) {
+    lines.push({ glyph: "Δ", text: `Posture ${prev.posture}→${curr.posture}`, tone: "warn" });
+  }
+  if (prev.hydroBand !== curr.hydroBand && (prev.hydroBand || curr.hydroBand)) {
+    lines.push({ glyph: "Δ",
+      text: `Hydro posture ${prev.hydroBand || "—"}→${curr.hydroBand || "—"}`,
+      tone: "warn" });
+  }
+  if (prev.hydroWorstLevel != null && curr.hydroWorstLevel != null &&
+      Math.abs(curr.hydroWorstLevel - prev.hydroWorstLevel) >= 0.2 &&
+      curr.hydroWorstName) {
+    const delta = (curr.hydroWorstLevel - prev.hydroWorstLevel).toFixed(1);
+    const sign = delta > 0 ? "+" : "";
+    lines.push({ glyph: "Δ",
+      text: `${curr.hydroWorstName} ${sign}${delta}m`,
+      tone: "warn" });
+  }
+  if (prev.metActive !== curr.metActive) {
+    if (curr.metActive > prev.metActive) {
+      lines.push({ glyph: "+",
+        text: `MET warning${curr.metActive > 1 ? "s" : ""} active: ${curr.metHeading || "see brief"}`,
+        tone: "alert" });
+    } else if (prev.metActive > curr.metActive) {
+      lines.push({ glyph: "−", text: `MET warning${prev.metActive > 1 ? "s" : ""} cleared`, tone: "cool" });
+    }
+  }
+  const newOps  = curr.operationHashes.filter(h => !prev.operationHashes.includes(h)).length;
+  const goneOps = prev.operationHashes.filter(h => !curr.operationHashes.includes(h)).length;
+  if (newOps > 0)  lines.push({ glyph: "+", text: `${newOps} new directive${newOps > 1 ? "s" : ""}`, tone: "warn" });
+  if (goneOps > 0) lines.push({ glyph: "−", text: `${goneOps} directive${goneOps > 1 ? "s" : ""} cleared`, tone: "cool" });
+  const newNews = curr.newsHashes.filter(h => !prev.newsHashes.includes(h)).length;
+  if (newNews >= 3) lines.push({ glyph: "+", text: `${newNews} new headline${newNews > 1 ? "s" : ""}`, tone: "info" });
+
+  return lines.slice(0, 5);
+}
+
+function relativeMinutes(ts) {
+  if (!ts) return null;
+  const m = Math.round((Date.now() - ts) / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ${m % 60}m ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
+function renderDeltaDigest(payload) {
+  const strip = $("deltaStrip");
+  const sinceEl = $("deltaSince");
+  const listEl = $("deltaList");
+  if (!strip || !sinceEl || !listEl) return;
+
+  const prev = readJson(SNAPSHOT_KEY);
+  const curr = captureSnapshot(payload);
+  const lines = prev ? diffSnapshots(prev, curr) : [];
+  const since = prev?.t ? relativeMinutes(prev.t) : null;
+
+  if (!prev) {
+    strip.dataset.empty = "true";
+    sinceEl.textContent = "First visit · baseline captured";
+    listEl.innerHTML = "";
+  } else if (lines.length === 0) {
+    strip.dataset.empty = "true";
+    sinceEl.textContent = `No change since ${since || "earlier"}`;
+    listEl.innerHTML = "";
+  } else {
+    strip.dataset.empty = "false";
+    sinceEl.textContent = `since ${since}`;
+    listEl.innerHTML = lines.map(l => `
+      <span class="delta-line" data-tone="${l.tone}">
+        <span class="delta-glyph">${l.glyph}</span>
+        <span class="delta-text">${escapeHtml ? escapeHtml(l.text) : l.text}</span>
+      </span>`).join("");
+  }
+
+  // Persist the new snapshot for next visit / next render.
+  writeJson(SNAPSHOT_KEY, curr);
+  writeJson(VISIT_KEY, Date.now());
+}
+
+// --- Pass 1.2: Directive status (queued → active → done) + age-decayed borders ---
+const DIRECTIVE_STATUS_GLYPH = { queued: "◇", active: "◆", done: "●" };
+const DIRECTIVE_NEXT_STATUS = { queued: "active", active: "done", done: "queued" };
+
+function loadDirectiveState() {
+  const raw = readJson(DIRECTIVE_STATE_KEY) || {};
+  // Auto-purge entries with firstSeen older than 24h to keep storage clean.
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  const cleaned = {};
+  for (const [hash, entry] of Object.entries(raw)) {
+    if (entry?.firstSeen && entry.firstSeen >= cutoff) cleaned[hash] = entry;
+  }
+  if (Object.keys(cleaned).length !== Object.keys(raw).length) writeJson(DIRECTIVE_STATE_KEY, cleaned);
+  return cleaned;
+}
+function saveDirectiveState(table) { writeJson(DIRECTIVE_STATE_KEY, table); }
+
+function ageBucket(firstSeenMs) {
+  if (!firstSeenMs) return "fresh";
+  const ageH = (Date.now() - firstSeenMs) / 3_600_000;
+  if (ageH < 4) return "fresh";
+  if (ageH < 8) return "aging";
+  return "stale";
+}
+
+function renderDirectives(ops) {
+  const root = $("operationList");
+  if (!root) return;
+  const table = loadDirectiveState();
+  const now = Date.now();
+  let mutated = false;
+
+  root.innerHTML = ops.map(o => {
+    const hash = hashStr((o.owner || "") + "|" + (o.title || ""));
+    let entry = table[hash];
+    if (!entry) {
+      entry = { status: "queued", firstSeen: now };
+      table[hash] = entry;
+      mutated = true;
+    }
+    const age = ageBucket(entry.firstSeen);
+    const status = entry.status || "queued";
+    const stale = age === "stale" ? `<span class="directive-stale-mark">↻ STALE</span>` : "";
+    const ownerSafe = (o.owner || "").replace(/"/g, "&quot;");
+    const titleSafe = (o.title || "").replace(/</g, "&lt;");
+    return `
+      <article class="operation-card"
+               data-severity="${o.severity || "low"}"
+               data-status="${status}"
+               data-age="${age}"
+               data-hash="${hash}"
+               title="Click to cycle queued → active → done">
+        <span class="directive-status" data-status="${status}">${DIRECTIVE_STATUS_GLYPH[status]}</span>
+        <div class="kicker">${ownerSafe}${stale}</div>
+        <strong>${titleSafe}</strong>
+        <div class="operation-detail">${o.detail || ""}</div>
+        ${o.humanContext ? `<div class="directive-context">${o.humanContext}</div>` : ""}
+      </article>`;
+  }).join("");
+
+  if (mutated) saveDirectiveState(table);
+
+  // Click cycles status. Reads the table on each click (avoids stale closure).
+  root.querySelectorAll(".operation-card").forEach(card => {
+    card.addEventListener("click", () => {
+      const hash = card.dataset.hash;
+      if (!hash) return;
+      const t = loadDirectiveState();
+      const entry = t[hash] || { status: "queued", firstSeen: Date.now() };
+      entry.status = DIRECTIVE_NEXT_STATUS[entry.status] || "queued";
+      t[hash] = entry;
+      saveDirectiveState(t);
+      card.dataset.status = entry.status;
+      const glyph = card.querySelector(".directive-status");
+      if (glyph) {
+        glyph.dataset.status = entry.status;
+        glyph.textContent = DIRECTIVE_STATUS_GLYPH[entry.status];
+      }
+    });
+  });
+}
+
+// Map runtime delivery tone → status keyword for glyphs.
+function deliveryToneToStatus(tone) {
+  if (tone === "live") return "live";
+  if (tone === "snapshot") return "cached";
+  if (tone === "fallback") return "degraded";
+  return "unknown";
+}
+
 function renderRuntimeMeta(payload) {
   const badge = $("dataModeBadge");
   const board = $("boardRoleBadge");
@@ -1238,9 +1489,10 @@ function renderRuntimeMeta(payload) {
   if (!badge || !board || !detail || !stamp) return;
 
   const delivery = payload.delivery || {};
-  badge.textContent = delivery.modeLabel || "UNKNOWN";
+  const status = deliveryToneToStatus(delivery.tone);
+  badge.innerHTML = glyphHTML(status, delivery.modeLabel || "UNKNOWN");
   badge.dataset.mode = delivery.tone || "boot";
-  board.textContent = delivery.boardLabel || "BOARD";
+  board.innerHTML = glyphHTML(delivery.boardMode === "live-service" ? "live" : "cached", delivery.boardLabel || "BOARD");
   board.dataset.mode = delivery.boardMode || "boot";
   detail.innerHTML = buildRuntimeDetail(delivery, payload) || "Payload metadata unavailable.";
   stamp.textContent = payload.generatedAt ? `PAYLOAD // ${formatBadgeStamp(payload.generatedAt)}` : "PAYLOAD // --";
@@ -2015,6 +2267,7 @@ function renderDashboard(payload) {
   $("summaryLead").textContent = payload.summary.headline;
   $("mapSummary").textContent = payload.summary.detail;
   renderRuntimeMeta(payload);
+  renderDeltaDigest(payload);
   renderBriefStrip(payload);
 
   renderPosture(payload);
@@ -2026,13 +2279,8 @@ function renderDashboard(payload) {
   renderMppCouncillors(payload);
   renderMppLocalities(payload);
 
-  // Directives — with human context when available
-  $("operationList").innerHTML = payload.operations.map(o=>`
-    <article class="operation-card" data-severity="${o.severity}">
-      <div class="kicker">${o.owner}</div><strong>${o.title}</strong>
-      <div class="operation-detail">${o.detail}</div>
-      ${o.humanContext ? `<div class="directive-context">${o.humanContext}</div>` : ""}
-    </article>`).join("");
+  // Directives — with human context, click-cyclable status, age-decayed borders.
+  renderDirectives(payload.operations || []);
 
   // Ticker — secretary mode prefers official-tier headlines (UKAS / TVS / MPP / MBKS / DBKU) first
   const allNews = payload.news.items || [];
@@ -2071,7 +2319,7 @@ function renderDashboard(payload) {
       <div class="signal-card" data-band="${ib.highestBand}" style="border-left:3px solid ${bandColors[ib.highestBand]||"#8aa2c8"}">
         <strong>FLOOD // JPS HYDRO</strong>
         <div class="val">${ib.liveCount}<sup>/${ib.stationCount}</sup></div>
-        <div class="meta">${(ib.highestBandLabel || "Reference").toUpperCase()} · ${ib.status === "live" ? "live feed" : "reference hold"}</div>
+        <div class="meta">${(ib.highestBandLabel || "Reference").toUpperCase()} · ${glyphHTML(ib.status === "live" ? "live" : "cached", ib.status === "live" ? "live feed" : "reference hold")}</div>
         ${top.map(s => `<div class="meta" style="color:${bandColors[s.band]||"#8aa2c8"}">${s.name} · ${s.waterLevelM != null ? s.waterLevelM + "m" : "—"} (${s.bandLabel})${s.catchment?.status === "snapped" ? ` · ${s.catchment.segmentCount}seg` : ""}</div>`).join("")}
         ${catchLine}
       </div>`;
@@ -2082,8 +2330,8 @@ function renderDashboard(payload) {
       <div class="signal-card" style="border-left:3px solid ${w?.band?.tone === "good" ? "#00ffaa" : w?.band?.tone === "watch" ? "#ffd000" : w?.band?.tone === "warn" ? "#ff7a00" : w?.band?.tone === "alert" || w?.band?.tone === "critical" ? "#ff003c" : "#8aa2c8"}">
         <strong>APIMS // GROUND AQ</strong>
         <div class="val">${w?.aqi ?? "—"}<sup>${w?.band?.label || apims.status}</sup></div>
-        <div class="meta">${apims.stations.map(s => `${s.label}: ${s.aqi ?? "—"}`).join(" · ")}</div>
-        <div class="meta">src: aqicn.org · ${apims.tokenMode} token</div>
+        <div class="meta">${apims.stations.map(s => `${glyphHTML(s.status || (s.aqi != null ? "live" : "offline"), s.label + ": " + (s.aqi ?? "—"))}`).join(" · ")}</div>
+        <div class="meta">${glyphHTML(apims.status || "live", "src: aqicn.org · " + (apims.tokenMode || "demo") + " token")}</div>
       </div>`;
   }
 

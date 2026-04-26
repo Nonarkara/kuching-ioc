@@ -2015,3 +2015,110 @@ body::before {
   color: var(--soft);
   font-weight: 400;
 }
+
+/* === Pass 1: Control-room upgrades === */
+
+/* Delta strip — "what changed since you last looked" thin row */
+.delta-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--hud-bg);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+  min-height: 24px;
+}
+.delta-stamp {
+  font-weight: 700;
+  color: var(--cyan);
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+}
+.delta-since {
+  color: var(--soft);
+  white-space: nowrap;
+}
+.delta-list {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+.delta-line {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.delta-line .delta-glyph {
+  font-weight: 700;
+  font-size: 11px;
+}
+.delta-line[data-tone="alert"] .delta-glyph { color: var(--red); }
+.delta-line[data-tone="warn"]  .delta-glyph { color: var(--amber); }
+.delta-line[data-tone="cool"]  .delta-glyph { color: var(--cyan); }
+.delta-line[data-tone="info"]  .delta-glyph { color: var(--soft); }
+.delta-line .delta-text { color: var(--ink); }
+.delta-line[data-tone="info"] .delta-text { color: var(--soft); }
+.delta-strip[data-empty="true"] .delta-list { color: var(--soft); }
+.delta-strip[data-empty="true"] .delta-since { color: var(--soft); opacity: 0.7; }
+
+/* Directive aging + interactive status */
+.operation-card {
+  position: relative;
+  cursor: pointer;
+  transition: opacity 200ms ease, border-color 200ms ease;
+  user-select: none;
+}
+.operation-card:hover { background: rgba(0,243,255,0.03); }
+.operation-card[data-age="aging"]  { opacity: 0.85; border-left-color: var(--amber) !important; }
+.operation-card[data-age="stale"]  { opacity: 0.7;  border-left-color: var(--red) !important; }
+.operation-card[data-status="done"] { opacity: 0.4; }
+.operation-card[data-status="done"] strong { text-decoration: line-through; text-decoration-color: var(--soft); }
+.directive-status {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--soft);
+  letter-spacing: 0;
+  line-height: 1;
+}
+.operation-card[data-status="active"] .directive-status {
+  color: var(--amber);
+  animation: directive-pulse 1.6s ease-in-out infinite;
+}
+.operation-card[data-status="done"] .directive-status {
+  color: var(--green);
+}
+@keyframes directive-pulse {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
+}
+.directive-stale-mark {
+  display: inline-block;
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--red);
+  letter-spacing: 0.1em;
+}
+
+/* Glyph-based status indicators */
+.glyph {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  margin-right: 4px;
+  display: inline-block;
+}
+.glyph[data-tone="ok"]    { color: var(--cyan); }
+.glyph[data-tone="warn"]  { color: var(--amber); }
+.glyph[data-tone="alert"] { color: var(--red); }
+.glyph[data-tone="muted"] { color: var(--soft); opacity: 0.7; }

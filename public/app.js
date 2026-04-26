@@ -3039,6 +3039,123 @@ function setLang(lang) {
   document.querySelectorAll(".lang-btn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
 }
 
+// --- Keyboard shortcuts + help overlay ---
+// Power-user navigation: ?, esc, 1-9/0 → wards, w → cycle, e → export,
+// shift+e → print, t → theme, r → refresh, g → toggle full mode.
+const SHORTCUT_WARD_MAP = ["A", "B", "D", "FG", "H", "I", "JL", "K", "M", "NPQ"];
+
+function isTypingTarget(el) {
+  if (!el) return false;
+  const tag = (el.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "textarea" || tag === "select") return true;
+  if (el.isContentEditable) return true;
+  return false;
+}
+
+function showHelpOverlay() {
+  const el = $("helpOverlay");
+  if (!el) return;
+  el.hidden = false;
+  // Move keyboard focus into the overlay's close button so esc behavior is natural.
+  el.querySelector(".help-close")?.focus({ preventScroll: true });
+}
+function hideHelpOverlay() {
+  const el = $("helpOverlay");
+  if (!el) return;
+  el.hidden = true;
+}
+function toggleHelpOverlay() {
+  const el = $("helpOverlay");
+  if (!el) return;
+  el.hidden ? showHelpOverlay() : hideHelpOverlay();
+}
+
+function cycleWard(direction) {
+  const order = SHORTCUT_WARD_MAP;
+  const cur = state.activeWard;
+  if (!cur) {
+    setActiveWard(order[direction > 0 ? 0 : order.length - 1]);
+    return;
+  }
+  const idx = order.indexOf(cur);
+  if (idx < 0) {
+    setActiveWard(order[0]);
+    return;
+  }
+  const next = (idx + direction + order.length) % order.length;
+  setActiveWard(order[next]);
+}
+
+function toggleViewMode() {
+  const html = document.documentElement;
+  const next = html.dataset.view === "secretary" ? "full" : "secretary";
+  html.dataset.view = next;
+  showToast(`▰ VIEW: ${next.toUpperCase()}`, "ok");
+  // Re-render so renderers that branch on isSecretary update their output.
+  if (state.payload) {
+    // Hot-swap the constant so subsequent renders see the change.
+    // (isSecretary is computed once at module load — this re-renders DOM
+    // for the panels it controls but the JS flag stays. A full reload
+    // gives the cleanest result.)
+    setTimeout(() => location.reload(), 600);
+  }
+}
+
+function setupKeyboardShortcuts() {
+  // Help-hint click → opens overlay.
+  $("helpHint")?.addEventListener("click", showHelpOverlay);
+  $("helpOverlay")?.querySelector(".help-close")?.addEventListener("click", hideHelpOverlay);
+  // Backdrop click also closes.
+  $("helpOverlay")?.addEventListener("click", (e) => {
+    if (e.target.id === "helpOverlay") hideHelpOverlay();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (isTypingTarget(e.target)) return;
+    // Modifier-aware: Shift used as a modifier; Ctrl/Cmd/Alt always pass through.
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key;
+
+    // ESC: close ward brief or help overlay
+    if (k === "Escape") {
+      if (!$("helpOverlay")?.hidden) { hideHelpOverlay(); e.preventDefault(); return; }
+      if (state.activeWard) { setActiveWard(null); e.preventDefault(); return; }
+      return;
+    }
+
+    // ? — toggle help overlay (Shift+/)
+    if (k === "?" || (e.shiftKey && k === "/")) { toggleHelpOverlay(); e.preventDefault(); return; }
+
+    // 1–9, 0 → ward jump (1=A, 2=B, ..., 0=NPQ)
+    if (/^[0-9]$/.test(k)) {
+      const idx = k === "0" ? 9 : (parseInt(k, 10) - 1);
+      const ward = SHORTCUT_WARD_MAP[idx];
+      if (ward) { setActiveWard(state.activeWard === ward ? null : ward); e.preventDefault(); }
+      return;
+    }
+
+    // w / W — cycle wards
+    if (k === "w" || k === "W") { cycleWard(e.shiftKey ? -1 : 1); e.preventDefault(); return; }
+
+    // e / E — export
+    if (k === "e" || k === "E") {
+      if (e.shiftKey) { window.print(); }
+      else { exportSitrepWhatsApp(); }
+      e.preventDefault();
+      return;
+    }
+
+    // t — theme toggle
+    if (k === "t" || k === "T") { toggleTheme(); e.preventDefault(); return; }
+
+    // r — force refresh
+    if (k === "r" || k === "R") { boot(); showToast("▱ REFRESHING", "ok"); e.preventDefault(); return; }
+
+    // g — toggle view mode
+    if (k === "g" || k === "G") { toggleViewMode(); e.preventDefault(); return; }
+  });
+}
+
 // --- Export (Pass 3.7: WhatsApp clipboard / Shift-click for print / Alt-click for .txt download) ---
 function setupExport() {
   $("exportSitrep")?.addEventListener("click", (e) => {
@@ -3085,6 +3202,7 @@ async function boot() {
 // Init controls
 setupExport();
 setupConnectors();
+setupKeyboardShortcuts();
 $("themeToggle")?.addEventListener("click", toggleTheme);
 document.querySelectorAll(".lang-btn").forEach(btn => btn.addEventListener("click", () => setLang(btn.dataset.lang)));
 

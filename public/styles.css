@@ -2512,6 +2512,138 @@ body::before {
   height: 100vh;
 }
 
+/* Keyboard help overlay — power-user key-map. Hit ? to summon. */
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(1, 2, 3, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: help-fade-in 220ms ease-out;
+}
+.help-overlay[hidden] { display: none !important; }
+@keyframes help-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.help-overlay-card {
+  width: min(720px, 90vw);
+  max-height: 86vh;
+  overflow-y: auto;
+  background: var(--hud-bg);
+  border: 1px solid var(--cyan);
+  box-shadow: 0 0 24px rgba(0, 243, 255, 0.18), inset 0 0 80px rgba(0,243,255,0.04);
+  padding: 18px 24px 20px;
+  position: relative;
+}
+.help-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line-strong);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+.help-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  font-weight: 700;
+  color: var(--cyan);
+  text-shadow: 0 0 6px var(--cyan-glow);
+}
+.help-close {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--soft);
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+}
+.help-close:hover { color: var(--red); border-color: var(--red); }
+.help-section {
+  margin-top: 12px;
+}
+.help-section h3 {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--cyan);
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+.help-keys, .help-glyphs {
+  display: grid;
+  grid-template-columns: 175px 1fr;
+  gap: 4px 16px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.help-keys dt, .help-glyphs dt {
+  color: var(--ink);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: baseline;
+}
+.help-keys dd, .help-glyphs dd {
+  color: var(--soft);
+  margin: 0;
+}
+.help-keys kbd {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: rgba(0,243,255,0.06);
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  padding: 1px 6px;
+  color: var(--cyan);
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 3px var(--cyan-glow);
+  line-height: 1.5;
+  min-width: 18px;
+  text-align: center;
+}
+.help-foot {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: var(--soft);
+  font-style: italic;
+  line-height: 1.6;
+}
+
+/* Help-hint pill in the bottom bar — "?" for key map */
+.bottom-bar .help-hint {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--soft);
+  border: 1px solid var(--line);
+  padding: 1px 6px 2px;
+  cursor: pointer;
+  user-select: none;
+  margin-left: 8px;
+  background: transparent;
+}
+.bottom-bar .help-hint:hover { color: var(--cyan); border-color: var(--cyan); }
+.bottom-bar .help-hint kbd {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--cyan);
+}
+
 /* Sitrep toast — appears after COMMAND EXPORT click */
 .export-toast {
   position: fixed;

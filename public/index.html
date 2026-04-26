@@ -9,9 +9,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-    <link rel="stylesheet" href="./styles.css?v=22ec3f7efd71-185816" />
+    <link rel="stylesheet" href="./styles.css?v=793a996e5a78-190247" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-    <script>window.__IOC_BOOT__ = {"assetVersion":"22ec3f7efd71-185816","builtAt":"2026-04-26T18:58:47.866Z","deploymentMode":"pages-static","boardLabel":"SNAPSHOT BOARD","pagesUrl":"https://nonarkara.github.io/kuching-ioc/","liveUrl":"https://nonarkara-kuching-ioc-live.fly.dev/"};</script>
+    <script>window.__IOC_BOOT__ = {"assetVersion":"793a996e5a78-190247","builtAt":"2026-04-26T19:02:56.039Z","deploymentMode":"pages-static","boardLabel":"SNAPSHOT BOARD","pagesUrl":"https://nonarkara.github.io/kuching-ioc/","liveUrl":"https://nonarkara-kuching-ioc-live.fly.dev/"};</script>
   </head>
   <body>
     <div class="dashboard-shell">
@@ -211,11 +211,56 @@
 
       <footer class="bottom-bar">
         <span>KCH-IOC // V3.0</span>
-        <button id="exportSitrep" class="action-btn" data-i18n="commandExport">COMMAND EXPORT</button>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button type="button" id="helpHint" class="help-hint" title="Keyboard shortcuts &amp; legend"><kbd>?</kbd> KEYS</button>
+          <button id="exportSitrep" class="action-btn" data-i18n="commandExport">COMMAND EXPORT</button>
+        </div>
       </footer>
     </div>
     <canvas id="connectorCanvas" class="connector-canvas" aria-hidden="true"></canvas>
     <div id="exportToast" class="export-toast" hidden></div>
-    <script src="./app.js?v=22ec3f7efd71-185816" type="module"></script>
+    <div id="helpOverlay" class="help-overlay" hidden>
+      <div class="help-overlay-card" role="dialog" aria-labelledby="helpTitle" aria-modal="true">
+        <header class="help-head">
+          <span id="helpTitle" class="help-title">KCH-IOC // KEY MAP</span>
+          <button type="button" class="help-close" aria-label="Close help">✕</button>
+        </header>
+        <section class="help-section">
+          <h3>NAVIGATION</h3>
+          <dl class="help-keys">
+            <dt><kbd>?</kbd></dt>           <dd>show / hide this key map</dd>
+            <dt><kbd>esc</kbd></dt>         <dd>close ward brief or this overlay</dd>
+            <dt><kbd>1</kbd> – <kbd>9</kbd>, <kbd>0</kbd></dt> <dd>jump to ward A, B, D, FG, H, I, JL, K, M, NPQ</dd>
+            <dt><kbd>w</kbd></dt>           <dd>cycle through wards (next)</dd>
+            <dt><kbd>shift</kbd>+<kbd>w</kbd></dt> <dd>cycle through wards (previous)</dd>
+          </dl>
+        </section>
+        <section class="help-section">
+          <h3>EXPORT &amp; ACTIONS</h3>
+          <dl class="help-keys">
+            <dt><kbd>e</kbd></dt>           <dd>copy WhatsApp sitrep to clipboard</dd>
+            <dt><kbd>shift</kbd>+<kbd>e</kbd></dt> <dd>print sitrep (browser → save as PDF)</dd>
+            <dt><kbd>t</kbd></dt>           <dd>toggle dark / light theme</dd>
+            <dt><kbd>r</kbd></dt>           <dd>force refresh (re-fetch payload)</dd>
+            <dt><kbd>g</kbd></dt>           <dd>toggle full mode (show all hidden panels)</dd>
+          </dl>
+        </section>
+        <section class="help-section">
+          <h3>READING THE BOARD</h3>
+          <dl class="help-glyphs">
+            <dt><span class="glyph" data-tone="ok">▰</span></dt><dd>live · last fetch within cache TTL</dd>
+            <dt><span class="glyph" data-tone="muted">▱</span></dt><dd>cached · referenced from baked snapshot</dd>
+            <dt><span class="glyph" data-tone="warn">◐</span></dt><dd>degraded · feed fell back to model / heuristic</dd>
+            <dt><span class="glyph" data-tone="alert">✕</span></dt><dd>offline · upstream feed unreachable</dd>
+            <dt><span class="glyph" data-tone="muted">◇ ◆ ●</span></dt><dd>directive: queued / in-progress / done (click to cycle)</dd>
+            <dt><span class="glyph" data-tone="warn">↻ STALE</span></dt><dd>directive first seen &gt; 8 hours ago</dd>
+          </dl>
+        </section>
+        <footer class="help-foot">
+          Built for the Office of Secretary Daniel Goh, MPP · in collaboration with depa, PMUA, Axiom, ReTL, Thailand Smart City Office &amp; ASCN.
+        </footer>
+      </div>
+    </div>
+    <script src="./app.js?v=793a996e5a78-190247" type="module"></script>
   </body>
 </html>

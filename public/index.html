@@ -9,9 +9,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-    <link rel="stylesheet" href="./styles.css?v=793a996e5a78-190247" />
+    <link rel="stylesheet" href="./styles.css?v=13104952e65b-190519" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-    <script>window.__IOC_BOOT__ = {"assetVersion":"793a996e5a78-190247","builtAt":"2026-04-26T19:02:56.039Z","deploymentMode":"pages-static","boardLabel":"SNAPSHOT BOARD","pagesUrl":"https://nonarkara.github.io/kuching-ioc/","liveUrl":"https://nonarkara-kuching-ioc-live.fly.dev/"};</script>
+    <script>window.__IOC_BOOT__ = {"assetVersion":"13104952e65b-190519","builtAt":"2026-04-26T19:05:27.977Z","deploymentMode":"pages-static","boardLabel":"SNAPSHOT BOARD","pagesUrl":"https://nonarkara.github.io/kuching-ioc/","liveUrl":"https://nonarkara-kuching-ioc-live.fly.dev/"};</script>
   </head>
   <body>
     <div class="dashboard-shell">
@@ -92,6 +92,15 @@
           </div>
           <div class="map-frame">
             <div id="mapCanvas" class="map-canvas"></div>
+            <div class="map-vignette" aria-hidden="true"></div>
+            <div class="map-scan-grid" aria-hidden="true"></div>
+            <div class="map-reticle" aria-hidden="true">
+              <span class="map-reticle-tl"></span>
+              <span class="map-reticle-br"></span>
+            </div>
+            <div class="map-compass" aria-hidden="true">
+              <span class="map-compass-label">N</span>
+            </div>
             <div class="radar-scan"></div>
           </div>
           <footer class="map-footer">
@@ -261,6 +270,6 @@
         </footer>
       </div>
     </div>
-    <script src="./app.js?v=793a996e5a78-190247" type="module"></script>
+    <script src="./app.js?v=13104952e65b-190519" type="module"></script>
   </body>
 </html>

@@ -1444,6 +1444,61 @@ function renderDeltaDigest(payload) {
   writeJson(VISIT_KEY, Date.now());
 }
 
+// --- Today's Brief: a single-line teleprompter under the title.
+// Reads as the first thing a Secretary glances at: time · posture · key flags ·
+// what needs his attention. Composed only from the existing payload, so it
+// updates on every render (and in delta differential after midnight resets).
+function composeTodayBrief(payload) {
+  const segments = [];
+  // Asia/Kuching local clock; precise to the minute keeps the line "live".
+  const stamp = new Date().toLocaleString("en-MY", {
+    day: "2-digit", month: "short",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+    timeZone: "Asia/Kuching",
+  }).replace(",", "").toUpperCase();
+  segments.push(stamp);
+
+  // Posture, in caps, glow-on-tone via inline data-posture.
+  const posture = String(payload?.summary?.posture || "STABLE").toUpperCase();
+  segments.push(`<span class="brief-posture" data-posture="${posture.toLowerCase()}">${posture}</span>`);
+
+  // Active MET warnings (red if any, else "MET CLEAR").
+  const metCount = payload?.metWarnings?.activeCount || 0;
+  if (metCount > 0) {
+    segments.push(`<span class="brief-flag" data-tone="alert">${metCount} MET WARNING${metCount > 1 ? "S" : ""}</span>`);
+  } else {
+    segments.push(`<span class="brief-flag" data-tone="ok">MET CLEAR</span>`);
+  }
+
+  // Hydro posture (only if non-normal).
+  const hydroBand = payload?.infobanjir?.highestBand;
+  if (hydroBand && !["normal", "reference"].includes(hydroBand)) {
+    const worstName = payload?.infobanjir?.stations?.[0]?.name;
+    segments.push(`<span class="brief-flag" data-tone="warn">HYDRO ${hydroBand.toUpperCase()}${worstName ? " · " + worstName.toUpperCase() : ""}</span>`);
+  }
+
+  // Worst APIMS reading.
+  const apims = payload?.apims?.worst;
+  if (apims?.aqi != null) {
+    const tone = apims.aqi >= 100 ? "warn" : apims.aqi >= 75 ? "warn" : "muted";
+    segments.push(`<span class="brief-flag" data-tone="${tone}">APIMS ${apims.aqi}</span>`);
+  }
+
+  // High-severity directive count.
+  const highOps = (payload?.operations || []).filter(o => o.severity === "high").length;
+  if (highOps > 0) {
+    segments.push(`<span class="brief-flag" data-tone="warn">${highOps} HIGH DIRECTIVE${highOps > 1 ? "S" : ""}</span>`);
+  }
+
+  // Rain forecast hook only when meaningful.
+  const rain6h = payload?.metrics?.find(m => m.id === "rain6h")?.value;
+  if (rain6h != null && rain6h >= 5) {
+    segments.push(`<span class="brief-flag" data-tone="warn">${rain6h}MM/6H RAIN</span>`);
+  }
+
+  return segments.join(' <span class="brief-sep">·</span> ');
+}
+
 // --- Pass 3.6: Today's events stack — ATC-style time-anchored log ---
 function freshnessBucket(tsMs) {
   const ageMin = (Date.now() - tsMs) / 60_000;
@@ -2730,7 +2785,13 @@ function renderDashboard(payload) {
   state.payload = payload;
   if (payload.site?.title) document.title = payload.site.title;
   if (payload.site?.title) $("titleText").textContent = payload.site.title;
-  if (payload.site?.subtitle) $("subtitleText").textContent = payload.site.subtitle;
+  // Today's Brief — dynamic teleprompter line. Replaces the static partnership
+  // subtitle (the partner-row of logos already credits the same partners visually).
+  const subtitle = $("subtitleText");
+  if (subtitle) {
+    subtitle.classList.add("today-brief");
+    subtitle.innerHTML = composeTodayBrief(payload);
+  }
   $("summaryLead").textContent = payload.summary.headline;
   $("mapSummary").textContent = payload.summary.detail;
   renderRuntimeMeta(payload);

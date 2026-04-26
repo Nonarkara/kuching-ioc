@@ -2258,6 +2258,42 @@ body::before {
   100% { transform: scale(2.4); opacity: 0; border-width: 1px; }
 }
 
+/* === Today's Brief === a single teleprompter line under the title.
+   Reads as the dashboard's "stand-up announcement" — first thing the eye sees. */
+.today-brief {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  line-height: 1.5;
+}
+.today-brief .brief-sep {
+  color: var(--soft);
+  opacity: 0.45;
+  font-weight: 700;
+}
+.today-brief .brief-posture {
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--cyan);
+  text-shadow: 0 0 4px var(--cyan-glow);
+}
+.today-brief .brief-posture[data-posture="watch"]      { color: var(--amber); text-shadow: 0 0 5px rgba(251,191,36,0.45); }
+.today-brief .brief-posture[data-posture="steady-watch"]{ color: var(--amber); text-shadow: 0 0 5px rgba(251,191,36,0.45); }
+.today-brief .brief-posture[data-posture="stretched"]  { color: var(--red);   text-shadow: 0 0 5px rgba(239,68,68,0.5); }
+.today-brief .brief-flag {
+  letter-spacing: 0.1em;
+}
+.today-brief .brief-flag[data-tone="ok"]    { color: var(--cyan); }
+.today-brief .brief-flag[data-tone="warn"]  { color: var(--amber); }
+.today-brief .brief-flag[data-tone="alert"] { color: var(--red); text-shadow: 0 0 4px rgba(239,68,68,0.4); }
+.today-brief .brief-flag[data-tone="muted"] { color: var(--soft); }
+
 /* === Pass 3: Events stack, telemetry, connectors, sitrep toast === */
 
 /* Events stack — vertical timeline, ATC-style */

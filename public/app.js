@@ -71,8 +71,8 @@ function hashStr(s) {
 // Map a status string to a HUD glyph (▰ live, ▱ cached, ◐ degraded, ✕ offline).
 function statusGlyph(status) {
   const map = {
-    live: "▰", ok: "▰",
-    cached: "▱", reference: "▱", curated: "▱",
+    live: "▰", ok: "▰", clear: "▰", none: "▰",
+    cached: "▱", reference: "▱", curated: "▱", snapshot: "▱",
     degraded: "◐", fallback: "◐", warn: "◐",
     offline: "✕", error: "✕",
   };
@@ -80,7 +80,7 @@ function statusGlyph(status) {
 }
 function statusTone(status) {
   const s = String(status || "").toLowerCase();
-  if (s === "live" || s === "ok") return "ok";
+  if (s === "live" || s === "ok" || s === "clear" || s === "none") return "ok";
   if (s === "offline" || s === "error") return "alert";
   if (s === "degraded" || s === "fallback" || s === "warn") return "warn";
   return "muted";
@@ -1444,6 +1444,280 @@ function renderDeltaDigest(payload) {
   writeJson(VISIT_KEY, Date.now());
 }
 
+// --- Pass 3.6: Today's events stack — ATC-style time-anchored log ---
+function freshnessBucket(tsMs) {
+  const ageMin = (Date.now() - tsMs) / 60_000;
+  if (ageMin < 30) return "now";
+  if (ageMin < 240) return "recent";
+  return "older";
+}
+function eventTime(tsMs) {
+  return new Date(tsMs).toLocaleTimeString("en-MY", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Kuching" });
+}
+function composeEvents(payload) {
+  const out = [];
+  const cutoff = Date.now() - 24 * 3600 * 1000;
+  // MET warnings
+  for (const w of payload?.metWarnings?.items || []) {
+    const t = Date.parse(w.validFrom || payload.metWarnings.updatedAt);
+    if (t && t >= cutoff) {
+      out.push({ t, type: "MET", text: `${w.heading || "Active warning"}${w.validTo ? " · valid until " + new Date(w.validTo).toLocaleTimeString("en-MY",{hour:"2-digit",minute:"2-digit",hour12:false,timeZone:"Asia/Kuching"}) : ""}` });
+    }
+  }
+  // Hydro: any non-normal stations as events at the payload generatedAt
+  const ib = payload?.infobanjir;
+  if (ib?.stations) {
+    const tIb = Date.parse(ib.updatedAt || payload.generatedAt) || Date.now();
+    for (const s of ib.stations) {
+      if (["alert", "warning", "danger"].includes(s.band)) {
+        out.push({ t: tIb, type: "HYDRO", text: `${s.name} ${s.waterLevelM != null ? s.waterLevelM + "m" : ""} (${s.bandLabel || s.band})` });
+      }
+    }
+  }
+  // Earthquakes (regional, last 24h)
+  for (const q of payload?.quakes?.events || []) {
+    const t = Date.parse(q.time);
+    if (t && t >= cutoff && (q.distanceKm == null || q.distanceKm < 600)) {
+      out.push({ t, type: "QUAKE", text: `M${q.magnitude?.toFixed(1) ?? "?"} ${q.place || "regional event"}` });
+    }
+  }
+  // Airport peak
+  const airTracked = payload?.airport?.movements?.totalTracked ?? 0;
+  if (airTracked >= 8) {
+    out.push({ t: Date.parse(payload.airport.updatedAt || payload.generatedAt) || Date.now(),
+      type: "AIR", text: `${airTracked} aircraft tracked · peak local traffic` });
+  }
+  // Flood-forecast peak (only if >200 m³/s)
+  const peak = payload?.floodForecast?.peakCms;
+  if (peak != null && peak > 200) {
+    out.push({ t: Date.parse(payload.floodForecast.updatedAt || payload.generatedAt) || Date.now(),
+      type: "FLOOD", text: `GloFAS peak ${peak} m³/s on Sarawak River` });
+  }
+  // News headlines (official-tier preferred). Last 24h.
+  const news = (payload?.news?.items || [])
+    .filter(i => {
+      const t = Date.parse(i.publishedAt || payload.news.updatedAt);
+      return t && t >= cutoff;
+    })
+    .sort((a, b) => (b.isOfficial ? 1 : 0) - (a.isOfficial ? 1 : 0))
+    .slice(0, 5);
+  for (const n of news) {
+    out.push({ t: Date.parse(n.publishedAt) || Date.now(), type: "NEWS", text: `${n.source || ""}${n.source ? " · " : ""}${(n.title || "").slice(0, 80)}` });
+  }
+  out.sort((a, b) => b.t - a.t);
+  return out.slice(0, 10);
+}
+
+function renderEventsStack(payload) {
+  const el = $("eventsStack");
+  if (!el) return;
+  const events = composeEvents(payload);
+  if (!events.length) {
+    el.innerHTML = `<div class="events-empty">No notable events in the last 24h.</div>`;
+    return;
+  }
+  el.innerHTML = events.map(e => `
+    <article class="event-row" data-type="${e.type}" data-fresh="${freshnessBucket(e.t)}">
+      <span></span>
+      <span class="event-time">${eventTime(e.t)}</span>
+      <span class="event-type">${e.type}</span>
+      <span class="event-text">${escapeHtml(e.text)}</span>
+    </article>`).join("");
+}
+
+// --- Pass 3.7: COMMAND EXPORT — WhatsApp clipboard, plain-text sitrep, print ---
+function buildSitrepText(p) {
+  const now = new Date();
+  const stamp = now.toLocaleString("en-MY", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Kuching" });
+  const posture = (p.summary?.posture || "stable").toUpperCase();
+  const acts = (p.operations || []).filter(o => o.severity === "high").slice(0, 3);
+  const env = [];
+  const heat = p.metrics?.find(m => m.id === "heat");
+  if (heat) env.push(`Heat index ${heat.value}°C · ${heat.context}`);
+  const aqi = p.apims?.worst;
+  if (aqi?.aqi != null) env.push(`AQI ${aqi.aqi} (APIMS ${aqi.stationName || aqi.label})`);
+  const rain = p.metrics?.find(m => m.id === "rain6h");
+  if (rain) env.push(`Rain next 6h: ${rain.value}mm`);
+  const ib = p.infobanjir;
+  if (ib?.stations?.length) {
+    const worst = ib.stations[0];
+    env.push(`${worst.name}: ${worst.waterLevelM != null ? worst.waterLevelM + "m" : "ref"} (${worst.bandLabel || worst.band})`);
+  }
+  const met = p.metWarnings;
+  if (met?.activeCount > 0) env.push(`MET warning active: ${met.items[0].heading || ""}`);
+  const air = p.airport?.movements;
+  const lines = [
+    "🛰 KUCHING SITREP · " + stamp,
+    "",
+    "POSTURE: " + posture + (p.summary?.headline ? " — " + p.summary.headline : ""),
+    "",
+    "ACT NOW",
+    ...(acts.length ? acts.map((o, i) => `${i + 1}. ${o.owner}: ${o.title}`) : ["No high-severity directives."]),
+    "",
+    "ENVIRONMENT",
+    ...env,
+    "",
+    "KCH AIRSPACE",
+    air ? `${air.totalTracked} aircraft tracked · ${air.arrivals} arrivals / ${air.departures} departures` : "—",
+    "",
+    "— Office of Secretary Daniel Goh, MPP",
+  ];
+  return lines.join("\n");
+}
+
+function showToast(msg, tone = "ok") {
+  const el = $("exportToast");
+  if (!el) return;
+  el.textContent = msg;
+  el.dataset.tone = tone;
+  el.hidden = false;
+  clearTimeout(el._tid);
+  el._tid = setTimeout(() => { el.hidden = true; }, 3000);
+}
+
+async function exportSitrepWhatsApp() {
+  if (!state.payload) return;
+  const text = buildSitrepText(state.payload);
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("✓ COPIED · paste in WhatsApp", "ok");
+  } catch (_) {
+    // Fallback: open a new window with the text selected (user copies manually).
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.body.style = "background:#010203;color:#e8f4ff;font:13px 'JetBrains Mono',monospace;padding:24px;white-space:pre-wrap;";
+      w.document.body.textContent = text;
+      showToast("◐ CLIPBOARD BLOCKED · text in new tab", "error");
+    } else {
+      showToast("✕ EXPORT FAILED", "error");
+    }
+  }
+}
+
+// --- Pass 3.8: Telemetry strip + cross-reference connectors ---
+function renderTelemetryStrip(payload) {
+  const el = $("telemetryStrip");
+  if (!el) return;
+  const fmtTime = new Date().toLocaleTimeString("en-MY", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: "Asia/Kuching" });
+  const entries = [];
+  entries.push(`<span class="tlm-time">[${fmtTime}]</span>`);
+  const mode = payload.delivery?.tone || "unknown";
+  const modeStatus = deliveryToneToStatus(mode);
+  entries.push(`<span class="tlm-entry">${glyphHTML(modeStatus, payload.delivery?.modeLabel || mode)}</span>`);
+  // Per-source heartbeat glyphs.
+  const sources = [
+    ["jps-infobanjir", payload.infobanjir?.status],
+    ["apims", payload.apims?.status],
+    ["met", payload.metWarnings?.status],
+    ["glofas", payload.floodForecast?.status],
+    ["weather", payload.climate?.weather?.status],
+    ["aqi", payload.climate?.air?.status],
+    ["news", payload.news?.status],
+  ];
+  for (const [name, st] of sources) {
+    if (st) entries.push(`<span class="tlm-entry">${glyphHTML(st, name)}</span>`);
+  }
+  el.innerHTML = entries.join('<span class="tlm-sep">·</span>');
+}
+
+// Connector overlay: hairline cyan curves from a hovered metric tile to its
+// related elements in the rest of the dashboard. Pointer-events: none.
+const CONNECTOR_MAP = {
+  // metric-card id (lowercased) → list of CSS selectors to draw to
+  aqi:      ['#signalCards .signal-card[style*="ff003c"], #signalCards .signal-card[style*="ff7a00"], #signalCards .signal-card[style*="ffd000"]', '.operation-card[data-severity="high"]'],
+  heat:     ['#signalCards .signal-card:first-child'],
+  rain6h:   ['#floodForecast', '#signalCards .signal-card[data-band]'],
+  airport:  ['#airportStats'],
+  pm25:     ['#signalCards .signal-card'],
+  flood:    ['#floodForecast', '#signalCards .signal-card[data-band]'],
+  trends:   ['#newsRail'],
+  headlines:['#newsRail', '#sentimentPanel'],
+  wards:    ['#localityList', '#councillorPanel'],
+};
+
+function setupConnectors() {
+  const canvas = $("connectorCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + "px";
+    canvas.style.height = window.innerHeight + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener("resize", resize);
+
+  let activeLines = []; // { from:{x,y}, to:{x,y}, until:ts }
+  let raf = null;
+
+  function clearAll() {
+    activeLines = [];
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const now = Date.now();
+    activeLines = activeLines.filter(l => l.until > now);
+    for (const l of activeLines) {
+      const remaining = (l.until - now) / 800;
+      ctx.strokeStyle = `rgba(0, 243, 255, ${0.15 + 0.4 * remaining})`;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.lineDashOffset = -((now / 25) % 8);
+      ctx.beginPath();
+      const cpx = (l.from.x + l.to.x) / 2;
+      const cpy = (l.from.y + l.to.y) / 2 - 30;
+      ctx.moveTo(l.from.x, l.from.y);
+      ctx.quadraticCurveTo(cpx, cpy, l.to.x, l.to.y);
+      ctx.stroke();
+    }
+    if (activeLines.length) raf = requestAnimationFrame(draw);
+    else raf = null;
+  }
+
+  function rectCenter(el) {
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  function showConnectors(metricId, srcEl) {
+    const selectors = CONNECTOR_MAP[metricId];
+    if (!selectors) return;
+    const from = rectCenter(srcEl);
+    const targets = selectors.flatMap(s => [...document.querySelectorAll(s)].slice(0, 3));
+    if (!targets.length) return;
+    const until = Date.now() + 1200;
+    for (const t of targets) {
+      activeLines.push({ from, to: rectCenter(t), until });
+    }
+    if (!raf) draw();
+  }
+
+  // Metric tiles render as .metric-card with a kicker that contains the id.
+  document.addEventListener("mouseover", (e) => {
+    const card = e.target.closest?.(".metric-card");
+    if (!card) return;
+    const idLabel = card.querySelector(".metric-label")?.textContent?.toLowerCase() || "";
+    let metricId = null;
+    if (idLabel.includes("aqi"))      metricId = "aqi";
+    else if (idLabel.includes("heat"))metricId = "heat";
+    else if (idLabel.includes("rain"))metricId = "rain6h";
+    else if (idLabel.includes("kch")) metricId = "airport";
+    else if (idLabel.includes("pm"))  metricId = "pm25";
+    else if (idLabel.includes("trend")) metricId = "trends";
+    else if (idLabel.includes("headline")) metricId = "headlines";
+    else if (idLabel.includes("ward")) metricId = "wards";
+    if (metricId) showConnectors(metricId, card);
+  }, { passive: true });
+  document.addEventListener("mouseout", (e) => {
+    if (!e.target.closest?.(".metric-card")) return;
+    // Lines fade naturally; nothing to do.
+  }, { passive: true });
+}
+
 // --- Pass 1.2: Directive status (queued → active → done) + age-decayed borders ---
 const DIRECTIVE_STATUS_GLYPH = { queued: "◇", active: "◆", done: "●" };
 const DIRECTIVE_NEXT_STATUS = { queued: "active", active: "done", done: "queued" };
@@ -2579,6 +2853,10 @@ function renderDashboard(payload) {
   if (!isSecretary) renderBypassTracker();
   if (!isSecretary) renderQualitativeLens(payload);
 
+  // Pass 3 additions
+  renderEventsStack(payload);
+  renderTelemetryStrip(payload);
+
   // Sources — hidden in secretary mode (panel CSS-gated; renderer skipped to save work)
   if (!isSecretary) {
     renderSourceMatrix(payload);
@@ -2629,24 +2907,31 @@ function setLang(lang) {
   document.querySelectorAll(".lang-btn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
 }
 
-// --- Export ---
+// --- Export (Pass 3.7: WhatsApp clipboard / Shift-click for print / Alt-click for .txt download) ---
 function setupExport() {
-  $("exportSitrep")?.addEventListener("click", () => {
+  $("exportSitrep")?.addEventListener("click", (e) => {
     if (!state.payload) return;
-    const p = state.payload;
-    const lines = [
-      `SITREP // GREATER KUCHING IOC`, `Generated: ${p.generatedAt}`, ``,
-      `POSTURE: ${p.summary.posture.toUpperCase()}`, p.summary.headline, ``, `DETAIL: ${p.summary.detail}`, ``,
-      `METRICS:`, ...p.metrics.map(m=>`  ${m.label}: ${m.value} ${m.unit} (${m.context})`), ``,
-      `OPERATIONS:`, ...p.operations.map(o=>`  [${o.severity.toUpperCase()}] ${o.owner}: ${o.title}`), ``,
-      `EXCHANGE RATES (1 MYR):`, ...p.exchange.pairs.map(r=>`  ${r.code}: ${r.rate}`),
-    ];
-    const blob = new Blob([lines.join("\n")], { type:"text/plain" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `sitrep-kuching-${new Date().toISOString().slice(0,10)}.txt`;
-    a.click();
+    if (e.shiftKey) {
+      // Print preview (browser → save as PDF).
+      window.print();
+      return;
+    }
+    if (e.altKey) {
+      // Legacy: download as .txt
+      const text = buildSitrepText(state.payload);
+      const blob = new Blob([text], { type: "text/plain" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `sitrep-kuching-${new Date().toISOString().slice(0, 10)}.txt`;
+      a.click();
+      return;
+    }
+    // Default: copy to clipboard for WhatsApp.
+    exportSitrepWhatsApp();
   });
+  // Tooltip hint on the button.
+  const btn = $("exportSitrep");
+  if (btn) btn.title = "Click → copy WhatsApp text · Shift-click → print · Alt-click → save .txt";
 }
 
 // --- Boot ---
@@ -2667,6 +2952,7 @@ async function boot() {
 
 // Init controls
 setupExport();
+setupConnectors();
 $("themeToggle")?.addEventListener("click", toggleTheme);
 document.querySelectorAll(".lang-btn").forEach(btn => btn.addEventListener("click", () => setLang(btn.dataset.lang)));
 

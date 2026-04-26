@@ -2257,3 +2257,148 @@ body::before {
   0%   { transform: scale(0.6); opacity: 1; border-width: 2px; }
   100% { transform: scale(2.4); opacity: 0; border-width: 1px; }
 }
+
+/* === Pass 3: Events stack, telemetry, connectors, sitrep toast === */
+
+/* Events stack — vertical timeline, ATC-style */
+.events-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 0 6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+.event-row {
+  display: grid;
+  grid-template-columns: 8px 38px 32px 1fr;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 8px;
+  border-left: 1px solid var(--line);
+  position: relative;
+}
+.event-row::before {
+  content: "";
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--soft);
+  display: inline-block;
+  align-self: center;
+}
+.event-row[data-fresh="now"]::before    { background: var(--green); box-shadow: 0 0 4px var(--green); }
+.event-row[data-fresh="recent"]::before { background: var(--cyan);  box-shadow: 0 0 4px var(--cyan-glow); }
+.event-row[data-fresh="older"]::before  { background: var(--soft);  opacity: 0.6; }
+.event-time {
+  color: var(--soft);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.event-type {
+  color: var(--cyan);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+.event-row[data-type="MET"]   .event-type { color: var(--red); }
+.event-row[data-type="HYDRO"] .event-type { color: var(--amber); }
+.event-row[data-type="QUAKE"] .event-type { color: var(--red); }
+.event-row[data-type="AIR"]   .event-type { color: var(--cyan); }
+.event-row[data-type="FLOOD"] .event-type { color: var(--amber); }
+.event-row[data-type="NEWS"]  .event-type { color: var(--soft); }
+.event-text {
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.event-row[data-fresh="older"] .event-text { color: var(--soft); opacity: 0.85; }
+.events-empty {
+  padding: 6px 12px;
+  font-size: 9px;
+  color: var(--soft);
+  font-style: italic;
+}
+
+/* Telemetry strip — kernel-boot-log feel above the bottom bar */
+.telemetry-strip {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 18px;
+  padding: 0 12px;
+  border-top: 1px solid var(--line);
+  background: var(--hud-bg);
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.04em;
+  color: var(--soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+.telemetry-strip .tlm-time   { color: var(--cyan); font-weight: 700; }
+.telemetry-strip .tlm-entry  { display: inline-flex; align-items: baseline; gap: 4px; }
+.telemetry-strip .tlm-sep    { color: var(--soft); opacity: 0.4; }
+
+/* Cross-reference connector canvas — full-screen overlay, pointer-events:none */
+.connector-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 90;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Sitrep toast — appears after COMMAND EXPORT click */
+.export-toast {
+  position: fixed;
+  bottom: 60px;
+  right: 20px;
+  z-index: 200;
+  padding: 8px 14px;
+  background: var(--hud-bg);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 4px var(--cyan-glow);
+  animation: toast-in 220ms ease-out;
+}
+.export-toast[hidden] { display: none; }
+.export-toast[data-tone="error"] {
+  border-color: var(--red);
+  color: var(--red);
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Print stylesheet — single-page A4 sitrep, white background, signature typography preserved */
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+  html, body { background: #fff !important; color: #000 !important; }
+  .dashboard-shell { height: auto !important; overflow: visible !important; }
+  /* Hide everything that's noise in print */
+  .ticker-bar, .delta-strip, .partner-row, .controls-row, .runtime-meta,
+  .map-panel, .situation-rail, .lower-grid, .telemetry-strip,
+  .bottom-bar, .connector-canvas, .export-toast, #generatedAt,
+  .micro-badge, #sysStatus, .radar-scan, .map-controls,
+  .locality-filters, .locality-status, .locality-list { display: none !important; }
+  /* Keep the title block, metric band, brief strip, locality summary */
+  .masthead { border: none !important; padding: 0 !important; background: #fff !important; }
+  .masthead h1 { color: #000 !important; text-shadow: none !important; }
+  .eyebrow, .summary-lead { color: #444 !important; }
+  .metric-band { background: #fff !important; border: 1px solid #000 !important; }
+  .metric-card { color: #000 !important; background: #fff !important; border: 1px solid #999 !important; }
+  .metric-value, .metric-label { color: #000 !important; text-shadow: none !important; }
+  .brief-strip, .brief-card { background: #fff !important; color: #000 !important; border-color: #999 !important; }
+  .brief-kicker { color: #000 !important; }
+  .locality-panel { background: #fff !important; }
+  .locality-summary { color: #333 !important; }
+  .locality-summary .locality-num { color: #000 !important; text-shadow: none !important; }
+  .panel-head h2, .panel-head .kicker { color: #000 !important; }
+}

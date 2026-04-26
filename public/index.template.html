@@ -138,6 +138,11 @@
               <div class="section-label">NEWS DIGEST</div>
               <div id="sentimentPanel" class="sentiment-panel"></div>
             </div>
+
+            <div class="section-group">
+              <div class="section-label">EVENTS // 24H</div>
+              <div id="eventsStack" class="events-stack"></div>
+            </div>
           </div>
         </aside>
       </main>
@@ -202,11 +207,15 @@
         </section>
       </section>
 
+      <div id="telemetryStrip" class="telemetry-strip" aria-hidden="true"></div>
+
       <footer class="bottom-bar">
         <span>KCH-IOC // V3.0</span>
         <button id="exportSitrep" class="action-btn" data-i18n="commandExport">COMMAND EXPORT</button>
       </footer>
     </div>
+    <canvas id="connectorCanvas" class="connector-canvas" aria-hidden="true"></canvas>
+    <div id="exportToast" class="export-toast" hidden></div>
     <script src="./app.js?v=__ASSET_VERSION__" type="module"></script>
   </body>
 </html>

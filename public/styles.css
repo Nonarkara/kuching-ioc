@@ -1943,3 +1943,59 @@ body::before {
   .locality-kpis { grid-template-columns: repeat(3, 1fr); }
   .ward-detail-roster { grid-template-columns: 1fr; }
 }
+
+/* === Secretary Goh view: trimmed for a non-tech municipal user ===
+   Set data-view="full" on <html> to restore everything. Nothing deleted. */
+[data-view="secretary"] .qualitative-panel,
+[data-view="secretary"] .source-panel,
+[data-view="secretary"] #trendsBand,
+[data-view="secretary"] #bypassTracker,
+[data-view="secretary"] #jurisdictionCards,
+[data-view="secretary"] .locality-kpis {
+  display: none !important;
+}
+
+/* When 2 panels are removed from lower-grid, intel panel claims the row */
+[data-view="secretary"] .lower-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* One-line locality summary that replaces the 6-tile KPI grid */
+.locality-summary {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--soft);
+  letter-spacing: 0.04em;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.locality-summary span { white-space: nowrap; }
+.locality-summary .locality-count,
+.locality-summary .locality-num {
+  color: var(--cyan);
+  font-weight: 700;
+  text-shadow: 0 0 4px var(--cyan-glow);
+}
+
+/* Ward-grouped list: ward header + nested locality rows */
+.locality-ward-group { margin-bottom: 6px; }
+.locality-ward-header {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--amber);
+  padding: 6px 12px 3px;
+  border-top: 1px solid var(--line);
+  background: rgba(251,191,36,0.04);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.locality-ward-header .ward-locality-count {
+  color: var(--soft);
+  font-weight: 400;
+}

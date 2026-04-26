@@ -8,6 +8,11 @@ import {
 
 const BOOT = window.__IOC_BOOT__ || {};
 
+// View mode — "secretary" (trimmed for non-tech municipal user) or "full" (everything).
+// Set via data-view attribute on <html>. Toggle in HTML; nothing deleted from JS or DOM.
+const VIEW_MODE = document.documentElement.dataset.view || "secretary";
+const isSecretary = VIEW_MODE === "secretary";
+
 const SOURCE_STATUS_LABEL = {
   live: "live",
   official: "official",
@@ -822,7 +827,12 @@ function renderMap(payload) {
   state.labelLayerGroup.clearLayers();
   state.markerLayerGroup.clearLayers();
 
-  payload.jurisdictions.items.forEach(item => {
+  // In secretary mode show only Padawan (MPP) boundary; full mode shows all 3 councils.
+  const visibleJurisdictions = isSecretary
+    ? payload.jurisdictions.items.filter(j => j.id === "mpp")
+    : payload.jurisdictions.items;
+
+  visibleJurisdictions.forEach(item => {
     item.polygons.forEach(ring => {
       window.L.polygon(ring.map(p=>[p[1],p[0]]), { color:item.accent, weight:2, fillOpacity:0.12, fillColor:item.accent }).addTo(state.boundaryLayerGroup);
     });
@@ -1775,6 +1785,7 @@ function filterLocalities(items, f) {
 function renderLocalityKpis(totals) {
   const target = $("localityKpis");
   if (!target) return;
+  // Original 6-tile grid — kept for full mode (data-view="full") via CSS gate hiding via .locality-kpis.
   const tile = (label, value, unit = "") => `
     <article class="metric-card" data-tone="neutral">
       <div class="metric-label">${escapeHtml(label)}</div>
@@ -1788,6 +1799,28 @@ function renderLocalityKpis(totals) {
     tile(t("stateSeats"),      totals.stateConstituencies),
     tile(t("parliamentSeats"), totals.parliamentConstituencies),
   ].join("");
+}
+
+// Secretary mode replacement — single dense summary line above the list.
+function renderLocalitySummary(payload) {
+  const target = $("localityList")?.parentElement?.querySelector(".locality-summary")
+    || (() => {
+      const el = document.createElement("div");
+      el.className = "locality-summary";
+      const list = $("localityList");
+      if (list) list.parentElement.insertBefore(el, list);
+      return el;
+    })();
+  const totals = payload?.mppLocalities?.totals || {};
+  const wards = payload?.mppLocalities?.breakdowns?.byWard || {};
+  const wardCount = Object.values(wards).filter(c => (typeof c === "object" ? (c?.count ?? 0) : c) > 0).length;
+  target.innerHTML = `
+    <span><span class="locality-num">${num(totals.localities ?? 0, 0)}</span> ${t("totalLocalities").toLowerCase()}</span>
+    <span><span class="locality-num">${wardCount}</span> ${(t("wards") || "wards")}</span>
+    <span><span class="locality-num">${num(totals.residential ?? 0, 0)}</span> ${t("residential").toLowerCase()}</span>
+    <span><span class="locality-num">${num(totals.commercial ?? 0, 0)}</span> ${t("commercial").toLowerCase()}</span>
+    <span><span class="locality-num">${num(totals.industrial ?? 0, 0)}</span> ${t("industrial").toLowerCase()}</span>
+    <span><span class="locality-num">${totals.stateConstituencies ?? 0}</span> state · <span class="locality-num">${totals.parliamentConstituencies ?? 0}</span> parl seats</span>`;
 }
 
 function renderLocalityFilters(payload) {
@@ -1856,7 +1889,8 @@ function renderLocalityList(items) {
     target.innerHTML = `<div class="panel-empty">No localities match the current filters.</div>`;
     return;
   }
-  target.innerHTML = visible.map(it => {
+
+  const renderRow = (it) => {
     const color = WARD_COLOR_MAP[it.wardCode] || "#8aa2c8";
     return `
       <article class="locality-row" data-ward="${escapeHtml(it.wardCode || "")}" style="border-left-color:${color}">
@@ -1869,7 +1903,34 @@ function renderLocalityList(items) {
           <span class="c-ind" title="Industrial">${num(it.industrial)}I</span>
         </span>
       </article>`;
-  }).join("");
+  };
+
+  if (isSecretary) {
+    // Group by ward — Secretary Goh's ask: "put the MPP Ward info together".
+    const grouped = new Map();
+    for (const it of visible) {
+      const key = it.wardCode || "—";
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(it);
+    }
+    const ordered = WARD_CODE_ORDER.filter(c => grouped.has(c)).concat(
+      [...grouped.keys()].filter(c => !WARD_CODE_ORDER.includes(c))
+    );
+    target.innerHTML = ordered.map(wardCode => {
+      const rows = grouped.get(wardCode);
+      const color = WARD_COLOR_MAP[wardCode] || "#8aa2c8";
+      return `
+        <section class="locality-ward-group">
+          <header class="locality-ward-header" style="border-left:3px solid ${color}; padding-left:9px;">
+            <span>WARD ${escapeHtml(wardCode)}</span>
+            <span class="ward-locality-count">${rows.length} ${rows.length === 1 ? "locality" : "localities"}</span>
+          </header>
+          ${rows.map(renderRow).join("")}
+        </section>`;
+    }).join("");
+  } else {
+    target.innerHTML = visible.map(renderRow).join("");
+  }
 
   target.querySelectorAll(".locality-row").forEach(row => {
     row.addEventListener("click", () => {
@@ -1892,6 +1953,7 @@ function renderMppLocalities(payload) {
     // Keep explicit filter even without activeWard (e.g. user picked dropdown).
   }
   renderLocalityKpis(data.totals || {});
+  if (isSecretary) renderLocalitySummary(payload);
   renderLocalityFilters(payload);
   const filtered = filterLocalities(data.items || [], state.localityFilter);
   renderLocalityList(filtered);
@@ -1972,8 +2034,11 @@ function renderDashboard(payload) {
       ${o.humanContext ? `<div class="directive-context">${o.humanContext}</div>` : ""}
     </article>`).join("");
 
-  // Ticker
-  const news = payload.news.items.slice(0,8);
+  // Ticker — secretary mode prefers official-tier headlines (UKAS / TVS / MPP / MBKS / DBKU) first
+  const allNews = payload.news.items || [];
+  const news = isSecretary
+    ? [...allNews.filter(i => i.isOfficial), ...allNews.filter(i => !i.isOfficial)].slice(0, 8)
+    : allNews.slice(0, 8);
   $("newsRail").innerHTML = [...news,...news].map(n=>`<span class="ticker-item"><span class="ticker-source">${n.languageBadge || (n.isOfficial ? "OFF" : n.source)}</span> ${n.title}</span>`).join("");
 
   // Signals
@@ -2055,34 +2120,39 @@ function renderDashboard(payload) {
       <div class="meta">> ${t.trafficLabel} // ${t.locality?.label || "Context"}</div></div>`).join("")
     : `<div class="trend-empty"><strong>Local trend watch is quiet</strong><div class="meta">${payload.trends.summary}</div></div>`;
 
-  // Jurisdictions
-  $("jurisdictionCards").innerHTML = payload.jurisdictions.items.map(j=>`
+  // Jurisdictions — secretary mode shows only Padawan
+  const visibleJurs = isSecretary
+    ? payload.jurisdictions.items.filter(j => j.id === "mpp")
+    : payload.jurisdictions.items;
+  $("jurisdictionCards").innerHTML = visibleJurs.map(j=>`
     <div class="municipality-tag" style="border-color:${j.accent};color:${j.accent}">${j.code} // ${j.areaKm2}km2</div>`).join("");
 
   // Map legend
   const hydroLegend = (payload.mapScene?.hydroBands || []).filter(b => b.id !== "reference").map(b => `<span class="legend-item"><span class="legend-dot" style="background:${b.color}"></span>${b.label}</span>`).join("");
-  $("mapLegend").innerHTML = payload.jurisdictions.items.map(j=>`<span class="legend-item"><span class="legend-dot" style="background:${j.accent}"></span>${j.code}</span>`).join("") + `<span class="legend-item"><span class="legend-dot" style="background:#1e90ff"></span>River</span>` + hydroLegend;
+  $("mapLegend").innerHTML = visibleJurs.map(j=>`<span class="legend-item"><span class="legend-dot" style="background:${j.accent}"></span>${j.code}</span>`).join("") + `<span class="legend-item"><span class="legend-dot" style="background:#1e90ff"></span>River</span>` + hydroLegend;
   $("watchpointList").innerHTML = MAP_WATCHPOINTS.map(w=>`<span>${w}</span>`).join("");
 
   // Intel panel: economy + news digest + trends + bypass tracker
   renderIntelPanel(payload);
   renderFloodForecast(payload.floodForecast);
-  renderBypassTracker();
-  renderQualitativeLens(payload);
+  if (!isSecretary) renderBypassTracker();
+  if (!isSecretary) renderQualitativeLens(payload);
 
-  // Sources
-  renderSourceMatrix(payload);
-  $("sourceList").innerHTML = payload.sources.map(s=>`
-    <div class="source-item">
-      <div class="source-copy">
-        <span class="source-name">${s.name}</span>
-        <span class="source-detail">${s.detail || ""}</span>
-      </div>
-      <div class="source-meta">
-        <span class="source-status" data-status="${s.status}">${s.status}</span>
-        <span class="source-updated">${formatShortStamp(s.generatedAt || payload.generatedAt)}</span>
-      </div>
-    </div>`).join("");
+  // Sources — hidden in secretary mode (panel CSS-gated; renderer skipped to save work)
+  if (!isSecretary) {
+    renderSourceMatrix(payload);
+    $("sourceList").innerHTML = payload.sources.map(s=>`
+      <div class="source-item">
+        <div class="source-copy">
+          <span class="source-name">${s.name}</span>
+          <span class="source-detail">${s.detail || ""}</span>
+        </div>
+        <div class="source-meta">
+          <span class="source-status" data-status="${s.status}">${s.status}</span>
+          <span class="source-updated">${formatShortStamp(s.generatedAt || payload.generatedAt)}</span>
+        </div>
+      </div>`).join("");
+  }
 
   queueMapResize();
 }

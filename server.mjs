@@ -300,7 +300,22 @@ const NEWS_FEEDS = [
     url:
       "https://news.google.com/rss/search?q=%28%E5%8F%A4%E6%99%8B%20OR%20%E5%B7%B4%E8%BE%BE%E6%97%BA%20OR%20%E5%B3%87%E9%83%BD%E5%8A%A0%E7%93%A6%20OR%20%E7%A0%82%E6%8B%89%E8%B6%8A%29%20%28site%3Aseehua.com%20OR%20site%3Asinchew.com.my%20OR%20site%3Aenanyang.my%20OR%20site%3Achinapress.com.my%29%20when%3A14d&hl=zh-CN&gl=MY&ceid=MY%3Azh-Hans",
   },
+  {
+    // Sarawak Government official news (UKAS / TVS) via Google News indexing.
+    // UKAS direct site is JS-rendered, so we use Google News with site filters.
+    // Items from these domains are tagged isOfficial=true automatically (priority +40).
+    id: "sarawak-gov-official",
+    label: "Sarawak Govt Official",
+    language: "ms",
+    languageLabel: "Sarawak Govt",
+    tier: "official",
+    url:
+      "https://news.google.com/rss/search?q=%28Kuching%20OR%20Padawan%20OR%20Sarawak%29%20%28site%3Aukas.sarawak.gov.my%20OR%20site%3Atvs.com.my%20OR%20site%3Atvsarawak.my%29%20when%3A14d&hl=ms&gl=MY&ceid=MY%3Ams",
+  },
 ];
+
+// Domains we treat as state-tier official sources (drives isOfficial flag + priority +40).
+const SARAWAK_OFFICIAL_DOMAINS = /(?:ukas|sarawak\.gov)\.my|tvsarawak\.my|tvs\.com\.my/i;
 
 const GOOGLE_TRENDS_FEED = {
   id: "google-trends-my",
@@ -860,11 +875,17 @@ async function loadGoogleNewsLane(feed) {
     language: feed.language,
     languageLabel: feed.languageLabel,
     feedId: feed.id,
-  }).map((item) => ({
-    ...item,
-    source: item.source || feed.label,
-    isOfficial: false,
-  }));
+  }).map((item) => {
+    // Sarawak Government official sites (UKAS, TVS) — tag as isOfficial regardless of feed.
+    // Combined with feed.tier === "official" so the dedicated UKAS feed is always official-tier.
+    const linkIsOfficial = item.link && SARAWAK_OFFICIAL_DOMAINS.test(item.link);
+    const isOfficial = linkIsOfficial || feed.tier === "official";
+    return {
+      ...item,
+      source: item.source || feed.label,
+      isOfficial,
+    };
+  });
 }
 
 async function loadMbksNews() {
@@ -1771,7 +1792,7 @@ async function loadApimsAqi() {
             o3: iaqi.o3?.v != null ? round(iaqi.o3.v, 1) : null,
             no2: iaqi.no2?.v != null ? round(iaqi.no2.v, 1) : null,
             dominant: d.dominentpol || null,
-            stationName: d.city?.name || station.label,
+            stationName: station.label,
             lat: geo[0] ?? null,
             lon: geo[1] ?? null,
             observedAt: d.time?.iso || null,

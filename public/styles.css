@@ -2205,6 +2205,61 @@ body::before {
 .delta-line[data-tone="info"] .delta-text { color: var(--soft); }
 .delta-strip[data-empty="true"] .delta-list { color: var(--soft); }
 .delta-strip[data-empty="true"] .delta-since { color: var(--soft); opacity: 0.7; }
+.delta-strip[data-empty="false"] {
+  /* Subtle pulse when there are deltas — eye-catching but quiet */
+  animation: delta-pulse 4s ease-in-out 1;
+}
+@keyframes delta-pulse {
+  0%   { background: var(--hud-bg); }
+  10%  { background: rgba(0,243,255,0.04); box-shadow: inset 0 0 12px rgba(0,243,255,0.08); }
+  100% { background: var(--hud-bg); }
+}
+
+/* Universal interactive polish — applies to anything that's tabbable.
+   Subtle cyan focus ring; never a 2px-blue browser default. */
+:where(button, [tabindex], a, .operation-card, .locality-row, .locality-ward-header):focus-visible {
+  outline: 1px solid var(--cyan);
+  outline-offset: 2px;
+  box-shadow: 0 0 8px rgba(0,243,255,0.35);
+}
+
+/* Smoother default transitions on all interactive surfaces */
+button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .signal-card, .ward-project, .event-row {
+  transition: background 200ms ease, border-color 200ms ease, color 200ms ease, opacity 200ms ease;
+}
+
+/* Subtle ascending entrance for the situation-rail panels — soft cinematic
+   stagger that runs once on first load. Anti-templated: 6px slide, no bounce. */
+.situation-rail .section-group, .situation-rail .ward-brief, .situation-rail .posture-block {
+  animation: rail-enter 360ms ease-out both;
+}
+.situation-rail .section-group:nth-child(2) { animation-delay: 50ms; }
+.situation-rail .section-group:nth-child(3) { animation-delay: 100ms; }
+.situation-rail .section-group:nth-child(4) { animation-delay: 150ms; }
+.situation-rail .section-group:nth-child(5) { animation-delay: 200ms; }
+.situation-rail .section-group:nth-child(6) { animation-delay: 250ms; }
+@keyframes rail-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Brief-strip cards: a hairline cyan glow on hover so they feel inspectable */
+.brief-card { transition: border-color 220ms ease, box-shadow 220ms ease; }
+.brief-card:hover {
+  border-color: var(--cyan);
+  box-shadow: 0 0 18px rgba(0,243,255,0.08), inset 0 0 24px rgba(0,243,255,0.03);
+}
+
+/* Today-brief: compact the spacing slightly when the line is long */
+.today-brief { line-height: 1.45; }
+.today-brief .brief-flag { padding: 0 2px; }
+
+/* Locality summary: when the page is on the wider breakpoint, make the
+   monospaced row more rhythmic — tabular numbers, even spacing */
+.locality-summary { font-variant-numeric: tabular-nums; }
+.metric-value      { font-variant-numeric: tabular-nums; }
+.wp-rm, .wp-pct, .ward-brief-stat strong { font-variant-numeric: tabular-nums; }
+.event-time        { font-variant-numeric: tabular-nums; }
 
 /* Directive aging + interactive status */
 .operation-card {

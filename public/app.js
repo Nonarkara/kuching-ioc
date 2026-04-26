@@ -2880,7 +2880,13 @@ async function loadFloodZoneFeatures() {
 
 function renderDashboard(payload) {
   state.payload = payload;
-  if (payload.site?.title) document.title = payload.site.title;
+  // Dynamic <title> — encodes current posture + warning count so the browser
+  // tab itself is a status indicator. Safe / Watch / Stretched glyph prefix.
+  const postureToken = String(payload?.summary?.posture || "stable").toLowerCase();
+  const titlePrefix = postureToken === "stretched" ? "▲" : postureToken === "watch" || postureToken === "steady-watch" ? "◐" : "▰";
+  const metCount = payload?.metWarnings?.activeCount || 0;
+  const titleSuffix = metCount > 0 ? ` · ${metCount} MET` : "";
+  document.title = `${titlePrefix} ${(payload.site?.title || "Greater Kuching IOC")}${titleSuffix}`;
   if (payload.site?.title) $("titleText").textContent = payload.site.title;
   // Today's Brief — dynamic teleprompter line. Replaces the static partnership
   // subtitle (the partner-row of logos already credits the same partners visually).

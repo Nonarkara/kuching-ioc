@@ -2122,3 +2122,138 @@ body::before {
 .glyph[data-tone="warn"]  { color: var(--amber); }
 .glyph[data-tone="alert"] { color: var(--red); }
 .glyph[data-tone="muted"] { color: var(--soft); opacity: 0.7; }
+
+/* === Pass 2: Per-ward briefing + pulse rings + functional radar sweep === */
+
+/* Ward brief — slim mission-report panel inside the situation rail */
+.ward-brief {
+  border-bottom: 1px solid var(--line-strong);
+  padding: 8px 10px 10px;
+  background:
+    linear-gradient(0deg, rgba(0,243,255,0.02), rgba(0,243,255,0.02)),
+    var(--card-bg);
+  position: relative;
+}
+.ward-brief[data-active="false"], .ward-brief[hidden] { display: none !important; }
+.ward-brief-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.ward-brief-title {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--cyan);
+  text-shadow: 0 0 4px var(--cyan-glow);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.ward-brief-title .ward-brief-code {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.ward-brief-title .ward-brief-area {
+  color: var(--ink);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+.ward-brief-close {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--soft);
+  padding: 1px 6px;
+  cursor: pointer;
+  letter-spacing: 0;
+  line-height: 1;
+}
+.ward-brief-close:hover { color: var(--red); border-color: var(--red); }
+.ward-brief-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.ward-brief-stat {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--soft);
+  text-transform: uppercase;
+  border-left: 2px solid var(--cyan);
+  padding-left: 6px;
+}
+.ward-brief-stat strong {
+  display: block;
+  font-size: 13px;
+  color: var(--cyan);
+  font-weight: 700;
+  text-shadow: 0 0 4px var(--cyan-glow);
+  letter-spacing: 0.04em;
+  margin-bottom: 1px;
+}
+.ward-brief-row {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--ink);
+  line-height: 1.55;
+  letter-spacing: 0.04em;
+  padding: 1px 0;
+}
+.ward-brief-row .ward-brief-label {
+  color: var(--soft);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 7.5px;
+  margin-right: 6px;
+}
+.ward-brief-row .ward-brief-phone {
+  color: var(--cyan);
+  text-decoration: none;
+}
+.ward-brief-row .ward-brief-phone:hover { text-decoration: underline; }
+.ward-brief-section {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--line);
+}
+
+/* Make the ward groups in the locality list clickable */
+.locality-ward-header { cursor: pointer; user-select: none; }
+.locality-ward-header:hover { background: rgba(0,243,255,0.05); }
+
+/* Pulse rings on map markers — period coded to data freshness */
+.pulse-marker {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
+}
+.pulse-marker::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  opacity: 0;
+  animation: pulse-ring var(--pulse-period, 4s) ease-out infinite;
+}
+@keyframes pulse-ring {
+  0%   { transform: scale(0.6); opacity: 0.7; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+.pulse-marker[data-swept="true"]::after {
+  animation: pulse-ring-flash 600ms ease-out 1;
+}
+@keyframes pulse-ring-flash {
+  0%   { transform: scale(0.6); opacity: 1; border-width: 2px; }
+  100% { transform: scale(2.4); opacity: 0; border-width: 1px; }
+}

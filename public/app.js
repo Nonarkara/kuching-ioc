@@ -104,6 +104,48 @@ function writeJson(key, value) {
   try { ls.setItem(key, JSON.stringify(value)); } catch (_) { /* quota / disabled */ }
 }
 
+// Pass 2.5: pulse-ring period scaled to data freshness (newer = faster).
+function freshnessPeriodSeconds(updatedAt) {
+  if (!updatedAt) return 8;
+  const ageMin = (Date.now() - Date.parse(updatedAt)) / 60_000;
+  if (ageMin < 1) return 1.6;
+  if (ageMin < 10) return 2.6;
+  if (ageMin < 60) return 4;
+  return 8;
+}
+// Compass bearing from (lat1,lon1) → (lat2,lon2) in degrees [0,360).
+function bearingFromTo(lat1, lon1, lat2, lon2) {
+  const toRad = d => d * Math.PI / 180;
+  const dLon = toRad(lon2 - lon1);
+  const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+            Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+// Functional radar sweep — every second, advance the virtual sweep angle and
+// flash any pulse-marker whose bearing-from-map-centre lies within the cone.
+// Subtle, but reads as a system that's actively scanning, not just decoration.
+function startRadarSweep() {
+  if (state.radarTimer) return;
+  let angle = 0;
+  state.radarTimer = setInterval(() => {
+    angle = (angle + 12) % 360;
+    if (!state.map || !state.pulseMarkerEls?.size) return;
+    const center = state.map.getCenter();
+    state.pulseMarkerEls.forEach(({ lat, lon, marker }) => {
+      const bearing = bearingFromTo(center.lat, center.lng, lat, lon);
+      const diff = Math.abs(((bearing - angle + 540) % 360) - 180);
+      const within = diff > 174; // within ±6° of the sweep
+      if (!within) return;
+      const el = marker.getElement?.()?.querySelector(".pulse-marker");
+      if (!el) return;
+      el.dataset.swept = "true";
+      setTimeout(() => { el.dataset.swept = "false"; }, 600);
+    });
+  }, 1000);
+}
+
 function boardModeFromBoot() {
   if (BOOT.deploymentMode) return BOOT.deploymentMode;
   const host = window.location.hostname;
@@ -922,6 +964,7 @@ function renderMap(payload) {
   state.catchmentHighlightLayers = [];
 
   const hydroStations = payload.mapScene?.hydroStations || payload.infobanjir?.stations || [];
+  state.pulseMarkerEls = new Map();
   hydroStations.forEach(s => {
     if (s.lat == null || s.lon == null) return;
     state.hydroStationsByName.set(s.id, s);
@@ -929,6 +972,16 @@ function renderMap(payload) {
     const isLive = s.waterLevelM != null;
     const hasCatchment = s.catchment?.status === "snapped";
     const radius = s.band === "danger" ? 9 : s.band === "warning" ? 8 : s.band === "alert" ? 7 : isLive ? 6 : 5;
+    // Pulse-ring overlay — period coded to freshness (faster = newer data).
+    // Reference stations get a slow pulse so the radar sweep still has anchors;
+    // their muted colour signals "no live reading", honest visual semantics.
+    const period = isLive
+      ? freshnessPeriodSeconds(s.observedAt || payload?.infobanjir?.updatedAt)
+      : 9;
+    const pulseHtml = `<div class="pulse-marker" data-station="${s.id}" style="--pulse-period:${period}s;color:${color};opacity:${isLive ? 1 : 0.55}"></div>`;
+    const pulseIcon = window.L.divIcon({ className: "", html: pulseHtml, iconSize: [8, 8], iconAnchor: [4, 4] });
+    const pulse = window.L.marker([s.lat, s.lon], { icon: pulseIcon, interactive: false, zIndexOffset: -100 }).addTo(state.markerLayerGroup);
+    state.pulseMarkerEls.set(s.id, { lat: s.lat, lon: s.lon, marker: pulse });
     const catchmentLine = hasCatchment
       ? `<br><span style="color:${color}">Catchment: ${s.catchment.segmentCount} seg · ${s.catchment.totalLengthKm} km · snap ${s.catchment.snapDistanceKm} km</span><br><em>Click to highlight</em>`
       : s.catchment?.status === "cold"
@@ -2173,7 +2226,7 @@ function renderLocalityList(items) {
       const color = WARD_COLOR_MAP[wardCode] || "#8aa2c8";
       return `
         <section class="locality-ward-group">
-          <header class="locality-ward-header" style="border-left:3px solid ${color}; padding-left:9px;">
+          <header class="locality-ward-header" data-ward="${escapeHtml(wardCode)}" style="border-left:3px solid ${color}; padding-left:9px;">
             <span>WARD ${escapeHtml(wardCode)}</span>
             <span class="ward-locality-count">${rows.length} ${rows.length === 1 ? "locality" : "localities"}</span>
           </header>
@@ -2188,6 +2241,12 @@ function renderLocalityList(items) {
     row.addEventListener("click", () => {
       const w = row.dataset.ward;
       if (w) setActiveWard(w);
+    });
+  });
+  target.querySelectorAll(".locality-ward-header").forEach(hdr => {
+    hdr.addEventListener("click", () => {
+      const w = hdr.dataset.ward;
+      if (w) setActiveWard(state.activeWard === w ? null : w);
     });
   });
 }
@@ -2221,8 +2280,128 @@ function setActiveWard(code) {
   };
   renderMppCouncillors(state.payload);
   renderMppLocalities(state.payload);
-  if (code) highlightWard(code);
-  else clearWardHighlight();
+  renderWardBrief(code, state.payload);
+  if (code) {
+    highlightWard(code);
+    if (typeof history !== "undefined" && history.replaceState) {
+      history.replaceState(null, "", `#ward=${code}`);
+    }
+  } else {
+    clearWardHighlight();
+    if (typeof history !== "undefined" && history.replaceState && location.hash.startsWith("#ward=")) {
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+  }
+}
+
+// Pass 2.4: Per-ward briefing — read derived stats from the existing payload + mpp_wards features.
+function renderWardBrief(wardCode, payload) {
+  const el = $("wardBrief");
+  if (!el) return;
+  if (!wardCode) {
+    el.dataset.active = "false";
+    el.hidden = true;
+    el.innerHTML = "";
+    return;
+  }
+  const feat = (state.wardFeatures || []).find(f => f?.properties?.wardCode === wardCode);
+  const props = feat?.properties || {};
+  const color = props.color || WARD_COLOR_MAP[wardCode] || "#a78bfa";
+  const area = props.area || "";
+  const wardLabel = props.wardLabel || "";
+
+  // Localities in this ward (from existing mppLocalities.items[].wardCode).
+  const localities = (payload?.mppLocalities?.items || []).filter(it => it.wardCode === wardCode);
+  const totalLoc = localities.length;
+  const totals = localities.reduce((acc, it) => {
+    acc.residential += it.residential || 0;
+    acc.commercial  += it.commercial || 0;
+    acc.industrial  += it.industrial || 0;
+    return acc;
+  }, { residential: 0, commercial: 0, industrial: 0 });
+
+  // Majority constituency (state + parliament) by mode.
+  const stateCount = {}, parlCount = {};
+  for (const it of localities) {
+    const c = it.constituency?.parsed?.[0];
+    if (!c) continue;
+    if (c.stateCode) stateCount[c.stateCode + " " + (c.stateName || "")] = (stateCount[c.stateCode + " " + (c.stateName || "")] || 0) + 1;
+    if (c.parliamentCode) parlCount[c.parliamentCode + " " + (c.parliamentName || "")] = (parlCount[c.parliamentCode + " " + (c.parliamentName || "")] || 0) + 1;
+  }
+  const topEntry = (table) => Object.entries(table).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+  const stateSeat = topEntry(stateCount);
+  const parlSeat  = topEntry(parlCount);
+
+  // Councillor (already keyed by ward code in payload).
+  const councillor = (payload?.mppCouncillors?.wards || []).find(w => w.code === wardCode);
+  const councillorCard = councillor?.councillors?.[0];
+  const councillorLine = councillorCard
+    ? `${escapeHtml(councillorCard.name || councillorCard.title || "—")} · <a class="ward-brief-phone" href="tel:${(councillorCard.phone || "").replace(/[^0-9+]/g, "")}">${escapeHtml(councillorCard.phone || "—")}</a>`
+    : "—";
+
+  // Hydro stations whose snapped catchment overlaps this ward (best-effort heuristic).
+  const hydroNear = (payload?.infobanjir?.stations || []).filter(s => {
+    if (!feat?.geometry) return false;
+    if (s.lat == null || s.lon == null) return false;
+    return pointInRing([s.lon, s.lat], feat.geometry);
+  });
+  const hydroSummary = hydroNear.length
+    ? hydroNear.slice(0, 2).map(s => `${escapeHtml(s.name)} ${s.waterLevelM != null ? s.waterLevelM + "m" : ""} (${s.bandLabel || s.band})`).join(" · ")
+    : `none in ward`;
+
+  // Flood-zone overlap (centroid in ward polygon).
+  const floodZones = state.floodZoneFeatures || [];
+  const floodHits = floodZones.filter(f => {
+    const c = f?.geometry?.coordinates?.[0]?.[0];
+    if (!c || !feat?.geometry) return false;
+    return pointInRing(c, feat.geometry);
+  });
+
+  el.hidden = false;
+  el.dataset.active = "true";
+  el.innerHTML = `
+    <div class="ward-brief-head">
+      <div class="ward-brief-title" style="border-left:3px solid ${color}; padding-left:8px;">
+        <span class="ward-brief-code">WARD ${escapeHtml(wardCode)}</span>
+        <span class="ward-brief-area">${escapeHtml((wardLabel || "") + (area ? " · " + area : ""))}</span>
+      </div>
+      <button type="button" class="ward-brief-close" aria-label="Close ward brief">✕</button>
+    </div>
+    <div class="ward-brief-stats">
+      <div class="ward-brief-stat"><strong>${totalLoc}</strong>localities</div>
+      <div class="ward-brief-stat"><strong>${totals.residential.toLocaleString()}</strong>residential</div>
+      <div class="ward-brief-stat"><strong>${totals.commercial.toLocaleString()}</strong>commercial</div>
+    </div>
+    <div class="ward-brief-row"><span class="ward-brief-label">State seat</span>${escapeHtml(stateSeat)}</div>
+    <div class="ward-brief-row"><span class="ward-brief-label">Parliament</span>${escapeHtml(parlSeat)}</div>
+    <div class="ward-brief-row"><span class="ward-brief-label">Councillor</span>${councillorLine}</div>
+    <div class="ward-brief-section">
+      <div class="ward-brief-row"><span class="ward-brief-label">Hydro</span>${hydroSummary}</div>
+      <div class="ward-brief-row"><span class="ward-brief-label">Flood zones</span>${floodHits.length} historical hotspot${floodHits.length === 1 ? "" : "s"} on record</div>
+    </div>`;
+
+  el.querySelector(".ward-brief-close")?.addEventListener("click", () => setActiveWard(null));
+}
+
+// Ray-casting point-in-polygon. coords in [lon,lat]; geometry is GeoJSON Polygon.
+function pointInRing(pt, geometry) {
+  if (!geometry || !pt) return false;
+  const rings = geometry.type === "Polygon" ? [geometry.coordinates[0]]
+              : geometry.type === "MultiPolygon" ? geometry.coordinates.map(p => p[0])
+              : null;
+  if (!rings) return false;
+  for (const ring of rings) {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const xi = ring[i][0], yi = ring[i][1];
+      const xj = ring[j][0], yj = ring[j][1];
+      const intersect = ((yi > pt[1]) !== (yj > pt[1])) &&
+        (pt[0] < (xj - xi) * (pt[1] - yi) / ((yj - yi) || 1e-12) + xi);
+      if (intersect) inside = !inside;
+    }
+    if (inside) return true;
+  }
+  return false;
 }
 
 function clearWardHighlight() {
@@ -2256,6 +2435,20 @@ async function loadWardFeatures() {
   } catch (error) {
     console.warn("Ward boundaries unavailable:", error);
     state.wardFeatures = [];
+  }
+}
+
+// Pass 2.4: load flood_zones features so the per-ward brief can count overlaps.
+async function loadFloodZoneFeatures() {
+  if (state.floodZoneFeatures?.length) return;
+  try {
+    let res = await fetch(apiUrl("/api/layers/flood_zones")).catch(() => null);
+    if (!res || !res.ok) res = await fetch(apiUrl("/api/layers/flood_zones.json"));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const fc = await res.json();
+    state.floodZoneFeatures = fc.features || [];
+  } catch (_) {
+    state.floodZoneFeatures = [];
   }
 }
 
@@ -2461,6 +2654,14 @@ async function boot() {
   try {
     const payload = await loadDashboardPayload();
     renderDashboard(payload);
+    // Pass 2: bring up ward + flood-zone polygon caches in parallel; if a #ward=X
+    // hash is present, auto-open that ward's brief once data is available.
+    await Promise.all([loadWardFeatures(), loadFloodZoneFeatures()]);
+    const hash = (location.hash || "").match(/#ward=([A-Z]+)/i);
+    if (hash && hash[1] && !state.activeWard) {
+      setActiveWard(hash[1].toUpperCase());
+    }
+    startRadarSweep();
   } catch (err) { console.error("IOC SYNC FAILURE", err); }
 }
 

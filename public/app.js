@@ -1,10 +1,23 @@
-import {
+// Dynamic versioned import of data.js — pulls the asset version from the
+// app.js <script> tag's ?v= query so that updating the script tag (which
+// build.mjs already does on every build) cache-busts data.js too. Without
+// this, the browser keeps the old data.js parsed in module memory and any
+// new export silently fails to import. Top-level await is supported in ES
+// modules, which app.js declares via <script type="module">.
+const __ASSET_VER__ = (() => {
+  try {
+    const tag = document.querySelector('script[src*="app.js"]');
+    return tag?.src.match(/[?&]v=([^&]+)/)?.[1] || "";
+  } catch { return ""; }
+})();
+const __dataUrl__ = `./data.js${__ASSET_VER__ ? `?v=${encodeURIComponent(__ASSET_VER__)}` : ""}`;
+const {
   SITE, JURISDICTIONS, LOCAL_MARKERS, SARAWAK_RIVER, ASEAN_CLOCKS,
   MAP_WATCHPOINTS, AIRPORT_FALLBACK_ROUTES, FALLBACK_NEWS, FALLBACK_TRENDS,
   WEATHER_FALLBACK, AIR_FALLBACK, CITY_DEMOGRAPHICS, TRANSLATIONS,
   round, aqiBand, weatherCodeLabel, kmBetween, classifyAircraft,
-  sourceRecord, buildMapLayers, URBAN_LAYERS, ECONOMY_FALLBACK, RIVER_BYPASS_PROJECT
-} from "./data.js";
+  sourceRecord, buildMapLayers, URBAN_LAYERS, ECONOMY_FALLBACK, RIVER_BYPASS_PROJECT, MPP_WARD_PROJECTS,
+} = await import(__dataUrl__);
 
 const BOOT = window.__IOC_BOOT__ || {};
 
@@ -2707,9 +2720,67 @@ function renderWardBrief(wardCode, payload) {
     <div class="ward-brief-section">
       <div class="ward-brief-row"><span class="ward-brief-label">Hydro</span>${hydroSummary}</div>
       <div class="ward-brief-row"><span class="ward-brief-label">Flood zones</span>${floodHits.length} historical hotspot${floodHits.length === 1 ? "" : "s"} on record</div>
-    </div>`;
+    </div>
+    ${renderWardProjectsHTML(wardCode)}`;
 
   el.querySelector(".ward-brief-close")?.addEventListener("click", () => setActiveWard(null));
+}
+
+// Project ledger for the active ward — RM totals, status mix, line items.
+// Drawn from MPP_WARD_PROJECTS in data.js (hand-encoded, real Padawan tender
+// + GCAP shape). Renders as a self-contained HTML block to be injected into
+// the ward-brief.
+function renderWardProjectsHTML(wardCode) {
+  const projects = MPP_WARD_PROJECTS[wardCode] || [];
+  if (!projects.length) {
+    return `<div class="ward-brief-section ward-projects" data-empty="true">
+      <div class="ward-projects-head">
+        <span class="ward-brief-label">Ledger</span>
+        <span class="ward-projects-empty">no entries on file</span>
+      </div>
+    </div>`;
+  }
+  const totalRmK = projects.reduce((s, p) => s + (p.rmK || 0), 0);
+  const inProg = projects.filter(p => p.status === "in-progress").length;
+  const queued = projects.filter(p => p.status === "queued").length;
+  const done   = projects.filter(p => p.status === "complete").length;
+  const formatRm = (k) => k >= 1000 ? `RM ${(k/1000).toFixed(2)}M` : `RM ${k}k`;
+  const statusGlyphMap = { "in-progress": "◆", "queued": "◇", "complete": "●" };
+  const rows = projects.map(p => {
+    const rm = formatRm(p.rmK || 0);
+    const pct = p.pct ?? 0;
+    const sg = statusGlyphMap[p.status] || "◇";
+    return `
+      <article class="ward-project" data-status="${p.status}" data-cat="${p.category}">
+        <div class="wp-row1">
+          <span class="wp-status">${sg}</span>
+          <span class="wp-cat">${p.category.toUpperCase()}</span>
+          <span class="wp-title">${escapeHtml(p.title)}</span>
+          <span class="wp-rm">${rm}</span>
+        </div>
+        <div class="wp-row2">
+          <div class="wp-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
+            <div class="wp-bar-fill" style="width:${pct}%"></div>
+            <span class="wp-pct">${pct}%</span>
+          </div>
+          <span class="wp-contractor">${escapeHtml(p.contractor || "—")}</span>
+        </div>
+        ${p.note ? `<div class="wp-note">${escapeHtml(p.note)}</div>` : ""}
+      </article>`;
+  }).join("");
+  return `
+    <div class="ward-brief-section ward-projects">
+      <div class="ward-projects-head">
+        <span class="ward-brief-label">Ledger // ${projects.length} active</span>
+        <span class="ward-projects-totals">
+          ${formatRm(totalRmK)} ·
+          <span data-tone="ok">${done}●</span>
+          <span data-tone="warn">${inProg}◆</span>
+          <span data-tone="muted">${queued}◇</span>
+        </span>
+      </div>
+      <div class="ward-projects-list">${rows}</div>
+    </div>`;
 }
 
 // Ray-casting point-in-polygon. coords in [lon,lat]; geometry is GeoJSON Polygon.

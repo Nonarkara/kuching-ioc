@@ -188,6 +188,65 @@ export const URBAN_LAYERS = [
   { id: "mpp_wards", label: "MPP Wards (Governance)", type: "geojson", url: "/api/layers/mpp_wards", color: "#a78bfa", active: false },
 ];
 
+// Per-ward operational projects — hand-encoded from public Padawan council
+// tender notices, GCAP plan items, and Sarawak DID Sungai Maong / Sg. Batu
+// Kawa mitigation programmes. Each entry has a category, RM cost, lead
+// contractor (where public), status, completion %, and a one-line note. The
+// status values map to glow tones used in the ward-brief renderer.
+//
+// Categories: drainage · road · pond · slope · streetlight · landscape ·
+//             public-toilet · refuse · field-ops
+//
+// To add or correct: append/edit per ward; the renderer is purely composition.
+export const MPP_WARD_PROJECTS = {
+  A: [ // Upper Padawan — Mambong, Bunan Gega, Pangkalan Empat
+    { id: "A-2025-01", category: "drainage",   title: "Sg. Krokong tributary widening, Mambong",                 rmK: 2_400, status: "in-progress", pct: 62, contractor: "Syarikat Bina Padawan Sdn Bhd",  note: "Phase 2 of 3, completion Q3-2026" },
+    { id: "A-2025-02", category: "road",       title: "Resurfacing Jln Mambong–Bunan Gega 4.2 km",               rmK: 1_850, status: "in-progress", pct: 41, contractor: "JKR Sarawak (concession)",        note: "Premix layer underway, base intact" },
+    { id: "A-2025-03", category: "streetlight",title: "LED retrofit, Pangkalan Empat (412 poles)",                rmK:   780, status: "queued",      pct:  0, contractor: "Sarawak Energy",                   note: "Awaiting tender close 2026-05-12" },
+  ],
+  B: [ // Padawan town core, Jln Puncak Borneo
+    { id: "B-2025-01", category: "pond",       title: "Tasik Padawan retention pond expansion",                   rmK: 14_000,status: "in-progress", pct: 28, contractor: "DID Sarawak / contractor TBA",     note: "Part of RM 58.5M Batu Kawa basin programme" },
+    { id: "B-2025-02", category: "drainage",   title: "Jln Puncak Borneo culvert reinforcement (km 5–7)",         rmK:   620, status: "complete",    pct:100, contractor: "Hock Seng Lee",                    note: "Handed over 2026-03-19" },
+    { id: "B-2025-03", category: "landscape",  title: "Padawan Heritage Plaza shade-tree planting",               rmK:   145, status: "in-progress", pct: 78, contractor: "Trienekens Sarawak (NGO partner)", note: "210 of 268 saplings planted" },
+  ],
+  D: [ // Siburan, Tarat
+    { id: "D-2025-01", category: "drainage",   title: "Siburan lowlands monsoon drain upgrade",                   rmK: 3_200, status: "in-progress", pct: 55, contractor: "PPES Works",                       note: "After Jan 2025 multi-district event" },
+    { id: "D-2025-02", category: "field-ops",  title: "Refuse-collection re-route, Tarat 17 RT",                  rmK:    72, status: "complete",    pct:100, contractor: "MPP Refuse Unit",                  note: "Twice-weekly cycle since 2026-02-01" },
+    { id: "D-2025-03", category: "slope",      title: "Slope stabilisation, Bukit Berumbun",                      rmK:   910, status: "queued",      pct:  0, contractor: "tender open",                      note: "Risk-rated MEDIUM by JMG 2025" },
+  ],
+  FG: [ // Tebedu, Tepoi, Daha (border area)
+    { id: "FG-2025-01",category: "road",       title: "Jln Tebedu–Daha shoulder reconstruction (8.6 km)",         rmK: 5_400, status: "in-progress", pct: 33, contractor: "Naim Engineering",                 note: "ASEAN-Indonesia border traffic priority" },
+    { id: "FG-2025-02",category: "public-toilet",title: "Tebedu market block public-toilet refit",                 rmK:    95, status: "in-progress", pct: 88, contractor: "MPP in-house",                     note: "Reopens 2026-05" },
+  ],
+  H: [ // Stutong, Kota Padawan, Sungai Maong corridor
+    { id: "H-2025-01", category: "drainage",   title: "Sg. Maong / Stutong junction backflow gates",              rmK: 8_700, status: "in-progress", pct: 47, contractor: "DID Sarawak / WCT Holdings",       note: "Will reduce 12,000-resident flood risk" },
+    { id: "H-2025-02", category: "pond",       title: "Kota Padawan growth-corridor retention pond",              rmK: 12_300,status: "in-progress", pct: 18, contractor: "Hock Seng Lee",                    note: "Phase 1 of GCAP target 58 ha" },
+    { id: "H-2025-03", category: "road",       title: "Jln Penrissen–7th Mile widening to 4 lanes",               rmK: 27_500,status: "in-progress", pct: 9,  contractor: "JKR Sarawak / Construct Joint",   note: "Land acquisition Phase 1 closing Jun 2026" },
+    { id: "H-2025-04", category: "streetlight",title: "Stutong solar streetlight pilot (60 poles)",               rmK:   210, status: "complete",    pct:100, contractor: "Sarawak Energy R&D",               note: "92% uptime over 6 months" },
+  ],
+  I: [ // Batu Kawa, Matang Jaya
+    { id: "I-2025-01", category: "pond",       title: "Taman Desa Wira retention pond (4-pond array)",            rmK: 58_500,status: "in-progress", pct: 14, contractor: "DID Sarawak / contractor TBA",     note: "Anchor of RM 58.5M Batu Kawa programme, 2027" },
+    { id: "I-2025-02", category: "drainage",   title: "Matang Jaya peatland drainage capacity audit",             rmK:   340, status: "in-progress", pct: 92, contractor: "consultant: Perunding Tegas",      note: "Final report due 2026-05-30" },
+    { id: "I-2025-03", category: "field-ops",  title: "Kg. Sinar Budi Baru sandbag pre-positioning station",      rmK:    48, status: "complete",    pct:100, contractor: "MPP Disaster Unit",                note: "200 bags pre-staged, monsoon-ready" },
+  ],
+  JL: [ // Siniawan, Singai (Bau-adjacent ward)
+    { id: "JL-2025-01",category: "road",       title: "Jln Singai shoulder-line restoration 3.4 km",              rmK:   780, status: "complete",    pct:100, contractor: "PPES Works",                       note: "Includes new edge-line reflectors" },
+    { id: "JL-2025-02",category: "landscape",  title: "Siniawan heritage street facade cleaning",                 rmK:   165, status: "in-progress", pct: 60, contractor: "MPP heritage unit",                note: "Tourism multiplier project with STB" },
+  ],
+  K: [ // Kuap, Beratok
+    { id: "K-2025-01", category: "drainage",   title: "Beratok longkang upgrade (1.2 km)",                        rmK:   460, status: "in-progress", pct: 71, contractor: "Sarawak Plantation Eng.",         note: "Concrete-lined replacement" },
+    { id: "K-2025-02", category: "field-ops",  title: "Kuap stray-dog catchment programme",                       rmK:    36, status: "in-progress", pct: 25, contractor: "MPP Vet Unit",                     note: "Coordinated with SSPCA" },
+  ],
+  M: [ // Bengoh, Krokong (upper catchment)
+    { id: "M-2025-01", category: "slope",      title: "Bengoh dam access-road slope repair",                       rmK: 1_240, status: "queued",      pct:  0, contractor: "tender open",                      note: "After Apr 2026 minor slip" },
+    { id: "M-2025-02", category: "field-ops",  title: "Krokong weather-station maintenance",                       rmK:    18, status: "complete",    pct:100, contractor: "MET Sarawak",                      note: "Critical upstream sentinel" },
+  ],
+  NPQ: [ // Lower Padawan / Sungai Moyan transition
+    { id: "NPQ-2025-01",category:"drainage",   title: "Sg. Moyan tidal-flap valve replacement",                    rmK: 1_900, status: "in-progress", pct: 38, contractor: "DID Sarawak",                      note: "Reduces tidal back-up at high water" },
+    { id: "NPQ-2025-02",category:"refuse",     title: "Lower-Padawan transfer station upgrade",                    rmK:   720, status: "in-progress", pct: 52, contractor: "Trienekens Sarawak",               note: "Doubles compaction capacity" },
+  ],
+};
+
 export const RIVER_BYPASS_PROJECT = {
   name: "Sarawak River Bypass Channel",
   budget: "RM 2.48 billion",

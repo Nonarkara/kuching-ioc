@@ -1955,9 +1955,25 @@ body::before {
   display: none !important;
 }
 
-/* When 2 panels are removed from lower-grid, intel panel claims the row */
+/* When 2 panels are removed from lower-grid, intel panel claims the row.
+   Free the row from a fixed 340px so the freed vertical real estate goes to
+   the map (.board-grid has flex: 1). max-height is a safety cap. */
 [data-view="secretary"] .lower-grid {
   grid-template-columns: minmax(0, 1fr);
+  height: auto;
+  min-height: 180px;
+  max-height: 260px;
+}
+
+/* Locality panel: cap the height so a long ward list doesn't push the map up.
+   Internal scroll preserves access to all 525 localities. */
+[data-view="secretary"] .locality-panel {
+  max-height: 220px;
+}
+[data-view="secretary"] .locality-list {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* One-line locality summary that replaces the 6-tile KPI grid */

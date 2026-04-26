@@ -839,14 +839,40 @@ function renderClocks(clocks) {
   $("clockGrid").innerHTML = clocks.map(c=>`<div class="clock-card"><div class="country">${c.city} [${c.offset}]</div><div class="time">${clockTime(c.timezone)}</div></div>`).join("");
 }
 
+// Metric → source provenance map. Each entry: short source name + ttl/cadence
+// hint. Surfaced on hover so a glance reveals "this number came from X, fresh
+// to Y minutes". Reinforces honesty: every reading on the board is traceable.
+const METRIC_SOURCES = {
+  heat:        { src: "Open-Meteo",     fresh: "60 s",  link: "https://open-meteo.com/" },
+  aqi:         { src: "Open-Meteo AQI", fresh: "60 s",  link: "https://open-meteo.com/en/docs/air-quality-api" },
+  pm25:        { src: "Open-Meteo AQI", fresh: "60 s",  link: "https://open-meteo.com/en/docs/air-quality-api" },
+  rain6h:      { src: "Open-Meteo",     fresh: "60 s",  link: "https://open-meteo.com/" },
+  airport:     { src: "OpenSky Network",fresh: "live",  link: "https://opensky-network.org/" },
+  wards:       { src: "MPP zoning map", fresh: "static",link: "https://mpp.sarawak.gov.my/" },
+  area:        { src: "MPP / MBKS / DBKU profiles", fresh: "static" },
+  "padawan-share":{ src: "MPP profile", fresh: "static" },
+  properties:  { src: "MPP / DBKU disclosed counts", fresh: "static" },
+  population:  { src: "DOSM census",    fresh: "static",link: "https://open.dosm.gov.my/" },
+  headlines:   { src: "Google News + UKAS / TVS / MPP / MBKS / DBKU", fresh: "15 min" },
+  trends:      { src: "Google Trends MY",fresh: "30 min",link: "https://trends.google.com/" },
+  "flood-watch":{src: "MET Malaysia",   fresh: "15 min",link: "https://api.data.gov.my/weather/warning/" },
+};
+
 function renderMetrics(metrics) {
-  $("metricBand").innerHTML = metrics.slice(0,12).map(m=>`
-    <article class="metric-card" data-tone="${m.tone||'neutral'}">
+  $("metricBand").innerHTML = metrics.slice(0,12).map(m => {
+    const prov = METRIC_SOURCES[m.id];
+    const provHtml = prov
+      ? `<div class="metric-source"><span class="src-name">${prov.src}</span><span class="src-fresh">${prov.fresh}</span></div>`
+      : "";
+    return `
+    <article class="metric-card" data-tone="${m.tone||'neutral'}" data-metric-id="${m.id}">
       <div class="metric-label">${m.label}</div>
       <div class="metric-value">${num(m.value,m.value%1===0?0:1)}<span class="metric-unit">${m.unit||''}</span></div>
       <div class="metric-context">${m.context||''}</div>
       <div class="sparkline-shell">${m.history?sparkline(m.history,m.tone):''}</div>
-    </article>`).join("");
+      ${provHtml}
+    </article>`;
+  }).join("");
 }
 
 function highlightCatchment(station, bandColor) {

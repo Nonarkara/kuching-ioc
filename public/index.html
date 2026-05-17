@@ -177,5 +177,22 @@
       </footer>
     </div>
     <script src="./app.js?v=e5c288eb8d69" type="module"></script>
-  </body>
+  
+  <!-- NON visitor tracker — fire-and-forget, no cookies -->
+  <script>
+  (function(){
+    if(sessionStorage.getItem('non_v'))return;
+    sessionStorage.setItem('non_v','1');
+    var SH='https://script.google.com/macros/s/AKfycbwzTwBNOseKkvkkjD-LH6B3GWrsFcwS6MTDbn7W5eb3zHxA-swtlHYuwJ3w5PAVXDhU7Q/exec';
+    var b={dashboard:'KUCHING',hostname:location.hostname,page:location.href,
+      referrer:document.referrer||'Direct',userAgent:navigator.userAgent,
+      language:navigator.language,screen:screen.width+'x'+screen.height,
+      timezone:Intl.DateTimeFormat().resolvedOptions().timeZone};
+    function send(p){fetch(SH,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(p)}).catch(function(){});}
+    fetch('https://ipapi.co/json/').then(function(r){return r.json();}).then(function(d){
+      b.ip=d.ip;b.country=d.country_name;b.region=d.region;b.city=d.city;send(b);
+    }).catch(function(){send(b);});
+  })();
+  </script>
+</body>
 </html>

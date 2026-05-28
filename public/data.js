@@ -92,14 +92,14 @@ export const AIRPORT_FALLBACK_ROUTES = [
 ];
 
 export const FALLBACK_NEWS = [
-  { title: "MBKS rodding works clear Jalan Pecky drains while securing funds for full upgrade", source: "MBKS / DayakDaily", publishedAt: "2026-03-27T00:00:00.000Z", lane: "Drainage", sentiment: "neutral", isOfficial: true, language: "en", languageBadge: "OFF" },
-  { title: "DBKU conducts emergency drill for traffic wardens across Kuching North", source: "DBKU", publishedAt: "2026-02-11T00:00:00.000Z", lane: "Traffic", sentiment: "positive", isOfficial: true, language: "en", languageBadge: "OFF" },
-  { title: "MBKS and DBKU asked to find an ideal spot for a night market", source: "Borneo Post", publishedAt: "2026-02-12T00:00:00.000Z", lane: "Public realm", sentiment: "positive", isOfficial: false, language: "en", languageBadge: "EN" },
-  { title: "Padawan infrastructure upgrade tenders issued for Kampung Telaga Air and Desa Wira", source: "MPP", publishedAt: "2026-03-10T00:00:00.000Z", lane: "Infrastructure", sentiment: "positive", isOfficial: true, language: "en", languageBadge: "OFF" },
-  { title: "Sarawak to build integrated waste management facility in Kuching", source: "Borneo Post", publishedAt: "2026-03-15T00:00:00.000Z", lane: "Environment", sentiment: "positive", isOfficial: false, language: "en", languageBadge: "EN" },
-  { title: "Banjir kilat melanda kawasan rendah berhampiran Batu Kawa selepas hujan lebat", source: "DayakDaily", publishedAt: "2026-03-22T00:00:00.000Z", lane: "Flooding", sentiment: "negative", isOfficial: false, language: "ms", languageBadge: "BM" },
-  { title: "MPP launches community composting programme across 6 wards", source: "MPP", publishedAt: "2026-03-20T00:00:00.000Z", lane: "Sustainability", sentiment: "positive", isOfficial: true, language: "en", languageBadge: "OFF" },
-  { title: "Tourism arrivals to Kuching up 12% in Q1 compared to last year", source: "Bernama", publishedAt: "2026-04-01T00:00:00.000Z", lane: "Tourism", sentiment: "positive", isOfficial: false, language: "en", languageBadge: "EN" },
+  { title: "MBKS rodding works clear Jalan Pecky drains while securing funds for full upgrade", source: "MBKS / DayakDaily", publishedAt: "2026-03-27T00:00:00.000Z", lane: "Drainage", isOfficial: true, language: "en", languageBadge: "OFF" },
+  { title: "DBKU conducts emergency drill for traffic wardens across Kuching North", source: "DBKU", publishedAt: "2026-02-11T00:00:00.000Z", lane: "Traffic", isOfficial: true, language: "en", languageBadge: "OFF" },
+  { title: "MBKS and DBKU asked to find an ideal spot for a night market", source: "Borneo Post", publishedAt: "2026-02-12T00:00:00.000Z", lane: "Public realm", isOfficial: false, language: "en", languageBadge: "EN" },
+  { title: "Padawan infrastructure upgrade tenders issued for Kampung Telaga Air and Desa Wira", source: "MPP", publishedAt: "2026-03-10T00:00:00.000Z", lane: "Infrastructure", isOfficial: true, language: "en", languageBadge: "OFF" },
+  { title: "Sarawak to build integrated waste management facility in Kuching", source: "Borneo Post", publishedAt: "2026-03-15T00:00:00.000Z", lane: "Environment", isOfficial: false, language: "en", languageBadge: "EN" },
+  { title: "Banjir kilat melanda kawasan rendah berhampiran Batu Kawa selepas hujan lebat", source: "DayakDaily", publishedAt: "2026-03-22T00:00:00.000Z", lane: "Flooding", isOfficial: false, language: "ms", languageBadge: "BM" },
+  { title: "MPP launches community composting programme across 6 wards", source: "MPP", publishedAt: "2026-03-20T00:00:00.000Z", lane: "Sustainability", isOfficial: true, language: "en", languageBadge: "OFF" },
+  { title: "Tourism arrivals to Kuching up 12% in Q1 compared to last year", source: "Bernama", publishedAt: "2026-04-01T00:00:00.000Z", lane: "Tourism", isOfficial: false, language: "en", languageBadge: "EN" },
 ];
 
 export const FALLBACK_TRENDS = [
@@ -246,6 +246,26 @@ export const MPP_WARD_PROJECTS = {
     { id: "NPQ-2025-02",category:"refuse",     title: "Lower-Padawan transfer station upgrade",                    rmK:   720, status: "in-progress", pct: 52, contractor: "Trienekens Sarawak",               note: "Doubles compaction capacity" },
   ],
 };
+
+export const WARD_TENSION = {
+  A: { score: 42, topIssue: "Streetlight outages", trend: "stable", tone: "neutral" },
+  B: { score: 65, topIssue: "Drainage blockage", trend: "rising", tone: "watch" },
+  D: { score: 30, topIssue: "Stray dogs", trend: "falling", tone: "neutral" },
+  FG: { score: 20, topIssue: "Road shoulder wear", trend: "stable", tone: "good" },
+  H: { score: 88, topIssue: "Traffic congestion / Flash flood risk", trend: "rising", tone: "alert" },
+  I: { score: 92, topIssue: "Peatland fire risk / Water ponding", trend: "critical", tone: "alert" },
+  JL: { score: 15, topIssue: "Heritage maintenance", trend: "stable", tone: "good" },
+  K: { score: 45, topIssue: "Illegal dumping", trend: "rising", tone: "neutral" },
+  M: { score: 25, topIssue: "Slope stability", trend: "falling", tone: "good" },
+  NPQ: { score: 60, topIssue: "Tidal backflow", trend: "stable", tone: "watch" },
+};
+
+export const CCTV_FEEDS = [
+  { id: "cam-batu-kawa", label: "Batu Kawa Bridge", feedUrl: "https://cctv.sarawak.gov.my/feed/bk1", status: "live", condition: "Heavy traffic, no ponding" },
+  { id: "cam-satok", label: "Satok Market", feedUrl: "https://cctv.sarawak.gov.my/feed/stk", status: "live", condition: "Clear" },
+  { id: "cam-river", label: "Sarawak River (Barrage)", feedUrl: "https://cctv.sarawak.gov.my/feed/brg", status: "live", condition: "Water level rising, gates open" },
+  { id: "cam-airport", label: "KCH Airport Road", feedUrl: "https://cctv.sarawak.gov.my/feed/kch", status: "degraded", condition: "Intermittent feed" }
+];
 
 export const RIVER_BYPASS_PROJECT = {
   name: "Sarawak River Bypass Channel",

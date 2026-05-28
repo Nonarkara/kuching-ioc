@@ -2862,6 +2862,94 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* === CCTV Grid === */
+.cctv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+.cctv-card {
+  border: 1px solid var(--line-strong);
+  background: var(--card-bg);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cctv-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.cctv-label {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.cctv-status {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  padding: 1px 4px;
+  border: 1px solid;
+}
+.cctv-status[data-status="live"] {
+  color: var(--green);
+  border-color: var(--green);
+  background: rgba(0, 255, 170, 0.1);
+}
+.cctv-status[data-status="degraded"] {
+  color: var(--amber);
+  border-color: var(--amber);
+  background: rgba(255, 170, 0, 0.1);
+}
+.cctv-viewport {
+  position: relative;
+  background: #000;
+  height: 60px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.cctv-placeholder {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, #0a0e14 0%, #010203 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 243, 255, 0.2);
+}
+.cctv-crosshair {
+  width: 20px; height: 20px;
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  border-radius: 50%;
+  position: relative;
+}
+.cctv-crosshair::before, .cctv-crosshair::after {
+  content: "";
+  position: absolute;
+  background: rgba(0, 243, 255, 0.3);
+}
+.cctv-crosshair::before { top: 9px; left: -5px; right: -5px; height: 1px; }
+.cctv-crosshair::after { left: 9px; top: -5px; bottom: -5px; width: 1px; }
+.cctv-timestamp {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--cyan);
+  opacity: 0.8;
+}
+.cctv-condition {
+  font-size: 8px;
+  color: var(--soft);
+  text-transform: uppercase;
+}
+
 /* Print stylesheet — single-page A4 sitrep, white background, signature typography preserved */
 @media print {
   @page { size: A4 portrait; margin: 12mm; }

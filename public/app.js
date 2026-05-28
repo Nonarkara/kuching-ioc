@@ -17,6 +17,7 @@ const {
   WEATHER_FALLBACK, AIR_FALLBACK, CITY_DEMOGRAPHICS, TRANSLATIONS,
   round, aqiBand, weatherCodeLabel, kmBetween, classifyAircraft,
   sourceRecord, buildMapLayers, URBAN_LAYERS, ECONOMY_FALLBACK, RIVER_BYPASS_PROJECT, MPP_WARD_PROJECTS,
+  WARD_TENSION, CCTV_FEEDS
 } = await import(__dataUrl__);
 
 const BOOT = window.__IOC_BOOT__ || {};
@@ -602,29 +603,18 @@ function buildMetrics(w, a, ap, j, n, pz, tr) {
   ];
 }
 
-function buildOperations(w, a, ap, n, j, pz, tr, fires, quakes) {
-  const rain6h = round(w.nextHours.reduce((s,h)=>s+h.precipitationMm,0),1);
+function buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes }) {
+  const rain6h = round(weather.nextHours.reduce((s,h)=>s+h.precipitationMm,0),1);
   const items = [];
   if (rain6h>=6) items.push({ severity:"high", owner:"Drainage", title:"Sweep low-lying feeder roads", detail:`${rain6h}mm projected. Prioritise Penrissen and Batu Kawa.` });
-  if (a.current.aqi>=70||a.current.pm25>=25) items.push({ severity:"medium", owner:"Health", title:"Haze advisory for sensitive groups", detail:`AQI ${a.current.aqi}, PM2.5 ${a.current.pm25}` });
-  if (ap.movements.totalTracked>=6) items.push({ severity:"medium", owner:"Traffic", title:"Airport corridor watch", detail:`${ap.movements.arrivals} arrivals in envelope.` });
-  if (tr.localMatches.length>0) items.push({ severity:"medium", owner:"Comms", title:"Local search pulse active", detail:tr.localMatches.slice(0,2).map(i=>i.title).join(" / ") });
+  if (air.current.aqi>=70||air.current.pm25>=25) items.push({ severity:"medium", owner:"Health", title:"Haze advisory for sensitive groups", detail:`AQI ${air.current.aqi}, PM2.5 ${air.current.pm25}` });
+  if (airport.movements.totalTracked>=6) items.push({ severity:"medium", owner:"Traffic", title:"Airport corridor watch", detail:`${airport.movements.arrivals} arrivals in envelope.` });
+  if (trends.localMatches.length>0) items.push({ severity:"medium", owner:"Comms", title:"Local search pulse active", detail:trends.localMatches.slice(0,2).map(i=>i.title).join(" / ") });
   items.push({ severity:"low", owner:"Infrastructure", title:`${CITY_DEMOGRAPHICS.drainageNetworkKm}km drainage network`, detail:`${CITY_DEMOGRAPHICS.roadNetworkKm}km road network serving ${num(CITY_DEMOGRAPHICS.greaterKuchingPopulation)} residents.` });
-  items.push({ severity:"low", owner:"Planning", title:"Padawan growth ring", detail:`${j.items.find(i=>i.id==="mpp")?.areaKm2??0} km2 across ${pz.wardCount} wards.` });
+  items.push({ severity:"low", owner:"Planning", title:"Padawan growth ring", detail:`${jurisdictions.items.find(i=>i.id==="mpp")?.areaKm2??0} km2 across ${padawanZoning.wardCount} wards.` });
   return items.slice(0,6);
 }
 
-function computeSentiment(news) {
-  const counts = { positive: 0, neutral: 0, negative: 0 };
-  news.forEach(n => counts[n.sentiment || "neutral"]++);
-  const total = news.length || 1;
-  return {
-    positive: round(counts.positive / total * 100, 0),
-    neutral: round(counts.neutral / total * 100, 0),
-    negative: round(counts.negative / total * 100, 0),
-    label: counts.negative > counts.positive ? "Cautious" : counts.positive > 2 ? "Optimistic" : "Balanced",
-  };
-}
 
 const GROUND_PULSE_LANES = [
   { key: "kuching", label: "Kuching", intent: "What the city is being talked about right now.",
@@ -719,30 +709,21 @@ async function buildFallbackDashboard() {
     groundPulse: buildClientGroundPulse(enrichedNews, trends),
     exchange,
     fires, quakes,
-    sentiment: computeSentiment(enrichedNews.items),
-    demographics: CITY_DEMOGRAPHICS,
-    operations: buildOperations(weather, air, airport, enrichedNews, jurisdictions, padawanZoning, trends, fires, quakes),
-    // Official data feeds — fallback stubs so renderers don't silently skip
-    openDosmStats: {
-      updatedAt: gen, year: 2024,
+    govStats: {
+      status: "fallback", year: 2024,
       latestSarawakPop: "2,907,500",
-      source: "Department of Statistics Malaysia (DOSM)",
-    },
-    sarawakStats: {
       datasetCount: 142,
-      recentDatasets: [{ title: "Sarawak Population by District 2024" }],
+      updatedAt: gen
     },
-    infobanjir: {
-      status: "reference", updatedAt: gen,
-      stationCount: 0, liveCount: 0,
-      highestBand: "reference", highestBandLabel: "Reference hold",
-      stations: [], bands: defaultHydroBands,
-      summary: "JPS Infobanjir in reference hold (client fallback).",
-      catchmentStatus: "cold",
-      catchmentNote: "Toggle the Drainage layer once to enable catchment routing.",
+    metWarnings: {
+      status: "fallback",
+      activeCount: 0,
+      items: [],
+      forecast: { label: "No active warnings.", tone: "good" },
+      generatedAt: gen
     },
-    apims: null,
-    metWarnings: { status: "none", activeCount: 0, allActiveCount: 0, items: [] },
+    demographics: CITY_DEMOGRAPHICS,
+    operations: buildOperations({ weather, air, airport, news: enrichedNews, jurisdictions, padawanZoning, trends, fires, quakes }),
     floodForecast: {
       status: "fallback", station: "Sarawak River at Kuching", units: "m³/s",
       model: "GloFAS seamless v4 via Open-Meteo",
@@ -788,8 +769,8 @@ async function buildFallbackDashboard() {
       sourceRecord("opensky","OpenSky",airport.status,"Live airspace KCH","https://opensky-network.org",gen),
       sourceRecord("usgs","USGS",quakes.status,"Regional seismic","https://earthquake.usgs.gov",gen),
       sourceRecord("exchange","ExchangeRate API",exchange.status,"FX rates","https://open.er-api.com",gen),
-      sourceRecord("dosm","DOSM Census","reference","Sarawak demographics","https://open.dosm.gov.my",gen),
-      sourceRecord("jps-infobanjir","JPS Infobanjir","reference","Hydro stations (client fallback)","https://publicinfobanjir.water.gov.my",gen),
+      sourceRecord("gov-stats","DOSM/CKAN","reference","Sarawak demographics + datasets","https://open.dosm.gov.my",gen),
+      sourceRecord("met-warnings","MetMalaysia","reference","Official weather warnings","https://www.met.gov.my",gen),
     ],
   };
 }
@@ -803,7 +784,6 @@ async function loadDashboardPayload() {
     return decoratePayload({
       ...payload,
       exchange,
-      sentiment: computeSentiment(payload.news?.items ?? []),
       mapLayers: buildMapLayers(),
     }, { mode: "live-api" });
   } catch (liveError) {
@@ -816,7 +796,6 @@ async function loadDashboardPayload() {
       return decoratePayload({
         ...payload,
         exchange,
-        sentiment: computeSentiment(payload.news?.items ?? []),
         mapLayers: buildMapLayers(),
       }, { mode: "static-snapshot", manifest });
     } catch (snapshotError) {
@@ -1725,7 +1704,7 @@ const CONNECTOR_MAP = {
   pm25:     ['#signalCards .signal-card'],
   flood:    ['#floodForecast', '#signalCards .signal-card[data-band]'],
   trends:   ['#newsRail'],
-  headlines:['#newsRail', '#sentimentPanel'],
+  headlines:['#newsRail'],
   wards:    ['#localityList', '#councillorPanel'],
 };
 
@@ -1942,7 +1921,8 @@ function renderQualitativeLens(payload, activeSatellite) {
   const observationsEl = $("qualObservations");
   const checksEl = $("qualChecks");
   const sourcesEl = $("qualSources");
-  if (!hero || !observationsEl || !checksEl || !sourcesEl) return;
+  const cctvGridEl = $("cctvGrid");
+  if (!hero || !observationsEl || !checksEl || !sourcesEl || !cctvGridEl) return;
 
   const lens = buildQualitativeLens(payload, activeSatellite);
   const renderList = (items) => items.map((item, index) => `
@@ -1971,6 +1951,23 @@ function renderQualitativeLens(payload, activeSatellite) {
         <span class="qualitative-source-note">${item.note}</span>
       </a>`).join("")
     : `<div class="qualitative-source-empty">Scene read is running on telemetry only — no field sources in this cycle.</div>`;
+
+  cctvGridEl.innerHTML = CCTV_FEEDS.map(feed => `
+    <div class="cctv-card">
+      <div class="cctv-head">
+        <span class="cctv-label">${escapeHtml(feed.label)}</span>
+        <span class="cctv-status" data-status="${feed.status}">${feed.status === 'live' ? '● LIVE' : '○ DEGRADED'}</span>
+      </div>
+      <div class="cctv-viewport">
+        <!-- Placeholder for actual stream/image -->
+        <div class="cctv-placeholder">
+          <div class="cctv-crosshair"></div>
+          <span class="cctv-timestamp">${new Date().toISOString().split('T')[1].slice(0, 8)}</span>
+        </div>
+      </div>
+      <div class="cctv-condition">${escapeHtml(feed.condition)}</div>
+    </div>
+  `).join("");
 }
 
 function renderAirportStats(airport) {
@@ -2029,7 +2026,7 @@ function renderSourceMatrix(payload) {
 }
 
 function renderNewsIntake(news) {
-  const el = $("sentimentPanel");
+  const el = $("newsIntakePanel");
   if (!el) return;
   const lanes = [
     { code: "official", label: "Official", badge: "OFF", count: news.counts?.official ?? news.items.filter((item) => item.isOfficial).length },
@@ -2298,23 +2295,22 @@ function renderPosture(payload) {
 
 function renderOfficialPulse(payload) {
   const el = $("officialPulse");
-  if (!el || !payload.openDosmStats?.updatedAt) return;
-  const dosm = payload.openDosmStats;
-  const swk = payload.sarawakStats;
+  if (!el || !payload.govStats?.updatedAt) return;
+  const gov = payload.govStats;
   
   el.innerHTML = `
     <div class="official-pulse-block">
       <div class="pulse-header">
-        <span class="pulse-label">Official Census Sync // ${dosm.year}</span>
+        <span class="pulse-label">Official Census Sync // ${gov.year}</span>
         <div class="pulse-indicator"></div>
       </div>
       <div class="pulse-metagrid">
         <div class="pulse-stat">
-          <strong>${num(dosm.latestSarawakPop, 0)}</strong>
+          <strong>${num(gov.latestSarawakPop, 0)}</strong>
           <span>Sarawak Pop</span>
         </div>
         <div class="pulse-stat">
-          <strong>${swk.datasetCount || 0}</strong>
+          <strong>${gov.datasetCount || 0}</strong>
           <span>CKAN Datasets</span>
         </div>
       </div>
@@ -2725,6 +2721,11 @@ function renderWardBrief(wardCode, payload) {
     return pointInRing(c, feat.geometry);
   });
 
+  // Tension Index
+  const tension = WARD_TENSION[wardCode] || { score: 0, topIssue: "No data", trend: "stable", tone: "muted" };
+  const tensionGlyph = tension.trend === "rising" ? "▲" : tension.trend === "falling" ? "▼" : "—";
+  const tensionLine = `<span class="glyph" data-tone="${tension.tone}">${tensionGlyph}</span> <strong style="color: var(--${tension.tone === 'alert' ? 'red' : tension.tone === 'watch' ? 'amber' : 'cyan'})">${tension.score}/100</strong> · ${escapeHtml(tension.topIssue)}`;
+
   el.hidden = false;
   el.dataset.active = "true";
   el.innerHTML = `
@@ -2740,6 +2741,7 @@ function renderWardBrief(wardCode, payload) {
       <div class="ward-brief-stat"><strong>${totals.residential.toLocaleString()}</strong>residential</div>
       <div class="ward-brief-stat"><strong>${totals.commercial.toLocaleString()}</strong>commercial</div>
     </div>
+    <div class="ward-brief-row"><span class="ward-brief-label">Tension Index</span>${tensionLine}</div>
     <div class="ward-brief-row"><span class="ward-brief-label">State seat</span>${escapeHtml(stateSeat)}</div>
     <div class="ward-brief-row"><span class="ward-brief-label">Parliament</span>${escapeHtml(parlSeat)}</div>
     <div class="ward-brief-row"><span class="ward-brief-label">Councillor</span>${councillorLine}</div>

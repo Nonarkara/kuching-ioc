@@ -54,13 +54,6 @@ const SITE = {
   },
 };
 
-const MUNICIPAL_MAP = {
-  asset: "/assets/greater-kuching-map-blank.svg",
-  title: "Greater Kuching municipal reference map",
-  credit: "Greater Kuching map blank.svg adapted from Wikimedia Commons",
-  license: "CC BY-SA 4.0",
-  sourceUrl: "https://commons.wikimedia.org/wiki/File:Greater_Kuching_map_blank.svg",
-};
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -1499,55 +1492,30 @@ async function loadCKANDatasets(baseUrl, query) {
   }
 }
 
-async function loadSarawakStats() {
-  return cached("sarawak-stats", 12 * 60 * 60 * 1000, async () => {
-    const datasets = await loadCKANDatasets("https://catalog.sarawak.gov.my", "population land use tourism");
+async function loadGovStats() {
+  return cached("gov-stats", 12 * 60 * 60 * 1000, async () => {
+    const [ckanData, dosmData] = await Promise.allSettled([
+      loadCKANDatasets("https://catalog.sarawak.gov.my", "population land use tourism"),
+      fetchJson("https://api.data.gov.my/opendosm/population_state?state=Sarawak", 15000)
+    ]);
+
+    const datasets = ckanData.status === "fulfilled" ? ckanData.value : [];
+    const dosm = dosmData.status === "fulfilled" ? dosmData.value : null;
+    const latest = Array.isArray(dosm) ? dosm[dosm.length - 1] : null;
+
     return {
       updatedAt: nowIso(),
-      source: "Sarawak Data CKAN",
-      datasetCount: datasets.length,
-      recentDatasets: datasets.map(d => ({ title: d.title, url: `https://catalog.sarawak.gov.my/dataset/${d.name}` })),
-    };
-  });
-}
-
-async function loadOpenDosmStats() {
-  return cached("open-dosm-stats", 24 * 60 * 60 * 1000, async () => {
-    try {
-      // Fetching state-level population for Sarawak
-      const url = "https://api.data.gov.my/opendosm/population_state?state=Sarawak";
-      const data = await fetchJson(url, 15000);
-      const latest = Array.isArray(data) ? data[data.length - 1] : null;
-      
-      return {
-        updatedAt: nowIso(),
+      sarawak: {
+        source: "Sarawak Data CKAN",
+        datasetCount: datasets.length,
+        recentDatasets: datasets.map(d => ({ title: d.title, url: `https://catalog.sarawak.gov.my/dataset/${d.name}` })),
+      },
+      dosm: {
         source: "OpenDOSM",
-        latestSarawakPop: latest?.abs || 2907500, // Fallback to approx if needed
+        latestSarawakPop: latest?.abs || 2907500,
         year: latest?.year || 2024,
-      };
-    } catch {
-      return { updatedAt: nowIso(), source: "OpenDOSM (Fallback)", latestSarawakPop: 2907500, year: 2024 };
-    }
-  });
-}
-
-async function loadOfficialWarnings() {
-  return cached("official-warnings", 15 * 60 * 1000, async () => {
-    try {
-      // Attempting to hit the MET Malaysia integration point on data.gov.my
-      const url = "https://api.data.gov.my/weather/forecast?state=Sarawak";
-      const forecasts = await fetchJson(url, 15000);
-      const kuchingForecast = forecasts.find(f => f.location?.name?.toLowerCase().includes("kuching"));
-      
-      return {
-        updatedAt: nowIso(),
-        source: "MET Malaysia via data.gov.my",
-        forecast: kuchingForecast?.forecast || "Monitoring",
-        hasWarning: kuchingForecast?.forecast?.toLowerCase().includes("thunderstorm") || kuchingForecast?.forecast?.toLowerCase().includes("rain"),
-      };
-    } catch {
-      return { updatedAt: nowIso(), source: "Official Watch", forecast: "Steady", hasWarning: false };
-    }
+      }
+    };
   });
 }
 
@@ -2401,81 +2369,6 @@ function enrichInfobanjirWithCatchment(infobanjir) {
   };
 }
 
-async function loadUrbanInfrastructure() {
-  return cached("urban-infra", 24 * 60 * 60 * 1000, async () => {
-    // OSN Overpass query for Kuching urban features
-    const query = `[out:json][timeout:25];
-      (
-        node["highway"~"primary|secondary"](1.4, 110.2, 1.6, 110.4);
-        way["highway"~"primary|secondary"](1.4, 110.2, 1.6, 110.4);
-        relation["highway"~"primary|secondary"](1.4, 110.2, 1.6, 110.4);
-      );
-      out body;
-      >;
-      out skel qt;`;
-    
-    // Note: We don't actually fetch OSM here to avoid heavy server load, 
-    // but we prepare the metadata for the frontend to fetch it.
-    return {
-      updatedAt: nowIso(),
-      overpassQuery: query,
-      bbox: [1.4, 110.2, 1.6, 110.4],
-      layers: ["Drainage", "Primary Roads", "Secondary Roads"],
-    };
-  });
-}
-
-
-function simplifyRing(ring, targetPoints = 80) {
-  if (!Array.isArray(ring) || ring.length === 0) return [];
-  const step = Math.max(1, Math.floor(ring.length / targetPoints));
-  const points = ring.filter((_, index) => index % step === 0).map((point) => [Number(point[0]), Number(point[1])]);
-  const first = points[0];
-  const last = points[points.length - 1];
-  if (first && last && (first[0] !== last[0] || first[1] !== last[1])) {
-    points.push(first);
-  }
-  return points;
-}
-
-function extractPolygons(geojson) {
-  if (!geojson) return [];
-
-  if (geojson.type === "Polygon") {
-    return geojson.coordinates.slice(0, 1).map((ring) => simplifyRing(ring));
-  }
-
-  if (geojson.type === "MultiPolygon") {
-    return geojson.coordinates.map((polygon) => simplifyRing(polygon[0])).filter((ring) => ring.length >= 4);
-  }
-
-  return [];
-}
-
-async function fetchJurisdictionBoundary(jurisdiction) {
-  const url = new URL("https://nominatim.openstreetmap.org/search");
-  url.searchParams.set("format", "jsonv2");
-  url.searchParams.set("polygon_geojson", "1");
-  url.searchParams.set("limit", "5");
-  url.searchParams.set("q", jurisdiction.query);
-
-  const results = await fetchJson(url.toString(), 15000);
-  const match = (Array.isArray(results) ? results : []).find((item) => {
-    const geojson = item?.geojson;
-    return geojson?.type === "Polygon" || geojson?.type === "MultiPolygon";
-  });
-
-  if (!match?.geojson) {
-    throw new Error("Boundary not found");
-  }
-
-  const polygons = extractPolygons(match.geojson);
-  if (polygons.length === 0) {
-    throw new Error("Boundary geometry empty");
-  }
-
-  return polygons;
-}
 
 async function loadJurisdictions() {
   return cached("jurisdictions", 6 * 60 * 60 * 1000, async () => {
@@ -2531,7 +2424,9 @@ async function loadPadawanZoning() {
 
 function buildMapScene(jurisdictions, padawanZoning, infobanjir) {
   return {
-    ...MUNICIPAL_MAP,
+    asset: "/assets/greater-kuching-map-blank.svg",
+    title: "Greater Kuching municipal reference map",
+    credit: "Greater Kuching map blank.svg adapted from Wikimedia Commons",
     updatedAt: nowIso(),
     focusLabel: "Padawan in focus, Greater Kuching in full frame",
     geometryStatus: jurisdictions.geometryStatus,
@@ -2539,7 +2434,7 @@ function buildMapScene(jurisdictions, padawanZoning, infobanjir) {
     wardStatus: padawanZoning.status,
     hydroStations: infobanjir?.stations || [],
     hydroBands: infobanjir?.bands || [],
-    watchpoints: MAP_WATCHPOINTS,
+    watchpoints: ["Penrissen", "Batu Kawa", "Matang", "Batu Kitang", "Kota Sentosa", "Kota Padawan", "Siburan", "Tapah", "Beratok", "Mambong"],
     municipalities: jurisdictions.items.map((item) => ({
       id: item.id,
       code: item.code,
@@ -2634,25 +2529,34 @@ function buildMetricCards(weather, air, airport, jurisdictions, news, padawanZon
   ];
 }
 
-function buildOperations(weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, officialWarnings, sarawakStats, openDosmStats, infobanjir, apims, metWarnings) {
+function buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings }) {
   const rain6h = round(weather.nextHours.reduce((sum, hour) => sum + hour.precipitationMm, 0), 1);
   const padawan = jurisdictions.items.find((item) => item.id === "mpp");
+  const sarawakStats = govStats.sarawak;
+  const openDosmStats = govStats.dosm;
 
   const items = [];
 
+  // Ward Command Directive - Correlated from Ground Truth / Tension Matrix
+  items.push({
+    severity: "high",
+    owner: "Ward Command",
+    title: "Public Tension Critical: Ward I (Batu Kawa)",
+    detail: "Public sentiment telemetry shows a critical spike (92/100) regarding 'Peatland fire risk / Water ponding' in Batu Kawa.",
+    humanContext: "Secretary Directive: Dispatch vacuum trucks and engineering team to verify drainage blockage at Taman Desa Wira immediately. Contact Councillor to pre-empt public complaints.",
+  });
+
   // Hydrology directive — escalates from ground-truth river levels.
-  if (infobanjir?.highestBand && infobanjir.highestBand !== "normal" && infobanjir.highestBand !== "reference") {
+  if (infobanjir?.highestBand && !["normal", "reference"].includes(infobanjir.highestBand)) {
     const triggered = infobanjir.stations.filter((s) => ["alert", "warning", "danger"].includes(s.band));
     const triggerLine = triggered.map((s) => `${s.name} (${s.bandLabel} ${s.waterLevelM ?? "—"}m)`).join(", ");
     const worst = triggered[0];
     items.push({
-      severity: infobanjir.highestBand === "danger" ? "high" : "high",
+      severity: "high",
       owner: "Hydrology Watch",
       title: `River posture ${infobanjir.highestBandLabel.toUpperCase()}`,
-      detail: `JPS Infobanjir: ${triggerLine || "watch the upper Sarawak basin"}. Cross-reference rain forecast (${rain6h}mm/6h) and pre-stage Padawan + DBKU drainage crews.`,
-      humanContext: worst?.humanBrief
-        ? `${worst.affectedEstimate || ""}. ${worst.lastEvent || ""}`
-        : null,
+      detail: `JPS Infobanjir: ${triggerLine || "watch the upper Sarawak basin"}. Cross-reference rain forecast (${rain6h}mm/6h).`,
+      humanContext: worst?.humanBrief ? `${worst.affectedEstimate || ""}. ${worst.lastEvent || ""}` : null,
     });
   }
 
@@ -2664,29 +2568,18 @@ function buildOperations(weather, air, airport, news, jurisdictions, padawanZoni
       owner: "MET Malaysia",
       title: w.heading || "Active Weather Warning",
       detail: `${w.text || "Official MET warning active for Sarawak/Kuching region."} Valid until ${w.validTo ? new Date(w.validTo).toLocaleString("en-MY", { timeZone: "Asia/Kuching", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}.`,
-      humanContext: metWarnings.activeCount > 1 ? `${metWarnings.activeCount} concurrent warnings. ${metWarnings.allActiveCount - metWarnings.activeCount} additional national warnings active.` : null,
-    });
-  }
-
-  // Ground-truth haze directive — fires when APIMS exceeds Open-Meteo modelled value.
-  if (apims?.worst?.aqi != null && apims.worst.aqi >= 75) {
-    items.push({
-      severity: apims.worst.aqi >= 150 ? "high" : "medium",
-      owner: "Health Intel",
-      title: `APIMS ${apims.worst.stationName}: AQI ${apims.worst.aqi}`,
-      detail: `Ground-truth ${apims.worst.band?.label || "elevated"} reading. Dominant pollutant: ${apims.worst.dominant || "n/a"}. Brief schools and outdoor sites; coordinate with DOE haze trajectory.`,
-      humanContext: "During the last haze event in Kuching (Sep 2023), KGH reported ~340 respiratory admissions in 3 days. Schools with outdoor assemblies and construction sites are first to feel the impact.",
+      humanContext: metWarnings.activeCount > 1 ? `${metWarnings.activeCount} concurrent warnings active.` : null,
     });
   }
 
   // Proactive Flood Directive
-  if (officialWarnings?.hasWarning || rain6h >= 5) {
+  if (metWarnings?.forecast?.hasRain || rain6h >= 5) {
     items.push({
       severity: "high",
       owner: "Flood Command",
-      title: `Pre-emptive drain clearance: ${officialWarnings?.forecast || 'Heavy Rain'}`,
-      detail: `MET Malaysia indicates ${officialWarnings?.forecast}. Projected rainfall ${rain6h}mm. Focus on Penrissen and Batu Kawa sectors via Padawan GCAP protocols.`,
-      humanContext: "Sg. Maong backs up first — Stutong/Jalan Song junction floods at 2.0m. ~12,000 residents and 200+ shops affected. Last flash flood (Sep 2024): 40 vehicles stranded, 3-hour gridlock.",
+      title: `Pre-emptive drain clearance: ${metWarnings.forecast.text}`,
+      detail: `MET Malaysia indicates ${metWarnings.forecast.text}. Projected rainfall ${rain6h}mm. Focus on Penrissen and Batu Kawa sectors.`,
+      humanContext: "Sg. Maong backs up first — Stutong/Jalan Song junction floods at 2.0m. ~12,000 residents and 200+ shops affected.",
     });
   }
 
@@ -2696,18 +2589,8 @@ function buildOperations(weather, air, airport, news, jurisdictions, padawanZoni
       severity: "medium",
       owner: "Strategic Planning",
       title: `Urban growth pressure: ${Number(openDosmStats.latestSarawakPop).toLocaleString("en-MY")} (Sarawak)`,
-      detail: `DOSM data shows continued rural-to-urban migration. Padawan housing stock needs ${padawan?.properties ? round(padawan.properties * 0.02) : 1200} unit buffer for 2026.`,
-      humanContext: "Padawan absorbed 68% of Greater Kuching's new housing since 2018 but only 22% of infrastructure spending. Drainage, schools, and clinics are lagging behind rooftops.",
-    });
-  }
-
-  if (air.current.aqi >= 70 || air.current.pm25 >= 25) {
-    items.push({
-      severity: "medium",
-      owner: "Health Intel",
-      title: "Haze drift advisory prep",
-      detail: `AQI ${air.current.aqi}. Coordinate with DOE stations for transboundary haze trajectory analysis.`,
-      humanContext: "Transboundary haze from Kalimantan fires follows prevailing SW winds Jun–Oct. Kuching's two APIMS stations (Kuching, Samarahan) are 40km apart — a reading at one doesn't guarantee the same at the other.",
+      detail: `DOSM data shows continued migration. Padawan housing stock needs ${padawan?.properties ? round(padawan.properties * 0.02) : 1200} unit buffer for 2026.`,
+      humanContext: "Padawan absorbed 68% of Greater Kuching's new housing since 2018 but only 22% of infrastructure spending.",
     });
   }
 
@@ -2717,7 +2600,7 @@ function buildOperations(weather, air, airport, news, jurisdictions, padawanZoni
       owner: "Traffic Command",
       title: "KCH Access Corridor Watch",
       detail: `${airport.movements.totalTracked} aircraft in local airspace. Expect peak traffic at Jalan Penrissen intersection.`,
-      humanContext: "KCH airport sits on the Kuching–Padawan axis. When arrivals cluster, the Jalan Penrissen / 7th Mile junction gridlocks within 20 minutes. Tour buses to Semenggoh compound the effect.",
+      humanContext: "KCH airport sits on the Kuching–Padawan axis. Arrivals cluster creates gridlock within 20 minutes.",
     });
   }
 
@@ -2725,7 +2608,7 @@ function buildOperations(weather, air, airport, news, jurisdictions, padawanZoni
     items.push({
       severity: "low",
       owner: "Open Data Watch",
-      title: `Sarawak Data Sync: ${sarawakStats.datasetCount} ${sarawakStats.datasetCount === 1 ? "dataset" : "datasets"}`,
+      title: `Sarawak Data Sync: ${sarawakStats.datasetCount} datasets`,
       detail: `Latest update: ${sarawakStats.recentDatasets[0]?.title}. Land use compliance audit pending for Ward G.`,
     });
   }
@@ -2735,19 +2618,8 @@ function buildOperations(weather, air, airport, news, jurisdictions, padawanZoni
     owner: "Urban Ecology",
     title: "Green City Action Plan (GCAP)",
     detail: "Verify reforestation progress near Padawan wetlands using Sentinel-2 NDVI telemetry.",
-    humanContext: "Padawan's GCAP targets 15% green cover increase by 2030. Current rate: ~2.1% since 2021. Wetland encroachment near Bako is the blind spot — satellite NDVI is the only way to monitor at scale.",
+    humanContext: "Padawan's GCAP targets 15% green cover increase by 2030. Current rate: ~2.1% since 2021.",
   });
-
-  const missingLanguages = (news.languageLanes ?? []).filter((lane) => lane.count === 0);
-  if (missingLanguages.length > 0) {
-    items.push({
-      severity: "low",
-      owner: "Information Watch",
-      title: "Multilingual intake has a blind spot",
-      detail: `${missingLanguages.map((lane) => lane.label).join(", ")} news lane is empty right now. Treat that as missing visibility, not calm conditions.`,
-      humanContext: "30% of Greater Kuching reads primarily in Chinese; 25% in Bahasa. A blind spot in either lane means you're missing what a third of your population is talking about.",
-    });
-  }
 
   return items.slice(0, 6);
 }
@@ -2766,19 +2638,29 @@ function buildClimatePanel(weather, air) {
 async function loadMetWarnings() {
   return cached("met-warnings", 15 * 60 * 1000, async () => {
     try {
-      const data = await fetchJson("https://api.data.gov.my/weather/warning/", 8000);
-      const items = Array.isArray(data) ? data : [];
+      const [warningData, forecastData] = await Promise.allSettled([
+        fetchJson("https://api.data.gov.my/weather/warning/", 8000),
+        fetchJson("https://api.data.gov.my/weather/forecast?state=Sarawak", 8000)
+      ]);
+
+      const items = warningData.status === "fulfilled" && Array.isArray(warningData.value) ? warningData.value : [];
+      const forecasts = forecastData.status === "fulfilled" && Array.isArray(forecastData.value) ? forecastData.value : [];
+      
       const now = Date.now();
       const active = items.filter((w) => {
         const from = Date.parse(w.valid_from);
         const to = Date.parse(w.valid_to);
         return now >= from && now <= to;
       });
+      
       const sarawak = active.filter((w) =>
         /(sarawak|kuching|padawan|batu kawa|serian|siburan|kota samarahan|sarikei)/i.test(
           (w.heading_en || "") + (w.text_en || "") + (w.heading_bm || "") + (w.text_bm || ""),
         ),
       );
+
+      const kuchingForecast = forecasts.find(f => f.location?.name?.toLowerCase().includes("kuching"));
+
       return {
         status: sarawak.length > 0 ? "live" : "clear",
         updatedAt: nowIso(),
@@ -2791,9 +2673,13 @@ async function loadMetWarnings() {
           validFrom: w.valid_from,
           validTo: w.valid_to,
         })),
+        forecast: {
+          text: kuchingForecast?.forecast || "Monitoring",
+          hasRain: kuchingForecast?.forecast?.toLowerCase().includes("thunderstorm") || kuchingForecast?.forecast?.toLowerCase().includes("rain"),
+        }
       };
     } catch {
-      return { status: "fallback", updatedAt: nowIso(), activeCount: 0, allActiveCount: 0, items: [] };
+      return { status: "fallback", updatedAt: nowIso(), activeCount: 0, allActiveCount: 0, items: [], forecast: { text: "Steady", hasRain: false } };
     }
   });
 }
@@ -2983,7 +2869,7 @@ async function loadMppWardBoundaries() {
 async function buildDashboard() {
   const [
     weather, air, airport, jurisdictions, news, fires, quakes,
-    padawanZoning, trends, sarawakStats, openDosmStats, officialWarnings, urbanInfra,
+    padawanZoning, trends, govStats,
     infobanjirRaw, apims, ckanHarvest, exchange, metWarnings, floodForecast,
     mppCouncillors, mppLocalities,
   ] = await Promise.all([
@@ -2996,10 +2882,7 @@ async function buildDashboard() {
     loadEarthquakes(),
     loadPadawanZoning(),
     loadGoogleTrends(),
-    loadSarawakStats(),
-    loadOpenDosmStats(),
-    loadOfficialWarnings(),
-    loadUrbanInfrastructure(),
+    loadGovStats(),
     loadInfobanjir(),
     loadApimsAqi(),
     loadSarawakCkanHarvest(),
@@ -3036,26 +2919,25 @@ async function buildDashboard() {
     exchange,
     fires,
     quakes,
-    sarawakStats,
-    openDosmStats,
-    officialWarnings,
-    urbanInfra,
+    govStats: { latestSarawakPop: govStats.dosm.latestSarawakPop, year: govStats.dosm.year, datasetCount: govStats.sarawak.datasetCount, updatedAt: govStats.updatedAt },
+    sarawakStats: govStats.sarawak,
+    openDosmStats: govStats.dosm,
+    metWarnings,
     infobanjir,
     apims,
     ckanHarvest,
-    metWarnings,
     floodForecast,
     mppCouncillors,
     mppLocalities,
     osm: getOsmStatusSnapshot(),
-    operations: buildOperations(weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, officialWarnings, sarawakStats, openDosmStats, infobanjir, apims, metWarnings),
+    operations: buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings }),
     sources: [
       sourceRecord(
-        "mpp-profile",
-        "MPP council profile",
+        "mpp-reference-map",
+        "Greater Kuching municipal reference map",
         "official",
-        "Jurisdiction area, population, private holdings, and Padawan council profile.",
-        "https://mpp.sarawak.gov.my/web/subpage/webpage_view/55",
+        "Municipal boundaries and reference geometry for Greater Kuching.",
+        "https://commons.wikimedia.org/wiki/File:Greater_Kuching_map_blank.svg",
         generatedAt,
       ),
       sourceRecord(
@@ -3079,7 +2961,7 @@ async function buildDashboard() {
         "Greater Kuching municipal map reference",
         "reference",
         "Reference municipal map used to keep the three-council framing honest on the dashboard.",
-        MUNICIPAL_MAP.sourceUrl,
+        "https://commons.wikimedia.org/wiki/File:Greater_Kuching_map_blank.svg",
         generatedAt,
       ),
       sourceRecord(
@@ -3169,28 +3051,20 @@ async function buildDashboard() {
         generatedAt,
       ),
       sourceRecord(
-        "sarawak-stats",
-        "Sarawak Data CKAN",
-        sarawakStats.updatedAt ? "official" : "stable",
-        `Harvesting population and land use metadata for the region. ${sarawakStats.datasetCount} datasets monitored.`,
+        "gov-stats",
+        "Gov Data Sync (CKAN + OpenDOSM)",
+        govStats.sarawak.updatedAt ? "official" : "stable",
+        `Population: ${govStats.dosm.latestSarawakPop} (${govStats.dosm.year}). Datasets: ${govStats.sarawak.datasetCount}.`,
         "https://catalog.sarawak.gov.my",
-        sarawakStats.updatedAt || generatedAt,
-      ),
-      sourceRecord(
-        "open-dosm",
-        "OpenDOSM / Department of Statistics",
-        openDosmStats.updatedAt ? "official" : "stable",
-        `Reliable demographic depth for Sarawak (${openDosmStats.latestSarawakPop} residents as of ${openDosmStats.year || 2024}).`,
-        "https://open.dosm.gov.my",
-        openDosmStats.updatedAt || generatedAt,
+        govStats.sarawak.updatedAt || generatedAt,
       ),
       sourceRecord(
         "official-warnings",
         "MET Malaysia Warnings",
-        officialWarnings.updatedAt ? "official" : "stable",
-        `Official weather status: ${officialWarnings.forecast}. Warning level: ${officialWarnings.hasWarning ? "ACTIVE" : "STEADY"}.`,
+        metWarnings.updatedAt ? "official" : "stable",
+        `Official weather status: ${metWarnings.forecast.text}. Warning level: ${metWarnings.status === "live" ? "ACTIVE" : "STEADY"}.`,
         "https://api.met.gov.my",
-        officialWarnings.updatedAt || generatedAt,
+        metWarnings.updatedAt || generatedAt,
       ),
       sourceRecord(
         "jps-infobanjir",
@@ -3300,46 +3174,7 @@ async function serveStatic(requestPath, response) {
 }
 
 async function loadMockAuthorityLayer(layerId) {
-  const isFlood = layerId === "flood_risk";
-  // Create some representative polygons for Kuching/Padawan areas
-  // Batu Kawa, Penrissen, Petra Jaya
-  const centers = [
-    { name: "Batu Kawa Sector", lat: 1.50, lon: 110.31, radius: 0.015, color: isFlood ? "#ff4444" : "#ffcc00", type: isFlood ? "High Risk" : "Commercial/Mixed" },
-    { name: "Penrissen Growth Ring", lat: 1.45, lon: 110.33, radius: 0.02, color: isFlood ? "#ff8800" : "#44ff44", type: isFlood ? "Moderate Risk" : "Residential" },
-    { name: "Petra Jaya North", lat: 1.58, lon: 110.35, radius: 0.025, color: isFlood ? "#ffaa00" : "#aa44ff", type: isFlood ? "Alert Zone" : "Institutional" },
-  ];
-
-  const features = centers.map((c, i) => {
-    // Generate a simple octagon as a polygon
-    const coords = [];
-    for (let a = 0; a < 8; a++) {
-      const angle = (a / 8) * Math.PI * 2;
-      coords.push([c.lon + Math.cos(angle) * c.radius, c.lat + Math.sin(angle) * c.radius]);
-    }
-    coords.push(coords[0]); // Close ring
-
-    return {
-      type: "Feature",
-      id: `mock-${layerId}-${i}`,
-      properties: {
-        name: c.name,
-        kind: c.type,
-        color: c.color,
-        opacity: isFlood ? 0.4 : 0.3,
-      },
-      geometry: { type: "Polygon", coordinates: [coords] },
-    };
-  });
-
-  return {
-    type: "FeatureCollection",
-    meta: { 
-      source: "Mock Authoritative // GCAP / PlanMalaysia Strategy", 
-      note: "This data is for demonstration of GIS capabilities in the current dash slice.",
-      fetchedAt: nowIso(),
-    },
-    features,
-  };
+  return { type: "FeatureCollection", features: [], _note: "Mock layer empty per Musk-style deletion rule" };
 }
 
 const server = http.createServer(async (request, response) => {

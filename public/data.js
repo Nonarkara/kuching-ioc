@@ -186,6 +186,7 @@ export const URBAN_LAYERS = [
   { id: "transit", label: "Transit Network", type: "geojson", url: "/api/layers/transit", color: "#fbbf24", active: false },
   { id: "flood_zones", label: "Flood Zones (Historical)", type: "geojson", url: "/api/layers/flood_zones", color: "#ef4444", active: false },
   { id: "mpp_wards", label: "MPP Wards (Governance)", type: "geojson", url: "/api/layers/mpp_wards", color: "#a78bfa", active: false },
+  { id: "growth", label: "Growth 2017→24 (AlphaEarth)", type: "image", color: "#f59e0b", active: false },
 ];
 
 // Per-ward operational projects — hand-encoded from public Padawan council

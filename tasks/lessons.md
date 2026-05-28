@@ -43,3 +43,21 @@ Per §13: the same mistake never happens twice.
 - **Correct behaviour:** ...
 - **How to recognise this pattern:** ...
 -->
+
+## 2026-05-28 · build.mjs regenerates index.html from index.template.html
+
+- **What went wrong:** Edited `public/index.html` directly (added #cctvGrid / #forecastRail); `node build.mjs` overwrote it from `public/index.template.html`, silently reverting the edits.
+- **Correct behaviour:** `public/index.html` is GENERATED. Always edit `public/index.template.html`. The build (`site-build.mjs renderIndexHtml`) reads the template, stamps the asset version, writes index.html.
+- **How to recognise:** An HTML element you added is missing after running build, or grep finds it in index.html but it vanishes post-build.
+
+## 2026-05-28 · Open-Meteo 429s + past_days precip truncation (TimesFM ingestion)
+
+- **What went wrong:** Forecast runner hit `429 Too Many Requests` on burst calls; `/v1/forecast?past_days=92&daily=precipitation_sum` returned only 20 daily points.
+- **Correct behaviour:** Backoff + stagger between Open-Meteo calls. For long daily history use `archive-api.open-meteo.com/v1/archive` with explicit start/end dates (lags ~5d) instead of the forecast endpoint's `past_days`.
+- **How to recognise:** "skip <metric>: only N points (<24)" or 429 in forecast_runner output.
+
+## 2026-05-28 · "Thai FM" = TimesFM; foundation-model jobs are local-only, never CI
+
+- **What went wrong:** n/a — clarification. Dr Non's "Thai FM" meant Google **TimesFM**.
+- **Correct behaviour:** TimesFM (2GB model, CPU/GPU) and AlphaEarth (Earth Engine auth) run LOCALLY on the M5 Max and commit static artifacts (`public/api/forecast.json`, `public/data/alphaearth/*`). GitHub CI only bakes the committed artifacts into dashboard.json — it must never try to regenerate them. Keep `scripts/*/.venv` gitignored.
+- **How to recognise:** CI failing on a missing python/timesfm/earthengine dependency = something tried to run a model in CI.

@@ -2950,6 +2950,50 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
   text-transform: uppercase;
 }
 
+/* === IOC 2.0 — TimesFM Forecast Rail === */
+.forecast-rail { display: flex; flex-direction: column; gap: 6px; }
+.forecast-rail-head {
+  display: flex; align-items: center; gap: 8px;
+  justify-content: space-between;
+}
+.forecast-badge {
+  font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  letter-spacing: 0.08em; padding: 2px 6px; border: 1px solid;
+  text-transform: uppercase;
+}
+.forecast-badge[data-src="timesfm"] { color: var(--cyan); border-color: var(--line-strong); }
+.forecast-badge[data-src="stub"] { color: var(--soft); border-color: var(--line); }
+.forecast-sub { font-family: var(--font-mono); font-size: 8px; color: var(--soft); text-transform: uppercase; letter-spacing: 0.04em; }
+.forecast-cards {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;
+}
+.forecast-card {
+  border: 1px solid var(--line); background: var(--card-bg);
+  padding: 6px 8px; display: flex; flex-direction: column; gap: 3px;
+}
+.forecast-card[data-tone="warn"] { border-color: var(--amber); }
+.fc-card-label {
+  font-size: 8px; font-weight: 700; color: var(--cyan);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.fc-now-row { display: flex; align-items: baseline; gap: 4px; }
+.fc-now-val { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--ink); }
+.fc-unit { font-family: var(--font-mono); font-size: 8px; color: var(--soft); }
+.fc-spark { width: 100%; height: 40px; display: block; }
+.fc-band { fill: rgba(0, 243, 255, 0.14); stroke: none; }
+.fc-median { stroke: var(--cyan); stroke-width: 1.5; }
+.forecast-card[data-tone="warn"] .fc-band { fill: rgba(255, 170, 0, 0.16); }
+.forecast-card[data-tone="warn"] .fc-median { stroke: var(--amber); }
+.fc-now-line { stroke: rgba(255, 255, 255, 0.22); stroke-width: 1; stroke-dasharray: 2 2; }
+.fc-outlook { font-family: var(--font-mono); font-size: 9px; color: var(--soft); }
+.fc-glyph { color: var(--cyan); font-weight: 700; }
+.fc-range { color: var(--soft); }
+.forecast-empty { font-size: 9px; color: var(--soft); line-height: 1.5; }
+.forecast-empty code { font-family: var(--font-mono); color: var(--cyan); font-size: 8px; }
+@media (max-width: 480px) {
+  .forecast-cards { grid-template-columns: 1fr; }
+}
+
 /* Print stylesheet — single-page A4 sitrep, white background, signature typography preserved */
 @media print {
   @page { size: A4 portrait; margin: 12mm; }

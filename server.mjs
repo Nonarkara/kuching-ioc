@@ -2529,7 +2529,7 @@ function buildMetricCards(weather, air, airport, jurisdictions, news, padawanZon
   ];
 }
 
-function buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings }) {
+function buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast }) {
   const rain6h = round(weather.nextHours.reduce((sum, hour) => sum + hour.precipitationMm, 0), 1);
   const padawan = jurisdictions.items.find((item) => item.id === "mpp");
   const sarawakStats = govStats.sarawak;
@@ -2558,6 +2558,43 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
       detail: `JPS Infobanjir: ${triggerLine || "watch the upper Sarawak basin"}. Cross-reference rain forecast (${rain6h}mm/6h).`,
       humanContext: worst?.humanBrief ? `${worst.affectedEstimate || ""}. ${worst.lastEvent || ""}` : null,
     });
+  }
+
+  // IOC 2.0 — forecast-driven directive. TimesFM p90 worst-case lookahead turns
+  // the board from "what's happening" into "what's coming". Thresholds are
+  // deliberately conservative so the directive never cries wolf — it fires only
+  // when the worst-case curve escalates meaningfully (Nonism §12.5: surface the
+  // worst case, act on the lead time, don't perform alarm).
+  if (forecast?.series) {
+    const dis = forecast.series.river_discharge;
+    if (Array.isArray(dis?.quantiles?.p90) && dis.quantiles.p90.length) {
+      const peak = Math.max(...dis.quantiles.p90);
+      const now = dis.lastValue ?? dis.quantiles.p50?.[0] ?? 0;
+      const step = dis.quantiles.p90.indexOf(peak) + 1;
+      if (now > 0 && peak >= now * 1.2) {
+        items.push({
+          severity: peak >= now * 1.5 ? "high" : "medium",
+          owner: "Hydrology Forecast",
+          title: `River rising — p90 ${Math.round(peak)} m³/s in ${step}d`,
+          detail: `TimesFM 7-day outlook: worst-case discharge climbs from ${Math.round(now)} to ${Math.round(peak)} m³/s within ${step} day(s). Pre-position crews at Batu Kawa / Sg. Maong before the peak.`,
+          humanContext: "The forecast lead time is the window to act — clear the worst drains before the rain, not during it.",
+        });
+      }
+    }
+    const aqiF = forecast.series.aqi;
+    if (Array.isArray(aqiF?.quantiles?.p90) && aqiF.quantiles.p90.length) {
+      const peak = Math.max(...aqiF.quantiles.p90);
+      if (peak >= 100) {
+        const step = aqiF.quantiles.p90.indexOf(peak) + 1;
+        items.push({
+          severity: peak >= 150 ? "high" : "medium",
+          owner: "Health Forecast",
+          title: `Air quality may degrade — p90 AQI ${Math.round(peak)} in ${step}d`,
+          detail: `TimesFM outlook: worst-case AQI reaches ${Math.round(peak)} within ${step} day(s). Stage a haze advisory for sensitive groups; watch Ward I peatland fire risk.`,
+          humanContext: null,
+        });
+      }
+    }
   }
 
   // MET Malaysia active weather warnings.
@@ -2866,12 +2903,54 @@ async function loadMppWardBoundaries() {
   }).catch(() => ({ type: "FeatureCollection", features: [] }));
 }
 
+// IOC 2.0 — TimesFM forecast. Read the static, locally-generated forecast.json
+// (scripts/forecast/forecast_runner.py). Never inferred at request time. If the
+// file is missing (fresh clone / forecaster not yet run) the dashboard degrades
+// to BASELINE in the client. Age >48h is flagged "stale".
+async function loadForecast() {
+  return cached("forecast", 60_000, async () => {
+    const raw = await fs.readFile(path.join(publicDir, "api", "forecast.json"), "utf-8");
+    const doc = JSON.parse(raw);
+    const ageMs = doc.asOf ? Date.now() - Date.parse(doc.asOf) : Infinity;
+    return {
+      status: ageMs < 48 * 3600_000 ? "live" : "stale",
+      asOf: doc.asOf || null,
+      model: doc.model || "timesfm",
+      horizon: doc.horizon || 0,
+      frequency: doc.frequency || "D",
+      site: doc.site || null,
+      series: doc.series || {},
+    };
+  }).catch(() => ({ status: "absent", series: {} }));
+}
+
+// IOC 2.0 — AlphaEarth growth-ring change overlay. Read the newest
+// growth-*.json sidecar produced by scripts/alphaearth/compute_change.py.
+// Absent until Earth Engine auth + the pipeline have been run once.
+async function loadAlphaEarth() {
+  return cached("alphaearth", 3600_000, async () => {
+    const dir = path.join(publicDir, "data", "alphaearth");
+    const files = await fs.readdir(dir).catch(() => []);
+    const sidecars = files.filter((f) => f.startsWith("growth-") && f.endsWith(".json")).sort();
+    if (!sidecars.length) return { status: "absent" };
+    const doc = JSON.parse(await fs.readFile(path.join(dir, sidecars[sidecars.length - 1]), "utf-8"));
+    return {
+      status: "ready",
+      image: `data/alphaearth/${doc.image}`,
+      bounds: doc.bounds,
+      years: doc.years,
+      stats: doc.stats,
+      dataset: doc.dataset,
+    };
+  }).catch(() => ({ status: "absent" }));
+}
+
 async function buildDashboard() {
   const [
     weather, air, airport, jurisdictions, news, fires, quakes,
     padawanZoning, trends, govStats,
     infobanjirRaw, apims, ckanHarvest, exchange, metWarnings, floodForecast,
-    mppCouncillors, mppLocalities,
+    mppCouncillors, mppLocalities, forecast, alphaEarth,
   ] = await Promise.all([
     loadWeather(),
     loadAirQuality(),
@@ -2891,6 +2970,8 @@ async function buildDashboard() {
     loadFloodForecast(),
     loadMppCouncillors(),
     loadMppLocalities(),
+    loadForecast(),
+    loadAlphaEarth(),
   ]);
 
   // Catchment enrichment compounds Infobanjir + OSM drainage. Pure post-process,
@@ -2927,10 +3008,12 @@ async function buildDashboard() {
     apims,
     ckanHarvest,
     floodForecast,
+    forecast,
+    alphaEarth,
     mppCouncillors,
     mppLocalities,
     osm: getOsmStatusSnapshot(),
-    operations: buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings }),
+    operations: buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast }),
     sources: [
       sourceRecord(
         "mpp-reference-map",

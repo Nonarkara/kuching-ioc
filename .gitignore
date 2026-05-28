@@ -4,3 +4,10 @@ npm-debug.log*
 .claude/
 .fly/
 sa-key.json
+
+# IOC 2.0 foundation-model pipelines — local Python venvs + raw GeoTIFFs are
+# heavy and machine-local. The committed artifacts are public/api/forecast.json
+# and public/data/alphaearth/*.png|json (the pipeline OUTPUTS), not the tooling.
+scripts/*/.venv/
+scripts/alphaearth/raw/
+.wrangler/

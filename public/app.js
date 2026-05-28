@@ -735,6 +735,11 @@ async function buildFallbackDashboard() {
       ],
     },
     mapScene: { hydroBands: defaultHydroBands },
+    // IOC 2.0 — forecast + AlphaEarth absent in pure client-fallback (tier 3);
+    // both are static artifacts that ride in via tier 1/2. Stubs keep renderers
+    // safe so the rail shows an idle note and the overlay toggle degrades.
+    forecast: { status: "absent", series: {} },
+    alphaEarth: { status: "absent" },
     // MPP governance — sample stubs so the councillor + locality panels
     // render meaningfully even in pure client-fallback mode (no server, no snapshot).
     mppCouncillors: {
@@ -1209,6 +1214,12 @@ function renderUrbanLayerToggle() {
     layer.active = !layer.active;
     btn.classList.toggle("active", layer.active);
 
+    // IOC 2.0 — AlphaEarth growth overlay is a raster image, not GeoJSON.
+    if (layer.type === "image") {
+      toggleAlphaEarthOverlay(layer.active, btn);
+      return;
+    }
+
     if (!layer.active) {
       const existing = state.urbanLayerGroups.get(layer.id);
       if (existing && state.map.hasLayer(existing)) state.map.removeLayer(existing);
@@ -1338,6 +1349,99 @@ function renderUrbanLayerToggle() {
       renderGisLegend(activeIds);
     }
   }));
+}
+
+// IOC 2.0 — AlphaEarth growth-ring change overlay (Leaflet imageOverlay).
+// Raster sits over the Kota Padawan growth frontier; amber→red marks where the
+// land-surface embedding shifted most between 2017 and the latest year.
+function toggleAlphaEarthOverlay(active, btn) {
+  const ae = state.payload?.alphaEarth;
+  if (!active) {
+    if (state.alphaEarthOverlay && state.map.hasLayer(state.alphaEarthOverlay)) {
+      state.map.removeLayer(state.alphaEarthOverlay);
+    }
+    return;
+  }
+  if (!ae || ae.status !== "ready" || !ae.bounds || !ae.image) {
+    // Pipeline not run yet (Earth Engine auth pending) — degrade gracefully.
+    btn.textContent = "Growth (pending)";
+    btn.classList.add("layer-empty");
+    return;
+  }
+  if (!state.alphaEarthOverlay) {
+    const b = ae.bounds;
+    const url = apiUrl("/" + ae.image.replace(/^\//, ""));
+    state.alphaEarthOverlay = window.L.imageOverlay(
+      url,
+      [[b.south, b.west], [b.north, b.east]],
+      { opacity: 0.85, interactive: false, className: "alphaearth-overlay" },
+    );
+  }
+  state.alphaEarthOverlay.addTo(state.map);
+  if (state.map.getZoom() < 11) state.map.flyTo([(ae.bounds.south + ae.bounds.north) / 2, (ae.bounds.west + ae.bounds.east) / 2], 12, { duration: 0.6 });
+}
+
+// IOC 2.0 — TimesFM forecast rail. Each card: current reading, a sparkline with
+// the p10–p90 uncertainty band around the p50 median (history → forecast), and
+// the 7-day outlook with worst-case p90. p90 = the worst case, always shown
+// alongside the median (Nonism §12.5). Source badge: TIMESFM vs BASELINE.
+function forecastBand(history, q) {
+  const hist = (Array.isArray(history) ? history : []).slice(-14);
+  const p10 = q?.p10 || [], p50 = q?.p50 || [], p90 = q?.p90 || [];
+  if (!p50.length) return "";
+  const w = 168, h = 44, pad = 3;
+  const histN = hist.length, fcN = p50.length, total = histN + fcN;
+  const all = [...hist, ...p10, ...p50, ...p90].filter((v) => Number.isFinite(v));
+  if (all.length < 2) return "";
+  const mn = Math.min(...all), mx = Math.max(...all), rng = Math.max(mx - mn, 1e-6);
+  const X = (idx) => (total <= 1 ? pad : (idx / (total - 1)) * (w - 2 * pad) + pad);
+  const Y = (v) => h - pad - ((v - mn) / rng) * (h - 2 * pad);
+  const up = p90.map((v, i) => `${X(histN + i).toFixed(1)},${Y(v).toFixed(1)}`);
+  const dn = p10.map((v, i) => `${X(histN + i).toFixed(1)},${Y(v).toFixed(1)}`).reverse();
+  const bandPath = up.length ? `M ${up.join(" L ")} L ${dn.join(" L ")} Z` : "";
+  const medPts = [...hist, ...p50].map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+  const splitX = X(Math.max(histN - 1, 0)).toFixed(1);
+  return `<svg viewBox="0 0 ${w} ${h}" class="fc-spark" preserveAspectRatio="none" aria-hidden="true">
+    ${bandPath ? `<path d="${bandPath}" class="fc-band"/>` : ""}
+    <line x1="${splitX}" y1="${pad}" x2="${splitX}" y2="${h - pad}" class="fc-now-line"/>
+    <polyline points="${medPts}" class="fc-median" fill="none"/>
+  </svg>`;
+}
+
+function renderForecastRail(payload) {
+  const el = $("forecastRail");
+  if (!el) return;
+  const fc = payload.forecast;
+  if (!fc || fc.status === "absent" || !fc.series || !Object.keys(fc.series).length) {
+    el.innerHTML = `<div class="forecast-empty">Forecast engine idle — run <code>scripts/forecast/forecast_runner.py</code> to populate the 7-day outlook.</div>`;
+    return;
+  }
+  const order = ["river_discharge", "rainfall", "aqi", "pm25"];
+  const keys = order.filter((k) => fc.series[k])
+    .concat(Object.keys(fc.series).filter((k) => !order.includes(k)));
+  const badge = fc.status === "stale" ? "STALE" : (String(fc.model || "").includes("timesfm") ? "TIMESFM" : "BASELINE");
+  el.innerHTML = `
+    <div class="forecast-rail-head">
+      <span class="forecast-badge" data-src="${badge === "TIMESFM" ? "timesfm" : "stub"}">${badge}</span>
+      <span class="forecast-sub">${fc.horizon || 7}-day outlook · p10–p90 band</span>
+    </div>
+    <div class="forecast-cards">
+      ${keys.map((k) => {
+        const s = fc.series[k];
+        const last = s.median?.length ? s.median[s.median.length - 1] : null;
+        const p10 = s.quantiles?.p10?.length ? s.quantiles.p10[s.quantiles.p10.length - 1] : null;
+        const p90 = s.quantiles?.p90?.length ? s.quantiles.p90[s.quantiles.p90.length - 1] : null;
+        const glyph = last > s.lastValue ? "▲" : last < s.lastValue ? "▼" : "—";
+        const tone = (k === "river_discharge" && p90 != null && s.lastValue && p90 >= s.lastValue * 1.5) ? "warn"
+          : (k === "aqi" && p90 >= 100) ? "warn" : "cool";
+        return `<div class="forecast-card" data-tone="${tone}">
+          <div class="fc-card-label">${escapeHtml(s.label || k)}</div>
+          <div class="fc-now-row"><span class="fc-now-val">${s.lastValue}</span><span class="fc-unit">${escapeHtml(s.unit || "")}</span></div>
+          ${forecastBand(s.history, s.quantiles)}
+          <div class="fc-outlook"><span class="fc-glyph">${glyph}</span> ${last} <span class="fc-range">[${p10} – ${p90}]</span></div>
+        </div>`;
+      }).join("")}
+    </div>`;
 }
 
 function renderExchange(exchange) {
@@ -2904,6 +3008,7 @@ function renderDashboard(payload) {
   renderBriefStrip(payload);
 
   renderPosture(payload);
+  renderForecastRail(payload);
   renderMetrics(payload.metrics.slice(0, 6));
   renderMap(payload);
   renderAirportStats(payload.airport);

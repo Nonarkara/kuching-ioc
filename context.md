@@ -70,3 +70,43 @@ Layers: CartoDB dark/light/satellite, Esri satellite, Land Use, Flood Risk, Drai
 - Partner logos must stay visible: PMUA, depa, Axiom, ReTL, Smart City Thailand, ASCN.
 - KCH airport reference: [1.4847, 110.347].
 - public/api/ must NOT be in .gitignore — baked JSON is part of the static deploy.
+
+---
+
+## IOC 2.0 — Foundation-Model Intelligence (added 2026-05-28)
+
+The board now predicts and detects change, not just reports the present.
+
+### TimesFM Forecast Engine (LIVE)
+- **What:** Google TimesFM-2.0-500m zero-shot probabilistic forecasts (p10/p50/p90, 7-day) for river discharge, rainfall, AQI, PM2.5. p90 = worst case, always shown.
+- **Pipeline:** `scripts/forecast/forecast_runner.py` (py3.11 venv at `scripts/forecast/.venv`, gitignored). Pulls ~90d history from Open-Meteo (keyless: flood/archive/air-quality APIs), runs TimesFM locally on the M5 Max (CPU, model cached ~2GB after first run), writes `public/api/forecast.json` (committed).
+- **Served via:** server `loadForecast()` → `payload.forecast` → baked into `dashboard.json` by `build.mjs` → client `renderForecastRail()` (situation rail, above DIRECTIVES). Forecast also drives auto-directives in `buildOperations` (p90 river ≥1.2× now, or p90 AQI ≥100).
+- **Runbook (nightly, local — NOT in CI):**
+  ```bash
+  scripts/forecast/.venv/bin/python scripts/forecast/forecast_runner.py
+  git add public/api/forecast.json && git commit -m "data: refresh forecast" && git push
+  ```
+  First-time setup: `cd scripts/forecast && uv venv --python 3.11 .venv && .venv/bin/python -m pip install -r requirements.txt` (or `uv pip install`).
+- **Gotchas:** Open-Meteo 429s on bursts → runner has backoff + stagger. The `/v1/forecast past_days` endpoint truncates precip history → rainfall uses `archive-api/v1/archive` (lags ~5d). CI cannot run TimesFM (no GPU/2GB model) — forecast.json is committed and CI just bakes it.
+
+### AlphaEarth Growth-Ring Change Detection (PIPELINE READY — needs EE auth)
+- **What:** Google DeepMind satellite-embedding L2 change 2017→latest over the Kota Padawan growth ring → amber overlay on the map ("Growth 2017→24" urban-layer toggle).
+- **Pipeline:** `scripts/alphaearth/{fetch_embeddings.py,compute_change.py}` (py3.11 venv, gitignored). AOI `kuching_padawan` = bbox (110.27, 1.39, 110.40, 1.49), scale 30 m.
+- **Served via:** server `loadAlphaEarth()` reads newest `public/data/alphaearth/growth-*.json` sidecar → `payload.alphaEarth` → client `toggleAlphaEarthOverlay()` (Leaflet imageOverlay). Degrades to "Growth (pending)" until the raster exists.
+- **ONE-TIME HANDOFF (Dr Non — interactive Google login required):**
+  ```bash
+  cd "Padawan Municipality Kuching Dashboard"
+  scripts/alphaearth/.venv/bin/python -m ee.cli.eecli authenticate   # browser OAuth
+  export EE_PROJECT=<your-earth-engine-project-id>                   # an EE-enabled GCP project
+  scripts/alphaearth/.venv/bin/python scripts/alphaearth/fetch_embeddings.py --aoi kuching_padawan --years 2017 2024
+  scripts/alphaearth/.venv/bin/python scripts/alphaearth/compute_change.py \
+    --year-a scripts/alphaearth/raw/alphaearth-kuching_padawan-2017.tif \
+    --year-b scripts/alphaearth/raw/alphaearth-kuching_padawan-2024.tif \
+    --out public/data/alphaearth/growth-padawan-2017-2024.png
+  node build.mjs && git add public/data/alphaearth && git commit -m "data: AlphaEarth growth overlay" && git push
+  ```
+  (If EE rejects the download as >50MB, bump `--scale 40`.)
+
+### Deferred (next increment)
+- JPS Infobanjir **rainfall** station scrape (state=SRK) alongside water level.
+- DOSM **district-level** population/income (Kuching/Padawan/Samarahan) in `loadGovStats`.

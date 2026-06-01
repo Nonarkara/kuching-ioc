@@ -1363,9 +1363,13 @@ function toggleAlphaEarthOverlay(active, btn) {
     return;
   }
   if (!ae || ae.status !== "ready" || !ae.bounds || !ae.image) {
-    // Pipeline not run yet (Earth Engine auth pending) — degrade gracefully.
-    btn.textContent = "Growth (pending)";
+    // Pipeline not run yet (Earth Engine auth pending) — degrade gracefully AND
+    // revert layer.active + button state so a second click isn't a no-op.
+    const layer = URBAN_LAYERS.find((l) => l.id === "growth");
+    if (layer) layer.active = false;
+    btn.classList.remove("active");
     btn.classList.add("layer-empty");
+    btn.textContent = "Growth (pending)";
     return;
   }
   if (!state.alphaEarthOverlay) {
@@ -1412,33 +1416,47 @@ function renderForecastRail(payload) {
   const el = $("forecastRail");
   if (!el) return;
   const fc = payload.forecast;
+  const tEmpty = t("forecastIdle") || "Forecast engine idle — run scripts/forecast/forecast_runner.py to populate the 7-day outlook.";
   if (!fc || fc.status === "absent" || !fc.series || !Object.keys(fc.series).length) {
-    el.innerHTML = `<div class="forecast-empty">Forecast engine idle — run <code>scripts/forecast/forecast_runner.py</code> to populate the 7-day outlook.</div>`;
+    el.innerHTML = `<div class="forecast-empty">${escapeHtml(tEmpty).replace("scripts/forecast/forecast_runner.py", "<code>scripts/forecast/forecast_runner.py</code>")}</div>`;
     return;
   }
+  // Filter to series with a usable median array — defensive against malformed JSON.
   const order = ["river_discharge", "rainfall", "aqi", "pm25"];
-  const keys = order.filter((k) => fc.series[k])
-    .concat(Object.keys(fc.series).filter((k) => !order.includes(k)));
-  const badge = fc.status === "stale" ? "STALE" : (String(fc.model || "").includes("timesfm") ? "TIMESFM" : "BASELINE");
+  const valid = (k) => fc.series[k] && Array.isArray(fc.series[k].median) && fc.series[k].median.length > 0;
+  const keys = order.filter(valid).concat(Object.keys(fc.series).filter((k) => !order.includes(k) && valid(k)));
+  if (!keys.length) {
+    el.innerHTML = `<div class="forecast-empty">${escapeHtml(tEmpty)}</div>`;
+    return;
+  }
+  const isTimesfm = String(fc.model || "").includes("timesfm");
+  const badge = fc.status === "stale" ? (t("forecastStale") || "STALE")
+    : isTimesfm ? "TIMESFM" : (t("forecastBaseline") || "BASELINE");
+  const horizonLabel = t("forecastSub") || `${fc.horizon || 7}-day outlook · p10–p90 band`;
   el.innerHTML = `
     <div class="forecast-rail-head">
-      <span class="forecast-badge" data-src="${badge === "TIMESFM" ? "timesfm" : "stub"}">${badge}</span>
-      <span class="forecast-sub">${fc.horizon || 7}-day outlook · p10–p90 band</span>
+      <span class="forecast-badge" data-src="${isTimesfm ? "timesfm" : "stub"}">${escapeHtml(badge)}</span>
+      <span class="forecast-sub">${escapeHtml(horizonLabel)}</span>
     </div>
     <div class="forecast-cards">
       ${keys.map((k) => {
         const s = fc.series[k];
-        const last = s.median?.length ? s.median[s.median.length - 1] : null;
-        const p10 = s.quantiles?.p10?.length ? s.quantiles.p10[s.quantiles.p10.length - 1] : null;
-        const p90 = s.quantiles?.p90?.length ? s.quantiles.p90[s.quantiles.p90.length - 1] : null;
-        const glyph = last > s.lastValue ? "▲" : last < s.lastValue ? "▼" : "—";
-        const tone = (k === "river_discharge" && p90 != null && s.lastValue && p90 >= s.lastValue * 1.5) ? "warn"
-          : (k === "aqi" && p90 >= 100) ? "warn" : "cool";
+        const median = s.median;
+        const q = s.quantiles || {};
+        const last = median[median.length - 1];
+        const p10 = Array.isArray(q.p10) && q.p10.length ? q.p10[q.p10.length - 1] : null;
+        const p90 = Array.isArray(q.p90) && q.p90.length ? q.p90[q.p90.length - 1] : null;
+        const now = s.lastValue;
+        const glyph = (last != null && now != null) ? (last > now ? "▲" : last < now ? "▼" : "—") : "—";
+        const tone = (k === "river_discharge" && p90 != null && now && p90 >= now * 1.5) ? "warn"
+          : (k === "aqi" && p90 != null && p90 >= 100) ? "warn" : "cool";
+        const label = t(`forecastSeries_${k}`) || s.label || k;
+        const range = (p10 != null && p90 != null) ? `[${p10} – ${p90}]` : "";
         return `<div class="forecast-card" data-tone="${tone}">
-          <div class="fc-card-label">${escapeHtml(s.label || k)}</div>
-          <div class="fc-now-row"><span class="fc-now-val">${s.lastValue}</span><span class="fc-unit">${escapeHtml(s.unit || "")}</span></div>
+          <div class="fc-card-label">${escapeHtml(label)}</div>
+          <div class="fc-now-row"><span class="fc-now-val">${now ?? "—"}</span><span class="fc-unit">${escapeHtml(s.unit || "")}</span></div>
           ${forecastBand(s.history, s.quantiles)}
-          <div class="fc-outlook"><span class="fc-glyph">${glyph}</span> ${last} <span class="fc-range">[${p10} – ${p90}]</span></div>
+          <div class="fc-outlook"><span class="fc-glyph">${glyph}</span> ${last ?? "—"} <span class="fc-range">${range}</span></div>
         </div>`;
       }).join("")}
     </div>`;
@@ -3173,7 +3191,10 @@ function setLang(lang) {
   });
   // Re-render focus toggle labels
   if (state.map) renderFocusToggle();
-  if (state.payload) renderRuntimeMeta(state.payload);
+  if (state.payload) {
+    renderRuntimeMeta(state.payload);
+    renderForecastRail(state.payload);
+  }
   // Highlight active lang button
   document.querySelectorAll(".lang-btn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
 }

@@ -2911,7 +2911,8 @@ async function loadForecast() {
   return cached("forecast", 60_000, async () => {
     const raw = await fs.readFile(path.join(publicDir, "api", "forecast.json"), "utf-8");
     const doc = JSON.parse(raw);
-    const ageMs = doc.asOf ? Date.now() - Date.parse(doc.asOf) : Infinity;
+    const parsed = doc.asOf ? Date.parse(doc.asOf) : NaN;
+    const ageMs = Number.isFinite(parsed) ? Date.now() - parsed : Infinity;
     return {
       status: ageMs < 48 * 3600_000 ? "live" : "stale",
       asOf: doc.asOf || null,

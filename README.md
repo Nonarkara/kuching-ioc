@@ -1,6 +1,6 @@
-# Secretary Goh's Super Dashboard // V2.0 Liquid Glass
+# Secretary Goh's Super Dashboard // V3.0 Lean Command
 
-A mission-critical, high-fidelity Operational OS for the Padawan Municipal Council, transforming Greater Kuching's municipal data into a Red Dot-standard situational awareness workspace.
+A mission-critical, high-fidelity Operational OS for the Padawan Municipal Council. **V3.0 "Lean Command"** executes a first-principles optimization: deleting redundant pipelines, consolidating disparate loaders into unified streams, and removing fake features to ensure every pixel serves a tactical purpose.
 
 ## Local Run
 
@@ -61,17 +61,20 @@ fly deploy
 
 The Fly app serves the same frontend as the local Node server. The HTML is rendered with `LIVE BOARD` metadata and live `/api/*` endpoints on the same origin.
 
-## V2.0 "Liquid Glass" Stack
+## V3.0 "Lean Command" Stack
 
+- **Musk-Style Optimization**: question every requirement, delete any part or process you can, simplify only after deletion.
 - **Zero-dependency Core**: Node 20 server providing cached, highly-available JSON telemetry. 
-- **High-Fidelity UI**: Dark themed "Liquid Glass" interface using Manrope/Inter typography and backdrop-blur glassmorphism.
-- **Data Density**: Real-time KPI strip with 24h sparklines and linear radar-sweep map.
+- **High-Fidelity UI**: Dark themed "Liquid Glass" HUD using Manrope/JetBrains Mono typography and glassmorphism.
+- **Asset Optimized**: Core logos compressed by 95% (7.7MB → 216K) for sub-second load times.
 
 ## Intelligence Pipeline
 
-- **NASA FIRMS**: Live satellite monitoring of thermal hotspots and fire anomalies in the Malaysia envelope.
+- **Gov Stats**: Unified census and open-data pipeline merging DOSM and CKAN streams.
+- **Met Warnings**: Consolidated weather warning engine combining MetMalaysia alerts and urban risk forecasts.
+- **NASA FIRMS**: Live satellite monitoring of thermal hotspots and fire anomalies.
 - **USGS Seismic**: Regional earthquake tracking and magnitude monitoring.
-- **OpenSky Network**: Live airspace tracking for KCH, classifying arrivals, departures, and holdings.
+- **OpenSky Network**: Live airspace tracking for KCH, classifying arrivals and departures.
 - **Open-Meteo**: Deep weather and air quality telemetry with 24h trend analysis.
 - **NASA GIBS**: Orbital context via high-resolution satellite imagery layers.
 - **Google News RSS**: Curated, deduped local news rail covering Kuching and Padawan sectors.

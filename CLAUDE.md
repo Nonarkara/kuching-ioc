@@ -66,10 +66,8 @@ Dockerfile          → node:20-alpine, serves on port 3000
 | Google News RSS | Local press aggregation | No | 15min |
 | Google Trends RSS | Malaysia trending | No | 30min |
 | MBKS/MPP/DBKU | Municipal website scraping | No | 15min |
-| JPS Infobanjir | Flood/hydro stations | No | 15min |
-| AQICN (APIMS) | Ground air quality | No (needs token) | 15min |
-| OpenDOSM | Census demographics | No | 6h |
-| Sarawak CKAN | Open data catalog | No | 6h |
+| MetMalaysia | Official weather warnings | No | 15min |
+| Gov Stats | DOSM + Sarawak CKAN | No | 6h |
 | OSM Overpass | Drainage/transit/land use GeoJSON | No | 6h |
 
 "No CORS" sources only work via server.mjs. On GitHub Pages, they come from the baked `dashboard.json` or from `buildFallbackDashboard()` stubs.
@@ -87,6 +85,7 @@ Dockerfile          → node:20-alpine, serves on port 3000
 - **Overlays**: Jurisdiction boundaries (3 polygons), Sarawak River polyline, 10 local markers, airport flight markers, hydro station markers
 - **Urban layers** (toggleable): Land Use, Flood Risk, Drainage, Transit Network — loaded from `public/api/layers/*.json`
 - **Catchment routing**: When drainage layer is active, clicking a flood station highlights its upstream drainage segments
+- **Coordinate HUD**: Hovering the map shows a bottom-left overlay with live lat/lng (6 d.p.); click snaps the coord (amber border); COPY button writes `"lat, lng"` to clipboard (green flash). Designed for field ops sharing locations via WhatsApp/Telegram. Pattern documented in `03-Topics/map-coord-hud.md` in the Obsidian vault — reusable across all Leaflet dashboards.
 
 ---
 
@@ -129,8 +128,8 @@ The left rail was intentionally killed. The ASEAN clocks, FX rates, and trend li
 | `renderBriefStrip()` | `#briefNow`, `#briefNext`, `#briefBlind` | 3-card directive summary |
 | `renderPostureBlock()` | `#postureBlock` | Operational posture (Stable/Watch/Stretched) |
 | `renderOperations()` | `#operationList` | Tactical directives |
-| `renderNewsIntake()` | `#sentimentPanel` | 4-column news count grid (OFF/EN/BM/ZH) + items |
-| `renderOfficialPulse()` | `#officialPulse` | Census sync block (needs `payload.openDosmStats`) |
+| `renderNewsIntake()` | `#newsIntakePanel` | 4-column news count grid (OFF/EN/BM/ZH) + items |
+| `renderOfficialPulse()` | `#officialPulse` | Census sync block (needs `payload.govStats`) |
 | `renderAirportStats()` | `#airportStats` | Flight tracker with arrival/departure breakdown |
 | `renderSatelliteDeck()` | `#satelliteGrid`, `#satelliteMeta` | 6-card NASA GIBS grid + metadata panel |
 | `renderQualitativeIntel()` | `#qualHero`, `#qualObservations`, etc. | Human observations + field checks |
@@ -164,6 +163,11 @@ node build.mjs && npx serve public
 ---
 
 ## Design Rules for This Dashboard
+
+### The Musk-Style Filter (First Principles)
+1. **Question every requirement.** Who owns it? Why does it exist?
+2. **Delete any part or process you can.** If you're not adding back at least 10% of what you deleted, you're not deleting enough.
+3. **Simplify and optimize only after deletion.** Never optimize something that should not exist.
 
 ### Visual Identity: "Liquid Glass" HUD
 - **Dark mode default**: `#010203` background, cyan (`#00f3ff`) accent, grid texture overlay

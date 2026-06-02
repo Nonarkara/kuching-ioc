@@ -61,3 +61,15 @@ Per §13: the same mistake never happens twice.
 - **What went wrong:** n/a — clarification. Dr Non's "Thai FM" meant Google **TimesFM**.
 - **Correct behaviour:** TimesFM (2GB model, CPU/GPU) and AlphaEarth (Earth Engine auth) run LOCALLY on the M5 Max and commit static artifacts (`public/api/forecast.json`, `public/data/alphaearth/*`). GitHub CI only bakes the committed artifacts into dashboard.json — it must never try to regenerate them. Keep `scripts/*/.venv` gitignored.
 - **How to recognise:** CI failing on a missing python/timesfm/earthengine dependency = something tried to run a model in CI.
+
+## 2026-06-02 · Earth Engine project registration blocks GCS access — bypass via parquet index
+
+- **What went wrong:** EE project `ee-nonsmartcity` exists and EE API is enabled, but registration (accept ToS in web console) was needed. Can't register programmatically.
+- **Correct behaviour:** Use the AlphaEarth public GCS bucket `gs://alphaearth_foundations` directly. Download `aef_index.parquet` (66MB), find the UTM tile via bbox intersection, range-read with rasterio /vsigs/ + ADC + requester-pays billing on a billing-linked project. No EE needed.
+- **How to recognise:** `EEException: Project X is not registered to use Earth Engine` during `ee.Initialize()`. Fall back to GCS immediately.
+
+## 2026-06-02 · AlphaEarth COG — 64-band full read times out; chunk by 8 bands; rasterio UTM bounds need reprojection
+
+- **What went wrong:** `src.read(window=win)` on the full 64-band COG fails with RasterioIOError (HTTP timeout). Also `rasterio.windows.from_bounds` raises WindowError with inverted-Y transform. Also sidecar bounds were in UTM not WGS84 — Leaflet imageOverlay would have placed raster at wrong position.
+- **Correct behaviour:** Read in chunks of 8 bands (`range(1, 65, 8)`), concatenate with numpy. Compute pixel window via inverse affine instead of `from_bounds`. Reproject bounds via `rasterio.warp.transform_bounds(src.crs, "EPSG:4326", ...)` before writing sidecar JSON.
+- **How to recognise:** `RasterioIOError: Read failed` on a COG = try band chunking. WindowError on `from_bounds` = affine direction mismatch, use `~src.transform` directly.

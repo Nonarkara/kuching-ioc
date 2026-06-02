@@ -26,6 +26,7 @@ except ImportError:
     sys.exit(2)
 try:
     import rasterio
+    from rasterio.warp import transform_bounds as rasterio_transform_bounds
 except ImportError:
     print("rasterio missing. uv pip install -r scripts/alphaearth/requirements.txt", file=sys.stderr)
     sys.exit(2)
@@ -66,7 +67,13 @@ def main() -> int:
     with rasterio.open(args.year_a) as sa, rasterio.open(args.year_b) as sb:
         if sa.shape != sb.shape:
             raise SystemExit(f"Shape mismatch: {sa.shape} vs {sb.shape}")
-        bounds = sa.bounds
+        utm_bounds = sa.bounds
+        # Reproject tile bounds to WGS84 so Leaflet imageOverlay can place it.
+        wgs84_w, wgs84_s, wgs84_e, wgs84_n = rasterio_transform_bounds(
+            sa.crs, "EPSG:4326",
+            utm_bounds.left, utm_bounds.bottom, utm_bounds.right, utm_bounds.top,
+            densify_pts=21,
+        )
         a = sa.read().astype(np.float32)
         b = sb.read().astype(np.float32)
 
@@ -87,8 +94,9 @@ def main() -> int:
     sidecar = args.out.with_suffix(".json")
     sidecar.write_text(json.dumps({
         "image": args.out.name,
-        "bounds": {"west": bounds.left, "south": bounds.bottom,
-                   "east": bounds.right, "north": bounds.top},
+        # WGS84 (EPSG:4326) bounds for Leaflet imageOverlay
+        "bounds": {"west": round(wgs84_w, 6), "south": round(wgs84_s, 6),
+                   "east": round(wgs84_e, 6), "north": round(wgs84_n, 6)},
         "years": {"a": ya, "b": yb},
         "stats": {"p_low": p_lo, "p_high": p_hi, "max_l2": float(l2.max()),
                   "median_l2": float(np.median(l2)), "pixel_count": int(t.size)},

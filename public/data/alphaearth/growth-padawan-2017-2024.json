@@ -1,0 +1,21 @@
+{
+  "image": "growth-padawan-2017-2024.png",
+  "bounds": {
+    "west": 110.269963,
+    "south": 1.390003,
+    "east": 110.40006,
+    "north": 1.482227
+  },
+  "years": {
+    "a": 2017,
+    "b": 2024
+  },
+  "stats": {
+    "p_low": 106.08016204833984,
+    "p_high": 317.3439025878906,
+    "max_l2": 432.909912109375,
+    "median_l2": 106.08016204833984,
+    "pixel_count": 1474493
+  },
+  "dataset": "GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL"
+}

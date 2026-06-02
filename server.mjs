@@ -1492,16 +1492,52 @@ async function loadCKANDatasets(baseUrl, query) {
   }
 }
 
+// IOC 2.0 — Greater Kuching district focus. Districts the dashboard tracks
+// (DOSM admin boundaries; Padawan's growth-ring story spans Kuching + Serian).
+const GREATER_KUCHING_DOSM_DISTRICTS = ["Kuching", "Samarahan", "Serian"];
+
 async function loadGovStats() {
   return cached("gov-stats", 12 * 60 * 60 * 1000, async () => {
-    const [ckanData, dosmData] = await Promise.allSettled([
+    const [ckanData, dosmStateData, dosmDistrictData] = await Promise.allSettled([
       loadCKANDatasets("https://catalog.sarawak.gov.my", "population land use tourism"),
-      fetchJson("https://api.data.gov.my/opendosm/population_state?state=Sarawak", 15000)
+      fetchJson("https://api.data.gov.my/opendosm/population_state?state=Sarawak", 15000),
+      // DOSM's data-catalogue endpoint doesn't filter server-side; pull a slice
+      // sorted by latest date and filter to Sarawak districts in code. Sarawak
+      // has many districts in the alphabetical sweep — limit=50000 captures
+      // every Sarawak (state, district, overall/overall/overall) row at the
+      // latest reporting year. ~7 MB response, cached 12 h.
+      fetchJson(
+        "https://api.data.gov.my/data-catalogue?id=population_district&sort=-date&limit=50000",
+        25000,
+      ),
     ]);
 
     const datasets = ckanData.status === "fulfilled" ? ckanData.value : [];
-    const dosm = dosmData.status === "fulfilled" ? dosmData.value : null;
+    const dosm = dosmStateData.status === "fulfilled" ? dosmStateData.value : null;
     const latest = Array.isArray(dosm) ? dosm[dosm.length - 1] : null;
+
+    // Reduce 10k records to per-district latest-year overall totals for the
+    // three Greater Kuching DOSM districts. Filter overall age + both sex +
+    // overall ethnicity to get a single population number per (district, year).
+    const districtRows = dosmDistrictData.status === "fulfilled" && Array.isArray(dosmDistrictData.value)
+      ? dosmDistrictData.value : [];
+    const districts = GREATER_KUCHING_DOSM_DISTRICTS.map((name) => {
+      const rows = districtRows.filter((r) =>
+        (r.state || "").toLowerCase() === "sarawak"
+        && (r.district || "").toLowerCase() === name.toLowerCase()
+        && r.age === "overall" && r.sex === "overall" && r.ethnicity === "overall"
+      );
+      if (!rows.length) return { name, status: "missing" };
+      rows.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+      const top = rows[0];
+      // OpenDOSM `population` is in thousands; convert to absolute count.
+      const pop = top.population != null ? Math.round(Number(top.population) * 1000) : null;
+      return {
+        name, status: "live",
+        population: pop,
+        year: top.date ? top.date.slice(0, 4) : null,
+      };
+    });
 
     return {
       updatedAt: nowIso(),
@@ -1514,6 +1550,7 @@ async function loadGovStats() {
         source: "OpenDOSM",
         latestSarawakPop: latest?.abs || 2907500,
         year: latest?.year || 2024,
+        districts,
       }
     };
   });
@@ -1659,6 +1696,33 @@ function parseInfobanjirHtml(html) {
   return found;
 }
 
+// IOC 2.0 — Per-station rainfall ground truth via Open-Meteo. JPS Infobanjir
+// publishes rainfall pages but as JS-rendered HTML (brittle scrape); Open-Meteo's
+// keyless daily precipitation API gives the same effective signal at every
+// hydro-station coordinate. One call per station, ~6 in parallel, 15-min cache.
+async function loadStationRainfall() {
+  return cached("station-rainfall", 15 * 60 * 1000, async () => {
+    const results = await Promise.all(
+      SARAWAK_HYDRO_STATIONS.map(async (s) => {
+        try {
+          const url = `https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&daily=precipitation_sum&past_days=1&forecast_days=2&timezone=Asia%2FKuching`;
+          const j = await fetchJson(url, 9000);
+          const vals = (j?.daily?.precipitation_sum) || [];
+          // past_days=1, forecast_days=2 → 3 values: [yesterday, today, tomorrow]
+          return [s.id, {
+            pastMm: round(vals[0] ?? 0, 1),
+            todayMm: round(vals[1] ?? 0, 1),
+            tomorrowMm: round(vals[2] ?? 0, 1),
+          }];
+        } catch {
+          return [s.id, null];
+        }
+      })
+    );
+    return new Map(results.filter(([, v]) => v));
+  }).catch(() => new Map());
+}
+
 async function loadInfobanjir() {
   return cached("jps-infobanjir", 15 * 60 * 1000, async () => {
     const reference = SARAWAK_HYDRO_STATIONS.map((s) => ({
@@ -1667,6 +1731,7 @@ async function loadInfobanjir() {
       band: "reference",
       bandLabel: "Reference",
     }));
+    const rainByStation = await loadStationRainfall();
 
     const candidates = [
       "https://publicinfobanjir.water.gov.my/aras-air/data-paras-air/?state=SWK&lang=en&menu=20",
@@ -1690,17 +1755,22 @@ async function loadInfobanjir() {
     }
 
     const stations = reference.map((station) => {
+      const rain = rainByStation.get(station.id) || null;
+      const enriched = rain
+        ? { rainfallPastMm: rain.pastMm, rainfallTodayMm: rain.todayMm, rainfallTomorrowMm: rain.tomorrowMm }
+        : {};
       if (live && live.has(station.id)) {
         const level = live.get(station.id);
         const band = classifyHydroBand(level, station.thresholds);
         return {
           ...station,
+          ...enriched,
           waterLevelM: round(level, 2),
           band,
           bandLabel: HYDRO_BANDS.find((b) => b.id === band)?.label || band,
         };
       }
-      return station;
+      return { ...station, ...enriched };
     });
 
     const liveCount = stations.filter((s) => s.waterLevelM != null).length;
@@ -3001,7 +3071,7 @@ async function buildDashboard() {
     exchange,
     fires,
     quakes,
-    govStats: { latestSarawakPop: govStats.dosm.latestSarawakPop, year: govStats.dosm.year, datasetCount: govStats.sarawak.datasetCount, updatedAt: govStats.updatedAt },
+    govStats: { latestSarawakPop: govStats.dosm.latestSarawakPop, year: govStats.dosm.year, datasetCount: govStats.sarawak.datasetCount, updatedAt: govStats.updatedAt, districts: govStats.dosm.districts || [] },
     sarawakStats: govStats.sarawak,
     openDosmStats: govStats.dosm,
     metWarnings,

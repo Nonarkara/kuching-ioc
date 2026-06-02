@@ -713,7 +713,8 @@ async function buildFallbackDashboard() {
       status: "fallback", year: 2024,
       latestSarawakPop: "2,907,500",
       datasetCount: 142,
-      updatedAt: gen
+      updatedAt: gen,
+      districts: [],
     },
     metWarnings: {
       status: "fallback",
@@ -2419,7 +2420,15 @@ function renderOfficialPulse(payload) {
   const el = $("officialPulse");
   if (!el || !payload.govStats?.updatedAt) return;
   const gov = payload.govStats;
-  
+  // IOC 2.0 — district granularity. DOSM gives us Kuching / Samarahan / Serian
+  // (Padawan's growth ring spans Kuching + Serian admin districts). Show each
+  // as a chip; degrades to silence if the upstream dataset is unreachable.
+  const districts = Array.isArray(gov.districts) ? gov.districts.filter((d) => d.status === "live" && d.population != null) : [];
+  const districtChips = districts.length
+    ? `<div class="pulse-districts">${districts.map((d) =>
+        `<span class="pulse-district"><span class="pd-name">${escapeHtml(d.name)}</span><strong>${num(d.population, 0)}</strong></span>`
+      ).join("")}</div>` : "";
+
   el.innerHTML = `
     <div class="official-pulse-block">
       <div class="pulse-header">
@@ -2436,6 +2445,7 @@ function renderOfficialPulse(payload) {
           <span>CKAN Datasets</span>
         </div>
       </div>
+      ${districtChips}
     </div>`;
 }
 

@@ -2950,6 +2950,24 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
   text-transform: uppercase;
 }
 
+/* === IOC 2.0 — DOSM District Chips (Official Pulse) === */
+.pulse-districts {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+  padding-top: 6px; border-top: 1px solid var(--line);
+}
+.pulse-district {
+  display: inline-flex; flex-direction: column; align-items: flex-start;
+  padding: 3px 6px; border: 1px solid var(--line); background: var(--card-bg);
+  min-width: 56px;
+}
+.pulse-district .pd-name {
+  font-family: var(--font-mono); font-size: 8px; color: var(--soft);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.pulse-district strong {
+  font-family: var(--font-mono); font-size: 10px; color: var(--ink); font-weight: 700;
+}
+
 /* === IOC 2.0 — TimesFM Forecast Rail === */
 .forecast-rail { display: flex; flex-direction: column; gap: 6px; }
 .forecast-rail-head {

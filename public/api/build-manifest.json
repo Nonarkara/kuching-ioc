@@ -1,8 +1,8 @@
 {
-  "builtAt": "2026-06-01T16:20:36.587Z",
-  "buildDurationMs": 66801,
-  "dashboardSizeKb": 255,
-  "assetVersion": "8cf66baa7a9c-161929",
+  "builtAt": "2026-06-02T07:07:29.785Z",
+  "buildDurationMs": 7600,
+  "dashboardSizeKb": 252,
+  "assetVersion": "1f6f87acd997-070722",
   "deploymentMode": "pages-static",
   "boardLabel": "SNAPSHOT BOARD",
   "pagesUrl": "https://nonarkara.github.io/kuching-ioc/",

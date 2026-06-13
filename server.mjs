@@ -3222,6 +3222,7 @@ async function buildDashboard() {
     floodForecast,
     forecast,
     alphaEarth,
+    impervious: imperviousData,
     floodMatrix: buildFloodRiskMatrix(forecast, imperviousData),
     mppCouncillors,
     mppLocalities,

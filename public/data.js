@@ -187,6 +187,7 @@ export const URBAN_LAYERS = [
   { id: "flood_zones", label: "Flood Zones (Historical)", type: "geojson", url: "/api/layers/flood_zones", color: "#ef4444", active: false },
   { id: "mpp_wards", label: "MPP Wards (Governance)", type: "geojson", url: "/api/layers/mpp_wards", color: "#a78bfa", active: false },
   { id: "growth", label: "Growth 2017→24 (AlphaEarth)", type: "image", color: "#f59e0b", active: false },
+  { id: "impervious", label: "Impervious Surface 2024 (AlphaEarth)", type: "image", color: "#f59e0b", active: false },
 ];
 
 // Per-ward operational projects — hand-encoded from public Padawan council

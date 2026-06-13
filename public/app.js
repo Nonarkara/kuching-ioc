@@ -743,6 +743,7 @@ async function buildFallbackDashboard() {
     forecast: { status: "absent", series: {}, stations: {}, basin_amc: null },
     floodMatrix: { status: "absent", rows: [], worst_band: "normal", basin_amc: null, impervious_status: "absent" },
     alphaEarth: { status: "absent" },
+    impervious: { status: "absent" },
     // MPP governance — sample stubs so the councillor + locality panels
     // render meaningfully even in pure client-fallback mode (no server, no snapshot).
     mppCouncillors: {
@@ -1223,9 +1224,10 @@ function renderUrbanLayerToggle() {
     layer.active = !layer.active;
     btn.classList.toggle("active", layer.active);
 
-    // IOC 2.0 — AlphaEarth growth overlay is a raster image, not GeoJSON.
+    // AlphaEarth raster overlays — route by layer id.
     if (layer.type === "image") {
-      toggleAlphaEarthOverlay(layer.active, btn);
+      if (layer.id === "impervious") toggleImperviousOverlay(layer.active, btn);
+      else toggleAlphaEarthOverlay(layer.active, btn);
       return;
     }
 
@@ -1394,6 +1396,38 @@ function toggleAlphaEarthOverlay(active, btn) {
   if (state.map.getZoom() < 11) state.map.flyTo([(ae.bounds.south + ae.bounds.north) / 2, (ae.bounds.west + ae.bounds.east) / 2], 12, { duration: 0.6 });
 }
 
+// IOC 2.1 — AlphaEarth impervious-surface overlay. Transparent→amber→red ramp;
+// red = dense concrete/rooftop, transparent = permeable. Helps Secretary Goh
+// correlate the flood matrix drainage-stress flags with actual land cover.
+function toggleImperviousOverlay(active, btn) {
+  const imp = state.payload?.impervious;
+  if (!active) {
+    if (state.imperviousOverlay && state.map.hasLayer(state.imperviousOverlay)) {
+      state.map.removeLayer(state.imperviousOverlay);
+    }
+    return;
+  }
+  if (!imp || imp.status !== "ready" || !imp.bounds || !imp.image) {
+    const layer = URBAN_LAYERS.find((l) => l.id === "impervious");
+    if (layer) layer.active = false;
+    btn.classList.remove("active");
+    btn.classList.add("layer-empty");
+    btn.textContent = "Impervious (pending)";
+    return;
+  }
+  if (!state.imperviousOverlay) {
+    const b = imp.bounds;
+    const url = apiUrl("/" + imp.image.replace(/^\//, ""));
+    state.imperviousOverlay = window.L.imageOverlay(
+      url,
+      [[b.south, b.west], [b.north, b.east]],
+      { opacity: 0.70, interactive: false, className: "alphaearth-overlay" },
+    );
+  }
+  state.imperviousOverlay.addTo(state.map);
+  if (state.map.getZoom() < 11) state.map.flyTo([(imp.bounds.south + imp.bounds.north) / 2, (imp.bounds.west + imp.bounds.east) / 2], 12, { duration: 0.6 });
+}
+
 // IOC 2.0 — TimesFM forecast rail. Each card: current reading, a sparkline with
 // the p10–p90 uncertainty band around the p50 median (history → forecast), and
 // the 7-day outlook with worst-case p90. p90 = the worst case, always shown
@@ -1433,7 +1467,7 @@ function renderForecastRail(payload) {
   // Filter to series with a usable median array — defensive against malformed JSON.
   const order = ["river_discharge", "rainfall", "aqi", "pm25"];
   const valid = (k) => fc.series[k] && Array.isArray(fc.series[k].median) && fc.series[k].median.length > 0;
-  const keys = order.filter(valid).concat(Object.keys(fc.series).filter((k) => !order.includes(k) && valid(k)));
+  const keys = order.filter(valid).concat(Object.keys(fc.series).filter((k) => !order.includes(k) && valid(k) && !k.startsWith("station_")));
   if (!keys.length) {
     el.innerHTML = `<div class="forecast-empty">${escapeHtml(tEmpty)}</div>`;
     return;

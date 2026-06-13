@@ -740,7 +740,8 @@ async function buildFallbackDashboard() {
     // IOC 2.0 — forecast + AlphaEarth absent in pure client-fallback (tier 3);
     // both are static artifacts that ride in via tier 1/2. Stubs keep renderers
     // safe so the rail shows an idle note and the overlay toggle degrades.
-    forecast: { status: "absent", series: {} },
+    forecast: { status: "absent", series: {}, stations: {}, basin_amc: null },
+    floodMatrix: { status: "absent", rows: [], worst_band: "normal", basin_amc: null, impervious_status: "absent" },
     alphaEarth: { status: "absent" },
     // MPP governance — sample stubs so the councillor + locality panels
     // render meaningfully even in pure client-fallback mode (no server, no snapshot).
@@ -2357,6 +2358,74 @@ function renderGroundPulse(groundPulse) {
     <div class="gp-lanes">${laneCards}</div>`;
 }
 
+// ── Flood Risk Matrix (IOC 2.1) ────────────────────────────────────────────
+// Per-station rows: AMC class + p90 forecast load → band at 6h / 24h / 72h.
+// When forecast.json hasn't been updated yet (status=absent/stale), shows an
+// idle state rather than blank — the structure is clear even without live data.
+function renderFloodMatrix(payload) {
+  const el = $("floodMatrix");
+  if (!el) return;
+
+  const fm = payload?.floodMatrix;
+  const rows = (fm?.rows || []).filter(Boolean);
+  const basinAmc = fm?.basin_amc || payload?.forecast?.basin_amc || null;
+  const status   = fm?.status || "absent";
+
+  const BAND_LABELS = {
+    normal:  "NRM",
+    watch:   "WTCH",
+    alert:   "ALRT",
+    warning: "WARN",
+  };
+  const BAND_TONES = {
+    normal:  "good",
+    watch:   "muted",
+    alert:   "warn",
+    warning: "alert",
+  };
+  const AMC_TONE = { I: "good", II: "muted", III: "alert" };
+
+  // AMC badge (basin-level)
+  const amcHtml = basinAmc
+    ? `<div class="fm-amc"><span class="fm-amc-label">BASIN AMC</span><span class="fm-amc-val" data-tone="${AMC_TONE[basinAmc.class] || "muted"}">CLASS ${escapeHtml(basinAmc.class)} · ${escapeHtml(basinAmc.label).toUpperCase()}</span><span class="fm-amc-mm">${basinAmc.total_mm14d}mm/14d</span></div>`
+    : "";
+
+  if (status === "absent" || !rows.length) {
+    el.innerHTML = `${amcHtml}<div class="fm-empty">Run <code>scripts/forecast/forecast_runner.py</code> to activate station flood forecasts.</div>`;
+    return;
+  }
+
+  const bandCell = (r) => `<span class="fm-band" data-tone="${BAND_TONES[r?.band] || "muted"}">${BAND_LABELS[r?.band] || "—"}</span>`;
+
+  const rowsHtml = rows.map((row) => {
+    const stressIcon = row.drainage_stress === "high"    ? '<span class="fm-stress" title="High impervious fraction — drainage may be under-capacity">⚠</span>'
+                      : row.drainage_stress === "moderate" ? '<span class="fm-stress fm-stress-mod" title="Moderate drainage stress">△</span>'
+                      : "";
+    const impFrac = row.impervious_fraction != null
+      ? `<span class="fm-imp" title="Impervious surface fraction (AlphaEarth 2024)">${Math.round(row.impervious_fraction * 100)}%</span>`
+      : "";
+    const amcBadge = row.amc
+      ? `<span class="fm-row-amc" data-tone="${AMC_TONE[row.amc.class] || "muted"}" title="${escapeHtml(row.amc.note)}">AMC ${escapeHtml(row.amc.class)}</span>`
+      : "";
+    return `<div class="fm-row" data-worst="${fm?.worst_band || "normal"}">
+      <div class="fm-station">${stressIcon}${escapeHtml(row.name)}${amcBadge}${impFrac}</div>
+      <div class="fm-cells">${bandCell(row.risk_6h)}${bandCell(row.risk_24h)}${bandCell(row.risk_72h)}</div>
+    </div>`;
+  }).join("");
+
+  const staleNote = status === "stale"
+    ? `<div class="fm-stale">↻ STALE — run forecast_runner.py to refresh</div>` : "";
+
+  el.innerHTML = `
+    ${amcHtml}
+    <div class="fm-header">
+      <span class="fm-col-label">STATION</span>
+      <span class="fm-horizons"><span>6H</span><span>24H</span><span>72H</span></span>
+    </div>
+    ${rowsHtml}
+    ${staleNote}`;
+}
+
 function renderFloodForecast(floodForecast) {
   const el = $("floodForecast");
   if (!el) return;
@@ -3044,6 +3113,7 @@ function renderDashboard(payload) {
 
   renderPosture(payload);
   renderForecastRail(payload);
+  renderFloodMatrix(payload);
   renderMetrics(payload.metrics.slice(0, 6));
   renderMap(payload);
   renderAirportStats(payload.airport);

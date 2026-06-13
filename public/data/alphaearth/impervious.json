@@ -1,0 +1,58 @@
+{
+  "generatedAt": "2026-06-13T17:12:54.726768Z",
+  "year": 2024,
+  "dataset": "GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL",
+  "method": "cosine-similarity reference-pixel classification",
+  "image": "impervious-2024.png",
+  "bounds": {
+    "west": 110.269963,
+    "south": 1.390003,
+    "east": 110.40006,
+    "north": 1.482227
+  },
+  "stats": {
+    "mean": 0.42,
+    "p50": 0.407,
+    "p75": 0.522,
+    "p90": 0.617,
+    "max": 0.867
+  },
+  "zones": [
+    {
+      "id": "maong",
+      "name": "Sg. Maong Urban Core",
+      "station": "maong",
+      "note": "MBKS commercial/residential belt draining to Sg. Maong",
+      "impervious_fraction": 0.459,
+      "impervious_p75": 0.562,
+      "pixel_count": 27800
+    },
+    {
+      "id": "batu-kawa",
+      "name": "Batu Kawa Growth Zone",
+      "station": "batu-kitang",
+      "note": "Padawan peri-urban expansion draining to Sg. Sarawak Kiri",
+      "impervious_fraction": 0.427,
+      "impervious_p75": 0.524,
+      "pixel_count": 385526
+    },
+    {
+      "id": "padawan-core",
+      "name": "Padawan Rural Core",
+      "station": "siniawan",
+      "note": "Mixed agriculture/forest, lower impervious baseline",
+      "impervious_fraction": 0.408,
+      "impervious_p75": 0.509,
+      "pixel_count": 491504
+    },
+    {
+      "id": "kota-padawan",
+      "name": "Kota Padawan Township",
+      "station": "batu-kitang",
+      "note": "Emerging township in the Padawan growth ring",
+      "impervious_fraction": 0.361,
+      "impervious_p75": 0.432,
+      "pixel_count": 136776
+    }
+  ]
+}

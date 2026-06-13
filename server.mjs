@@ -2599,7 +2599,7 @@ function buildMetricCards(weather, air, airport, jurisdictions, news, padawanZon
   ];
 }
 
-function buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast }) {
+function buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast, floodMatrix }) {
   const rain6h = round(weather.nextHours.reduce((sum, hour) => sum + hour.precipitationMm, 0), 1);
   const padawan = jurisdictions.items.find((item) => item.id === "mpp");
   const sarawakStats = govStats.sarawak;
@@ -2630,11 +2630,10 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
     });
   }
 
-  // IOC 2.0 — forecast-driven directive. TimesFM p90 worst-case lookahead turns
-  // the board from "what's happening" into "what's coming". Thresholds are
-  // deliberately conservative so the directive never cries wolf — it fires only
-  // when the worst-case curve escalates meaningfully (Nonism §12.5: surface the
-  // worst case, act on the lead time, don't perform alarm).
+  // IOC 2.0/2.1 — forecast-driven directives. TimesFM p90 worst-case lookahead
+  // turns the board from "what's happening" into "what's coming". Thresholds are
+  // deliberately conservative — fires only when the worst-case curve escalates
+  // meaningfully (Nonism §12.5: surface worst case, act on lead time, don't alarm).
   if (forecast?.series) {
     const dis = forecast.series.river_discharge;
     if (Array.isArray(dis?.quantiles?.p90) && dis.quantiles.p90.length) {
@@ -2646,7 +2645,7 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
           severity: peak >= now * 1.5 ? "high" : "medium",
           owner: "Hydrology Forecast",
           title: `River rising — p90 ${Math.round(peak)} m³/s in ${step}d`,
-          detail: `TimesFM 7-day outlook: worst-case discharge climbs from ${Math.round(now)} to ${Math.round(peak)} m³/s within ${step} day(s). Pre-position crews at Batu Kawa / Sg. Maong before the peak.`,
+          detail: `TimesFM 14-day outlook: worst-case discharge climbs from ${Math.round(now)} to ${Math.round(peak)} m³/s within ${step} day(s). Pre-position crews at Batu Kawa / Sg. Maong before the peak.`,
           humanContext: "The forecast lead time is the window to act — clear the worst drains before the rain, not during it.",
         });
       }
@@ -2664,6 +2663,60 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
           humanContext: null,
         });
       }
+    }
+  }
+
+  // IOC 2.1 — flood risk matrix directives (AMC + per-station p90 forecast).
+  // Only fires for "alert" or "warning" level to avoid alarm fatigue.
+  if (floodMatrix?.rows?.length) {
+    const amcClass  = floodMatrix.basin_amc?.class || "I";
+    const amcLabel  = floodMatrix.basin_amc?.label || "";
+    const amcNote   = floodMatrix.basin_amc?.note || "";
+    if (amcClass === "III") {
+      items.push({
+        severity: "medium",
+        owner: "Basin AMC Watch",
+        title: `Catchment saturated — AMC Class III (${floodMatrix.basin_amc?.total_mm14d ?? "—"}mm/14d)`,
+        detail: `14-day accumulated rainfall has saturated the basin. ${amcNote} Pre-position drainage crews and review pump station readiness across all 6 hydro-station catchments.`,
+        humanContext: "AMC III means the same rainstorm that would normally cause minor flooding will cause major flooding. Act before the next band arrives.",
+      });
+    }
+    // Station-level warning / alert directives
+    for (const row of floodMatrix.rows) {
+      const highest = [row.risk_6h, row.risk_24h, row.risk_72h]
+        .reduce((w, r) => {
+          const order = ["normal", "watch", "alert", "warning"];
+          return r && order.indexOf(r.band) > order.indexOf(w?.band || "normal") ? r : w;
+        }, null);
+      if (!highest || !["alert", "warning"].includes(highest.band)) continue;
+      const horizon = highest === row.risk_6h ? "6h" : highest === row.risk_24h ? "24h" : "72h";
+      const stressNote = row.drainage_stress === "high"
+        ? ` High impervious fraction (${Math.round((row.impervious_fraction || 0) * 100)}%) — drainage infrastructure may be undersized for current land cover.`
+        : "";
+      const lagNote = row.lag_h > 0
+        ? ` (${row.lag_h}h propagation lag to downstream gauges)`
+        : "";
+      items.push({
+        severity: highest.band === "warning" ? "high" : "medium",
+        owner: `Flood Forecast // ${row.name}`,
+        title: `${row.name}: ${highest.band.toUpperCase()} within ${horizon}`,
+        detail: `TimesFM p90 + AMC ${amcClass} load index ${highest.load}. Catchment: ${row.basin}.${lagNote}${stressNote}`,
+        humanContext: row.amc ? `${row.amc.label} catchment (${row.amc.total_mm14d}mm/14d). ${row.amc.note}` : null,
+      });
+    }
+    // Drainage stress directive (AlphaEarth-driven): stations where high impervious
+    // fraction + elevated risk = likely under-drained for current land cover.
+    const stressStations = floodMatrix.rows.filter(
+      (r) => r.drainage_stress === "high" && r.risk_72h?.band !== "normal"
+    );
+    if (stressStations.length && floodMatrix.impervious_status === "ready") {
+      items.push({
+        severity: "medium",
+        owner: "AlphaEarth // Drainage Stress",
+        title: `${stressStations.length} catchment(s) under drainage stress`,
+        detail: `AlphaEarth 2024 analysis: ${stressStations.map((s) => s.name).join(", ")} show high impervious surface fraction but elevated flood risk. New land cover may exceed existing drain capacity.`,
+        humanContext: "This is the Sg. Maong story in data: 23% residential growth since 2012, drainage not upgraded. The growth ring is now a flood amplifier.",
+      });
     }
   }
 
@@ -2991,8 +3044,95 @@ async function loadForecast() {
       frequency: doc.frequency || "D",
       site: doc.site || null,
       series: doc.series || {},
+      // IOC 2.1 flood additions — present when forecast_runner.py has been updated
+      stations: doc.stations || {},
+      basin_amc: doc.basin_amc || null,
     };
-  }).catch(() => ({ status: "absent", series: {} }));
+  }).catch(() => ({ status: "absent", series: {}, stations: {}, basin_amc: null }));
+}
+
+// IOC 2.1 — AlphaEarth impervious surface fraction per sub-catchment.
+// Written by scripts/alphaearth/compute_impervious.py (annual run, local only).
+async function loadImperviousData() {
+  return cached("impervious", 3600_000, async () => {
+    const jsonPath = path.join(publicDir, "data", "alphaearth", "impervious.json");
+    const doc = JSON.parse(await fs.readFile(jsonPath, "utf-8"));
+    return {
+      status: "ready",
+      year: doc.year || 2024,
+      image: `data/alphaearth/${doc.image}`,
+      bounds: doc.bounds,
+      stats: doc.stats,
+      zones: doc.zones || [],
+      dataset: doc.dataset,
+    };
+  }).catch(() => ({ status: "absent", zones: [] }));
+}
+
+// IOC 2.1 — Combine per-station AMC + forecast p90 + impervious fraction
+// into a per-station flood risk matrix. Surfaced as payload.floodMatrix.
+function buildFloodRiskMatrix(forecast, imperviousData) {
+  const fStations = forecast?.stations || {};
+  const zones = (imperviousData?.zones || []);
+
+  // Build a lookup: station id → impervious fraction (from nearest zone)
+  const imperviousByStation = {};
+  for (const zone of zones) {
+    if (zone.station && !imperviousByStation[zone.station]) {
+      imperviousByStation[zone.station] = zone.impervious_fraction;
+    }
+  }
+
+  const STATION_ORDER = ["batu-kitang", "kpg-git", "siniawan", "maong", "buntal", "bedup"];
+  const rows = STATION_ORDER.map((sid) => {
+    const stn = fStations[sid];
+    if (!stn) return null;
+    const impFrac = imperviousByStation[sid] ?? null;
+
+    // Drainage stress: high impervious fraction + high risk = under-drained
+    const highestRisk = [stn.risk_72h, stn.risk_24h, stn.risk_6h].reduce((worst, r) => {
+      const order = ["normal", "watch", "alert", "warning"];
+      return order.indexOf(r?.band || "normal") > order.indexOf(worst) ? (r?.band || "normal") : worst;
+    }, "normal");
+    const drainageStress = impFrac != null && impFrac > 0.5 && highestRisk !== "normal"
+      ? "high"
+      : impFrac != null && impFrac > 0.3 && ["alert", "warning"].includes(highestRisk)
+      ? "moderate"
+      : "low";
+
+    return {
+      id:   sid,
+      name: stn.name,
+      basin: stn.basin,
+      lag_h: stn.lag_h,
+      amc:  stn.amc || null,
+      risk_6h:  stn.risk_6h  || null,
+      risk_24h: stn.risk_24h || null,
+      risk_72h: stn.risk_72h || null,
+      impervious_fraction: impFrac,
+      drainage_stress:     drainageStress,
+      p90_day1: stn.cumulative_p90_mm?.day1 ?? null,
+      p90_day4: stn.cumulative_p90_mm?.day4 ?? null,
+    };
+  }).filter(Boolean);
+
+  const basinAmc = forecast?.basin_amc || null;
+  const forecastStatus = forecast?.status || "absent";
+  const worstBand = rows.reduce((worst, r) => {
+    const order = ["normal", "watch", "alert", "warning"];
+    const bands = [r.risk_6h?.band, r.risk_24h?.band, r.risk_72h?.band].filter(Boolean);
+    const max = bands.reduce((w, b) => order.indexOf(b) > order.indexOf(w) ? b : w, "normal");
+    return order.indexOf(max) > order.indexOf(worst) ? max : worst;
+  }, "normal");
+
+  return {
+    status: forecastStatus,
+    asOf:   forecast?.asOf || null,
+    basin_amc: basinAmc,
+    worst_band: worstBand,
+    rows,
+    impervious_status: imperviousData?.status || "absent",
+  };
 }
 
 // IOC 2.0 — AlphaEarth growth-ring change overlay. Read the newest
@@ -3021,7 +3161,7 @@ async function buildDashboard() {
     weather, air, airport, jurisdictions, news, fires, quakes,
     padawanZoning, trends, govStats,
     infobanjirRaw, apims, ckanHarvest, exchange, metWarnings, floodForecast,
-    mppCouncillors, mppLocalities, forecast, alphaEarth,
+    mppCouncillors, mppLocalities, forecast, alphaEarth, imperviousData,
   ] = await Promise.all([
     loadWeather(),
     loadAirQuality(),
@@ -3043,6 +3183,7 @@ async function buildDashboard() {
     loadMppLocalities(),
     loadForecast(),
     loadAlphaEarth(),
+    loadImperviousData(),
   ]);
 
   // Catchment enrichment compounds Infobanjir + OSM drainage. Pure post-process,
@@ -3081,10 +3222,11 @@ async function buildDashboard() {
     floodForecast,
     forecast,
     alphaEarth,
+    floodMatrix: buildFloodRiskMatrix(forecast, imperviousData),
     mppCouncillors,
     mppLocalities,
     osm: getOsmStatusSnapshot(),
-    operations: buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast }),
+    operations: buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast, floodMatrix: buildFloodRiskMatrix(forecast, imperviousData) }),
     sources: [
       sourceRecord(
         "mpp-reference-map",

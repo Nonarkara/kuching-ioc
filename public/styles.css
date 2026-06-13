@@ -311,8 +311,8 @@ body::before {
   display: grid;
   grid-template-columns: minmax(0, 2.4fr) minmax(300px, 1fr);
   grid-template-areas: "center situation";
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 1 0 480px;
+  min-height: 480px;
   background: var(--bg);
 }
 
@@ -3011,6 +3011,40 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
 @media (max-width: 480px) {
   .forecast-cards { grid-template-columns: 1fr; }
 }
+
+/* ── Flood Risk Matrix (IOC 2.1) ───────────────────────────────────────────
+   Per-station rows: AMC badge + band cells at 6h / 24h / 72h.
+   Geometric hard-edge, zero border-radius, amber/red/green severity palette. */
+.flood-matrix { display: flex; flex-direction: column; gap: 2px; font-family: var(--font-mono); }
+.fm-amc { display: flex; align-items: center; gap: 6px; padding: 4px 0 5px; border-bottom: 1px solid var(--border); margin-bottom: 3px; flex-wrap: wrap; }
+.fm-amc-label { font-size: 9px; color: var(--soft); letter-spacing: .08em; }
+.fm-amc-val { font-size: 9px; font-weight: 700; padding: 1px 4px; border: 1px solid currentColor; letter-spacing: .06em; }
+.fm-amc-val[data-tone="good"]  { color: var(--green); }
+.fm-amc-val[data-tone="muted"] { color: var(--soft); }
+.fm-amc-val[data-tone="alert"] { color: var(--amber); }
+.fm-amc-mm  { font-size: 9px; color: var(--soft); }
+.fm-header  { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; font-size: 8px; color: var(--soft); letter-spacing: .1em; border-bottom: 1px solid var(--border); margin-bottom: 1px; }
+.fm-horizons { display: flex; gap: 4px; }
+.fm-horizons span { width: 32px; text-align: center; }
+.fm-row     { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.04); min-height: 24px; }
+.fm-station { font-size: 9px; color: var(--text); display: flex; align-items: center; gap: 4px; flex: 1; flex-wrap: wrap; }
+.fm-stress  { color: var(--amber); font-size: 9px; }
+.fm-stress-mod { color: var(--soft); }
+.fm-row-amc { font-size: 7px; padding: 0 3px; border: 1px solid currentColor; letter-spacing: .05em; }
+.fm-row-amc[data-tone="good"]  { color: var(--green); }
+.fm-row-amc[data-tone="muted"] { color: var(--soft); }
+.fm-row-amc[data-tone="alert"] { color: var(--amber); }
+.fm-imp     { font-size: 7px; color: var(--soft); padding: 0 2px; }
+.fm-cells   { display: flex; gap: 4px; }
+.fm-band    { font-size: 8px; font-weight: 700; width: 32px; text-align: center; padding: 1px 0; letter-spacing: .04em; }
+.fm-band[data-tone="good"]  { color: var(--green); }
+.fm-band[data-tone="muted"] { color: var(--soft); }
+.fm-band[data-tone="warn"]  { color: var(--amber); }
+.fm-band[data-tone="alert"] { color: var(--red); }
+.fm-stale   { font-size: 8px; color: var(--soft); padding: 3px 0; }
+.fm-empty   { font-size: 9px; color: var(--soft); line-height: 1.5; padding: 4px 0; }
+.fm-empty code { font-family: var(--font-mono); color: var(--cyan); font-size: 8px; }
+@media (max-width: 480px) { .fm-horizons span { width: 28px; } .fm-band { width: 28px; } }
 
 /* Print stylesheet — single-page A4 sitrep, white background, signature typography preserved */
 @media print {

@@ -73,3 +73,33 @@ Per §13: the same mistake never happens twice.
 - **What went wrong:** `src.read(window=win)` on the full 64-band COG fails with RasterioIOError (HTTP timeout). Also `rasterio.windows.from_bounds` raises WindowError with inverted-Y transform. Also sidecar bounds were in UTM not WGS84 — Leaflet imageOverlay would have placed raster at wrong position.
 - **Correct behaviour:** Read in chunks of 8 bands (`range(1, 65, 8)`), concatenate with numpy. Compute pixel window via inverse affine instead of `from_bounds`. Reproject bounds via `rasterio.warp.transform_bounds(src.crs, "EPSG:4326", ...)` before writing sidecar JSON.
 - **How to recognise:** `RasterioIOError: Read failed` on a COG = try band chunking. WindowError on `from_bounds` = affine direction mismatch, use `~src.transform` directly.
+
+## 2026-06-14 · Other agent's Codex Incident — detect by line-count collapse
+
+- **What went wrong:** A Gemini agent attempted a modular refactor of server.mjs, gutting it from 3430 → 462 lines. The orphaned files (geo.mjs, api-client.mjs, constants.mjs) were left untracked but NOT imported.
+- **Correct behaviour:** Before any session touching server.mjs, run `wc -l server.mjs`. Expect ~3400+ lines. A >30% line-count drop is the Codex Incident — restore immediately via `git checkout HEAD -- server.mjs`.
+- **How to recognise:** `git diff HEAD --stat` shows "-3000 lines" on server.mjs, or the server starts with 462 lines. Also: untracked orphan files with names that look like modular extracts (geo.mjs, api-client.mjs, constants.mjs) that don't appear in import statements.
+
+## 2026-06-14 · Other agent early-return bug froze aircraft markers
+
+- **What went wrong:** Agent added `if (state.hasInitialMapFit) { queueMapResize(); return; }` before `clearLayers()` in app.js, causing aircraft marker positions to freeze after first render (the early return skipped the full re-render on every 60s refresh).
+- **Correct behaviour:** Never add early returns before clearLayers/re-render paths in the map update loop. `preferCanvas: true` is a legitimate performance optimization; the 120ms double `invalidateSize` call is intentional Leaflet pattern — keep both.
+- **How to recognise:** Aircraft markers are static even when new ADS-B data arrives. Live server shows different aircraft count than the frozen display.
+
+## 2026-06-14 · board-grid collapses to 0–136px on <1440×1080 viewports
+
+- **What went wrong:** `.board-grid { flex: 1 1 auto; min-height: 0 }` allowed the board-grid to collapse entirely. The locality-panel (150px, flex-shrink:0) + lower-grid (260px, flex-shrink:0) + fixed strips (44px) = 454px of non-shrinkable content competed with the map for 100svh space.
+- **Correct behaviour:** `.board-grid { flex: 1 0 480px; min-height: 480px }`. With flex-shrink:0 and a 480px basis, the board-grid can never shrink. Lower sections overflow the shell (clipped by overflow:hidden, scrollable via page scroll). Map always gets at least 480px.
+- **How to recognise:** `boardGrid.getBoundingClientRect().height < 200` on desktop. Map canvas is a sliver. Situation rail panel-inner.clientHeight is 0 or near-0.
+
+## 2026-06-14 · Tropical AMC thresholds differ from US CN-method
+
+- **What went wrong:** Standard US CN-method AMC thresholds (36mm/14d for Class I, 53mm/14d for Class II) are calibrated for temperate climates. Kuching averages 77mm/week (300+mm/month). At US thresholds, Kuching would always be in Class III (saturated) even in dry spells.
+- **Correct behaviour:** Tropical Kuching AMC thresholds: Class I <100mm/14d (dry), Class II 100–200mm (normal), Class III >200mm (saturated). These are roughly 2.7× the US values and match local hydrology.
+- **How to recognise:** Every station shows Class III in the flood matrix even in sunny weather = thresholds too low for tropics.
+
+## 2026-06-14 · uv venvs have no pip binary — use `uv pip install --python path/to/python`
+
+- **What went wrong:** `uv venv` creates venvs without a `pip` script. Running `<venv>/bin/pip install pyproj` fails with "no such file".
+- **Correct behaviour:** `uv pip install <pkg> --python <venv>/bin/python` — use uv's own pip subcommand with explicit python path.
+- **How to recognise:** `FileNotFoundError: <venv>/bin/pip` when trying to install a package into a uv-created venv.

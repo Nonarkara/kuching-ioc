@@ -3135,6 +3135,133 @@ function buildFloodRiskMatrix(forecast, imperviousData) {
   };
 }
 
+// IOC 2.2 — Citizen Reports from City Reporter Supabase.
+// Queries reports within the Greater Kuching bounding box.
+// Falls back to synthetic demo data when no credentials or no live reports.
+function buildCityReportsDemoData() {
+  const gen = nowIso();
+  return {
+    status: "demo",
+    count: 6,
+    open: 4,
+    resolved: 2,
+    recent: [
+      {
+        id: "KCH-2026-001",
+        ticket: "MPP-2026-0841",
+        timestamp: new Date(Date.now() - 1.2 * 3600_000).toISOString(),
+        problem_type: "Flooding / Banjir",
+        description: "Jalan Penrissen flooded to knee height blocking two lanes after heavy rain",
+        ai_summary: "Road flooding at Jalan Penrissen. Two lanes blocked. Upstream drain capacity exceeded.",
+        lat: 1.4520, lon: 110.3380,
+        urgency: "high",
+        status: "in_progress",
+        location_text: "Jalan Penrissen, Padawan",
+      },
+      {
+        id: "KCH-2026-002",
+        ticket: "MPP-2026-0840",
+        timestamp: new Date(Date.now() - 3.5 * 3600_000).toISOString(),
+        problem_type: "Clogged Drain / Longkang Tersumbat",
+        description: "Large drain at Kota Padawan market completely blocked with debris",
+        ai_summary: "Primary drain obstruction at Kota Padawan market. Risk of overflow during next rain event.",
+        lat: 1.4340, lon: 110.3210,
+        urgency: "high",
+        status: "received",
+        location_text: "Kota Padawan Market",
+      },
+      {
+        id: "KCH-2026-003",
+        ticket: "MPP-2026-0838",
+        timestamp: new Date(Date.now() - 8 * 3600_000).toISOString(),
+        problem_type: "Road Damage / Jalan Rosak",
+        description: "Large pothole on Jalan Batu Kawa causing vehicle damage",
+        ai_summary: "Pothole ~60cm diameter on Jalan Batu Kawa near BP station. Reported two vehicle incidents.",
+        lat: 1.4680, lon: 110.3090,
+        urgency: "medium",
+        status: "received",
+        location_text: "Jalan Batu Kawa",
+      },
+      {
+        id: "KCH-2026-004",
+        ticket: "MPP-2026-0835",
+        timestamp: new Date(Date.now() - 14 * 3600_000).toISOString(),
+        problem_type: "Illegal Dumping / Pembuangan Haram",
+        description: "Construction waste dumped at roadside near Siburan junction",
+        ai_summary: "Illegal construction debris dump at Siburan junction. Approximately 3 lorry loads. Road partially blocked.",
+        lat: 1.3890, lon: 110.2720,
+        urgency: "medium",
+        status: "received",
+        location_text: "Siburan Junction, Padawan",
+      },
+      {
+        id: "KCH-2026-005",
+        ticket: "MPP-2026-0831",
+        timestamp: new Date(Date.now() - 22 * 3600_000).toISOString(),
+        problem_type: "Street Light / Lampu Jalan",
+        description: "Three consecutive street lights out on Jalan Matang",
+        ai_summary: "Street lighting failure — 3 consecutive poles. Safety risk for pedestrians and cyclists.",
+        lat: 1.5510, lon: 110.3320,
+        urgency: "low",
+        status: "completed",
+        location_text: "Jalan Matang, Kuching North",
+      },
+      {
+        id: "KCH-2026-006",
+        ticket: "MPP-2026-0829",
+        timestamp: new Date(Date.now() - 28 * 3600_000).toISOString(),
+        problem_type: "Water Pipe Burst / Paip Pecah",
+        description: "Water gushing from burst pipe at Petra Jaya residential area",
+        ai_summary: "Burst main water pipe at Petra Jaya. Water supply disrupted to approximately 40 households.",
+        lat: 1.5670, lon: 110.3810,
+        urgency: "high",
+        status: "completed",
+        location_text: "Petra Jaya, Kuching",
+      },
+    ],
+    updatedAt: gen,
+  };
+}
+
+async function loadCityReports() {
+  return cached("cityReports", 300_000, async () => {
+    const supabaseUrl = process.env.CITY_REPORTER_SUPABASE_URL;
+    const supabaseKey = process.env.CITY_REPORTER_SUPABASE_KEY;
+    if (!supabaseUrl || !supabaseKey) return buildCityReportsDemoData();
+
+    const qUrl = `${supabaseUrl}/rest/v1/reports?latitude=gte.1.15&latitude=lte.1.85&longitude=gte.109.9&longitude=lte.110.7&select=id,ticket_number,timestamp,problem_type,description,ai_summary,latitude,longitude,urgency,status,location_text&order=timestamp.desc&limit=50`;
+    const resp = await fetchWithTimeout(qUrl, {
+      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
+    }, 8000);
+    if (!resp.ok) throw new Error(`City Reporter Supabase ${resp.status}`);
+    const rows = await resp.json();
+    if (!Array.isArray(rows) || rows.length === 0) return buildCityReportsDemoData();
+
+    const recent = rows.slice(0, 5).map((r) => ({
+      id: r.id,
+      ticket: r.ticket_number || r.id.slice(0, 8),
+      timestamp: r.timestamp,
+      problem_type: r.problem_type || "—",
+      description: r.description || "",
+      ai_summary: r.ai_summary || r.description || "",
+      lat: r.latitude,
+      lon: r.longitude,
+      urgency: ["high","urgent"].includes((r.urgency || "").toLowerCase()) ? "high" : r.urgency === "low" ? "low" : "medium",
+      status: r.status || "received",
+      location_text: r.location_text || "",
+    }));
+    const open = rows.filter((r) => !["completed","resolved"].includes(r.status)).length;
+    return {
+      status: "live",
+      count: rows.length,
+      open,
+      resolved: rows.length - open,
+      recent,
+      updatedAt: nowIso(),
+    };
+  }).catch(() => buildCityReportsDemoData());
+}
+
 // IOC 2.0 — AlphaEarth growth-ring change overlay. Read the newest
 // growth-*.json sidecar produced by scripts/alphaearth/compute_change.py.
 // Absent until Earth Engine auth + the pipeline have been run once.
@@ -3161,7 +3288,7 @@ async function buildDashboard() {
     weather, air, airport, jurisdictions, news, fires, quakes,
     padawanZoning, trends, govStats,
     infobanjirRaw, apims, ckanHarvest, exchange, metWarnings, floodForecast,
-    mppCouncillors, mppLocalities, forecast, alphaEarth, imperviousData,
+    mppCouncillors, mppLocalities, forecast, alphaEarth, imperviousData, cityReports,
   ] = await Promise.all([
     loadWeather(),
     loadAirQuality(),
@@ -3184,6 +3311,7 @@ async function buildDashboard() {
     loadForecast(),
     loadAlphaEarth(),
     loadImperviousData(),
+    loadCityReports(),
   ]);
 
   // Catchment enrichment compounds Infobanjir + OSM drainage. Pure post-process,
@@ -3224,6 +3352,7 @@ async function buildDashboard() {
     alphaEarth,
     impervious: imperviousData,
     floodMatrix: buildFloodRiskMatrix(forecast, imperviousData),
+    cityReports,
     mppCouncillors,
     mppLocalities,
     osm: getOsmStatusSnapshot(),

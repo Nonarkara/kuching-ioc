@@ -317,6 +317,7 @@ export const TRANSLATIONS = {
     forecastSeries_aqi: "Air Quality (US AQI)",
     forecastSeries_pm25: "PM2.5",
     floodMatrix: "Flood Risk // AMC + TimesFM",
+    citizenReports: "Citizen Reports // Field Intel",
   },
   ms: {
     title: "Pusat Operasi Pintar Greater Kuching",
@@ -350,6 +351,7 @@ export const TRANSLATIONS = {
     forecastSeries_aqi: "Kualiti Udara (US AQI)",
     forecastSeries_pm25: "PM2.5",
     floodMatrix: "Risiko Banjir // AMC + TimesFM",
+    citizenReports: "Laporan Awam // Maklumat Lapangan",
   },
   zh: {
     title: "大古晋智能运营中心",
@@ -383,6 +385,7 @@ export const TRANSLATIONS = {
     forecastSeries_aqi: "空气质量 (US AQI)",
     forecastSeries_pm25: "PM2.5",
     floodMatrix: "洪水风险 // AMC + TimesFM",
+    citizenReports: "市民报告 // 实地情报",
   },
 };
 

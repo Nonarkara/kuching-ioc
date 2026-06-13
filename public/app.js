@@ -744,6 +744,7 @@ async function buildFallbackDashboard() {
     floodMatrix: { status: "absent", rows: [], worst_band: "normal", basin_amc: null, impervious_status: "absent" },
     alphaEarth: { status: "absent" },
     impervious: { status: "absent" },
+    cityReports: { status: "absent", count: 0, open: 0, resolved: 0, recent: [] },
     // MPP governance — sample stubs so the councillor + locality panels
     // render meaningfully even in pure client-fallback mode (no server, no snapshot).
     mppCouncillors: {
@@ -1056,6 +1057,27 @@ function renderMap(payload) {
       .bindTooltip(
         `<strong>APIMS · ${s.stationName}</strong><br>AQI ${s.aqi} (${s.band?.label || "—"})<br>PM2.5 ${s.pm25 ?? "—"} · PM10 ${s.pm10 ?? "—"}<br>Dominant: ${s.dominant || "—"}`,
         { className: "marker-tooltip", direction: "top" },
+      )
+      .addTo(state.markerLayerGroup);
+  });
+
+  // Citizen Reports — ground-truth complaint markers. Red=high, amber=medium, green=resolved.
+  const crReports = payload.cityReports?.recent || [];
+  const crColors = { high: "#ff003c", medium: "#f59e0b", low: "#00ffaa", completed: "#8aa2c8" };
+  crReports.forEach((r) => {
+    if (r.lat == null || r.lon == null) return;
+    const color = r.status === "completed" ? crColors.completed : (crColors[r.urgency] || crColors.medium);
+    window.L.circleMarker([r.lat, r.lon], {
+      radius: 7,
+      fillColor: color,
+      fillOpacity: 0.9,
+      color: "#000",
+      weight: 1.5,
+      opacity: 0.8,
+    })
+      .bindTooltip(
+        `<strong>${escapeHtml(r.problem_type)}</strong><br>${escapeHtml(r.location_text || "—")}<br>Urgency: ${r.urgency.toUpperCase()} · ${(r.status || "").replace("_"," ").toUpperCase()}<br><em>${escapeHtml(r.ticket)}</em>`,
+        { className: "marker-tooltip cr-tooltip", direction: "top" },
       )
       .addTo(state.markerLayerGroup);
   });
@@ -2460,6 +2482,51 @@ function renderFloodMatrix(payload) {
     ${staleNote}`;
 }
 
+function renderCitizenReports(payload) {
+  const el = $("citizenReports");
+  if (!el) return;
+  const cr = payload?.cityReports;
+  if (!cr) {
+    el.innerHTML = `<div class="cr-empty">No field data available.</div>`;
+    return;
+  }
+
+  const URGENCY_TONE = { high: "alert", medium: "warn", low: "muted" };
+  const STATUS_LABEL = { received: "NEW", in_progress: "OPEN", completed: "DONE" };
+  const STATUS_TONE  = { received: "warn", in_progress: "warn", completed: "good" };
+
+  const isDemo = cr.status === "demo";
+  const badge = isDemo
+    ? `<span class="cr-mode-badge" style="color:var(--soft)">DEMO</span>`
+    : `<span class="cr-mode-badge" style="color:var(--cyan)">LIVE</span>`;
+
+  const summary = `<div class="cr-summary">
+    ${badge}
+    <span class="cr-count"><span style="color:var(--amber)">${cr.open}</span> open</span>
+    <span class="cr-count"><span style="color:var(--green)">${cr.resolved}</span> resolved</span>
+  </div>`;
+
+  const items = (cr.recent || []).slice(0, 5).map((r) => {
+    const tone = URGENCY_TONE[r.urgency] || "muted";
+    const statusTone = STATUS_TONE[r.status] || "muted";
+    const ago = (() => {
+      const ms = Date.now() - new Date(r.timestamp).getTime();
+      const h = Math.floor(ms / 3600_000);
+      return h < 1 ? `${Math.round(ms / 60_000)}m ago` : h < 24 ? `${h}h ago` : `${Math.floor(h/24)}d ago`;
+    })();
+    return `<div class="cr-row">
+      <div class="cr-urgency-bar" data-tone="${tone}"></div>
+      <div class="cr-body">
+        <div class="cr-type">${escapeHtml(r.problem_type)}<span class="cr-status" data-tone="${statusTone}">${STATUS_LABEL[r.status] || r.status.toUpperCase()}</span></div>
+        <div class="cr-loc">${escapeHtml(r.location_text || "—")}</div>
+        <div class="cr-meta">${escapeHtml(r.ticket)} · ${ago}</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  el.innerHTML = summary + items;
+}
+
 function renderFloodForecast(floodForecast) {
   const el = $("floodForecast");
   if (!el) return;
@@ -3148,6 +3215,7 @@ function renderDashboard(payload) {
   renderPosture(payload);
   renderForecastRail(payload);
   renderFloodMatrix(payload);
+  renderCitizenReports(payload);
   renderMetrics(payload.metrics.slice(0, 6));
   renderMap(payload);
   renderAirportStats(payload.airport);

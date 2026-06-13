@@ -417,6 +417,7 @@ function buildBoardBrief(payload) {
   return { now: now.slice(0, 3), next: next.slice(0, 3), blind: blind.slice(0, 3) };
 }
 
+
 function queueMapResize() {
   if (!state.map) return;
   window.requestAnimationFrame(() => {
@@ -915,6 +916,11 @@ function renderMap(payload) {
   if (!state.map) {
     state.map = window.L.map(mc, {
       zoomControl: false, attributionControl: false, fadeAnimation: false,
+      // preferCanvas: draw vectors on a single <canvas> instead of one SVG element
+      // per feature. On large GeoJSON layers (transit 1MB, drainage 600KB) this
+      // eliminates the zoom/pan stutter that was caused by the browser repainting
+      // thousands of individual SVG path nodes on every frame.
+      preferCanvas: true,
       maxBounds: SITE.mapMaxBounds, maxBoundsViscosity: 1.0,
       minZoom: SITE.minZoom, maxZoom: SITE.maxZoom,
     });
@@ -938,6 +944,7 @@ function renderMap(payload) {
       if (mc.parentElement) state.mapResizeObserver.observe(mc.parentElement);
     }
   }
+
   state.boundaryLayerGroup.clearLayers();
   state.labelLayerGroup.clearLayers();
   state.markerLayerGroup.clearLayers();

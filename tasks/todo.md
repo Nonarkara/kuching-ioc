@@ -1,6 +1,6 @@
 # TODO — Greater Kuching IOC (updated 2026-06-14)
 
-IOC 2.0 and IOC 2.1 are SHIPPED. Latest commit: 902a623.
+IOC 2.0, 2.1, and 2.2 are SHIPPED. Latest commit: a6b3136.
 
 ## ✅ COMPLETED — IOC 2.0 (2026-06-02)
 
@@ -65,6 +65,27 @@ IOC 2.0 and IOC 2.1 are SHIPPED. Latest commit: 902a623.
 - [x] Flood matrix CSS (styles.css): `.fm-amc`, `.fm-header`, `.fm-row`, `.fm-band` etc.
 - [x] `board-grid min-height: 480px; flex: 1 0 480px` — map-dominance fix
       (was collapsing to 0–136px on viewports <1440×1080 due to lower sections stealing flex space)
+
+## ✅ COMPLETED — IOC 2.2 (2026-06-14)
+
+### City Reporter integration
+- [x] `buildCityReportsDemoData()` — 6 realistic Kuching complaints (flooding, drain, road, dumping, light, pipe)
+      across Jalan Penrissen, Kota Padawan, Batu Kawa, Siburan, Jalan Matang, Petra Jaya
+- [x] `loadCityReports()` — queries City Reporter Supabase with lat/lon Kuching bbox filter;
+      falls back to demo data when env vars absent or 0 results
+- [x] `cityReports` added to `buildDashboard()` Promise.all and return object
+- [x] `cityReports` stub in `buildFallbackDashboard()` (3-tier safety)
+- [x] `renderCitizenReports(payload)` — DEMO/LIVE badge, open/resolved counts,
+      5-row compact list with left urgency bar (red=high, amber=medium, green=resolved),
+      problem type, location, ticket number, relative timestamp
+- [x] `renderCitizenReports()` called in main render dispatch
+- [x] Citizen report markers on Leaflet map — circleMarker colored by urgency,
+      bindTooltip with problem type, urgency, status, ticket number
+- [x] `#citizenReports` div + section label in index.template.html (situation rail, after DIRECTIVES)
+- [x] CSS: `.citizen-reports`, `.cr-summary`, `.cr-row`, `.cr-urgency-bar`, `.cr-body`, `.cr-status`, etc.
+- [x] i18n: `citizenReports` key in EN/BM/ZH
+- [x] Env vars for live mode: `CITY_REPORTER_SUPABASE_URL` + `CITY_REPORTER_SUPABASE_KEY`
+      (when Kuching City Reporter deployment exists, set these to go live)
 
 ## 🔲 DEFERRED (next increment)
 - [ ] Add `impervious-2024.png` as second AlphaEarth Leaflet image overlay toggle

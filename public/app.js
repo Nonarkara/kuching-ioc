@@ -1068,12 +1068,13 @@ function renderMap(payload) {
     if (r.lat == null || r.lon == null) return;
     const color = r.status === "completed" ? crColors.completed : (crColors[r.urgency] || crColors.medium);
     window.L.circleMarker([r.lat, r.lon], {
-      radius: 7,
+      radius: r.urgency === "high" ? 8 : 7,
       fillColor: color,
       fillOpacity: 0.9,
       color: "#000",
       weight: 1.5,
       opacity: 0.8,
+      className: r.urgency === "high" ? "cr-pulse-high" : ""
     })
       .bindTooltip(
         `<strong>${escapeHtml(r.problem_type)}</strong><br>${escapeHtml(r.location_text || "—")}<br>Urgency: ${r.urgency.toUpperCase()} · ${(r.status || "").replace("_"," ").toUpperCase()}<br><em>${escapeHtml(r.ticket)}</em>`,
@@ -2519,7 +2520,7 @@ function renderCitizenReports(payload) {
       <div class="cr-body">
         <div class="cr-type">${escapeHtml(r.problem_type)}<span class="cr-status" data-tone="${statusTone}">${STATUS_LABEL[r.status] || r.status.toUpperCase()}</span></div>
         <div class="cr-loc">${escapeHtml(r.location_text || "—")}</div>
-        <div class="cr-meta">${escapeHtml(r.ticket)} · ${ago}</div>
+        <div class="cr-meta"><span class="cr-ticket">${escapeHtml(r.ticket)}</span><span class="cr-ago">${ago}</span></div>
       </div>
     </div>`;
   }).join("");

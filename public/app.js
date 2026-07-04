@@ -1,12 +1,40 @@
-import {
+// Dynamic versioned import of data.js — pulls the asset version from the
+// app.js <script> tag's ?v= query so that updating the script tag (which
+// build.mjs already does on every build) cache-busts data.js too. Without
+// this, the browser keeps the old data.js parsed in module memory and any
+// new export silently fails to import. Top-level await is supported in ES
+// modules, which app.js declares via <script type="module">.
+const __ASSET_VER__ = (() => {
+  try {
+    const tag = document.querySelector('script[src*="app.js"]');
+    return tag?.src.match(/[?&]v=([^&]+)/)?.[1] || "";
+  } catch { return ""; }
+})();
+const __dataUrl__ = `./data.js${__ASSET_VER__ ? `?v=${encodeURIComponent(__ASSET_VER__)}` : ""}`;
+const {
   SITE, JURISDICTIONS, LOCAL_MARKERS, SARAWAK_RIVER, ASEAN_CLOCKS,
   MAP_WATCHPOINTS, AIRPORT_FALLBACK_ROUTES, FALLBACK_NEWS, FALLBACK_TRENDS,
   WEATHER_FALLBACK, AIR_FALLBACK, CITY_DEMOGRAPHICS, TRANSLATIONS,
   round, aqiBand, weatherCodeLabel, kmBetween, classifyAircraft,
-  sourceRecord, buildSatelliteCards, buildMapLayers, URBAN_LAYERS
-} from "./data.js";
+  sourceRecord, buildMapLayers, URBAN_LAYERS, ECONOMY_FALLBACK, RIVER_BYPASS_PROJECT, MPP_WARD_PROJECTS,
+  WARD_TENSION, CCTV_FEEDS
+} = await import(__dataUrl__);
 
 const BOOT = window.__IOC_BOOT__ || {};
+
+// View mode — "secretary" (trimmed for non-tech municipal user) or "full" (everything).
+// Set via data-view attribute on <html>. Toggle in HTML; nothing deleted from JS or DOM.
+const VIEW_MODE = document.documentElement.dataset.view || "secretary";
+const isSecretary = VIEW_MODE === "secretary";
+
+const SOURCE_STATUS_LABEL = {
+  live: "live",
+  official: "official",
+  fallback: "backup feed",
+  offline: "offline",
+  reference: "cached",
+  curated: "hand-curated",
+};
 
 // --- State ---
 const state = {
@@ -14,6 +42,9 @@ const state = {
   urbanLayerGroups: new Map(),
   tileLayers: new Map(), activeLayerId: "dark", payload: null, hasInitialMapFit: false,
   theme: "dark", lang: "en", mapResizeObserver: null,
+  activeWard: null,
+  localityFilter: { ward: null, stateCode: null, parliamentCode: null, propertyType: null, search: "" },
+  wardFeatures: null, wardLayerGroup: null, wardHighlightLayer: null,
 };
 
 // --- DOM ---
@@ -38,6 +69,97 @@ const formatBadgeStamp = value => value ? new Date(value).toLocaleString("en-MY"
   hour12: false,
 }) : null;
 
+// --- Pass 1: Control-room helpers (delta digest, directive state, glyph status) ---
+const SNAPSHOT_KEY = "kch_ioc_snapshot_v1";
+const VISIT_KEY    = "kch_ioc_last_visit_v1";
+const DIRECTIVE_STATE_KEY = "kch_ioc_directive_state_v1";
+
+// djb2-ish small hash; stable, fast, no crypto needed.
+function hashStr(s) {
+  let h = 5381;
+  const str = String(s ?? "");
+  for (let i = 0; i < str.length; i++) h = (h * 33) ^ str.charCodeAt(i);
+  return (h >>> 0).toString(36);
+}
+
+// Map a status string to a HUD glyph (▰ live, ▱ cached, ◐ degraded, ✕ offline).
+function statusGlyph(status) {
+  const map = {
+    live: "▰", ok: "▰", clear: "▰", none: "▰",
+    cached: "▱", reference: "▱", curated: "▱", snapshot: "▱",
+    degraded: "◐", fallback: "◐", warn: "◐",
+    offline: "✕", error: "✕",
+  };
+  return map[String(status || "").toLowerCase()] || "⊙";
+}
+function statusTone(status) {
+  const s = String(status || "").toLowerCase();
+  if (s === "live" || s === "ok" || s === "clear" || s === "none") return "ok";
+  if (s === "offline" || s === "error") return "alert";
+  if (s === "degraded" || s === "fallback" || s === "warn") return "warn";
+  return "muted";
+}
+function glyphHTML(status, label) {
+  const g = statusGlyph(status);
+  const tone = statusTone(status);
+  const txt = label != null ? `<span>${label}</span>` : "";
+  return `<span class="glyph" data-tone="${tone}" title="${status}">${g}</span>${txt}`;
+}
+
+function safeStorage() {
+  try { return window.localStorage; } catch (_) { return null; }
+}
+function readJson(key) {
+  const ls = safeStorage(); if (!ls) return null;
+  try { const v = ls.getItem(key); return v ? JSON.parse(v) : null; } catch (_) { return null; }
+}
+function writeJson(key, value) {
+  const ls = safeStorage(); if (!ls) return;
+  try { ls.setItem(key, JSON.stringify(value)); } catch (_) { /* quota / disabled */ }
+}
+
+// Pass 2.5: pulse-ring period scaled to data freshness (newer = faster).
+function freshnessPeriodSeconds(updatedAt) {
+  if (!updatedAt) return 8;
+  const ageMin = (Date.now() - Date.parse(updatedAt)) / 60_000;
+  if (ageMin < 1) return 1.6;
+  if (ageMin < 10) return 2.6;
+  if (ageMin < 60) return 4;
+  return 8;
+}
+// Compass bearing from (lat1,lon1) → (lat2,lon2) in degrees [0,360).
+function bearingFromTo(lat1, lon1, lat2, lon2) {
+  const toRad = d => d * Math.PI / 180;
+  const dLon = toRad(lon2 - lon1);
+  const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+            Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+// Functional radar sweep — every second, advance the virtual sweep angle and
+// flash any pulse-marker whose bearing-from-map-centre lies within the cone.
+// Subtle, but reads as a system that's actively scanning, not just decoration.
+function startRadarSweep() {
+  if (state.radarTimer) return;
+  let angle = 0;
+  state.radarTimer = setInterval(() => {
+    angle = (angle + 12) % 360;
+    if (!state.map || !state.pulseMarkerEls?.size) return;
+    const center = state.map.getCenter();
+    state.pulseMarkerEls.forEach(({ lat, lon, marker }) => {
+      const bearing = bearingFromTo(center.lat, center.lng, lat, lon);
+      const diff = Math.abs(((bearing - angle + 540) % 360) - 180);
+      const within = diff > 174; // within ±6° of the sweep
+      if (!within) return;
+      const el = marker.getElement?.()?.querySelector(".pulse-marker");
+      if (!el) return;
+      el.dataset.swept = "true";
+      setTimeout(() => { el.dataset.swept = "false"; }, 600);
+    });
+  }, 1000);
+}
+
 function boardModeFromBoot() {
   if (BOOT.deploymentMode) return BOOT.deploymentMode;
   const host = window.location.hostname;
@@ -54,7 +176,9 @@ function apiUrl(pathname) {
   const basePath = window.location.pathname.endsWith("/")
     ? window.location.pathname
     : window.location.pathname.replace(/[^/]+$/, "");
-  return new URL(relativePath, `${window.location.origin}${basePath}`).toString();
+  const url = new URL(relativePath, `${window.location.origin}${basePath}`);
+  if (BOOT.assetVersion) url.searchParams.set("v", BOOT.assetVersion);
+  return url.toString();
 }
 
 function buildModeMeta(mode) {
@@ -274,23 +398,25 @@ function buildBoardBrief(payload) {
   if (now.length === 0) now.push("No immediate tasking generated");
 
   const next = [];
-  if (rainMetric) next.push(`Rain watch ${rainMetric.value}${rainMetric.unit} · ${rainMetric.context}`);
-  if (aqiMetric) next.push(`Air ${aqiMetric.value} AQI · ${aqiMetric.context}`);
+  if (rainMetric) next.push(`Rain watch · ${rainMetric.value}${rainMetric.unit} today · ${rainMetric.context}`);
+  if (aqiMetric) next.push(`Air quality · AQI ${aqiMetric.value} · ${aqiMetric.context}`);
   if (payload.airport?.status === "live") {
-    next.push(`Airport ${airportMetric?.value ?? payload.airport.movements?.totalTracked ?? 0} tracked · live airspace`);
+    next.push(`Airspace · ${airportMetric?.value ?? payload.airport.movements?.totalTracked ?? 0} aircraft tracked live`);
   } else {
-    next.push(`Airport board is ${payload.airport?.status || "reference"} · treat movement counts as advisory`);
+    next.push(`Airspace · flight feed reduced · numbers indicative only`);
   }
 
   const blind = [];
   if (payload.delivery?.mode !== "live-api") {
-    blind.push(`This URL is ${payload.delivery?.modeLabel?.toLowerCase() || "not live"} · use live board for direct API telemetry`);
+    blind.push(`Static snapshot · refreshes every 6 hours · live board streams real-time`);
   }
-  degradedSources.slice(0, 3).forEach((source) => blind.push(`${source.name}: ${source.status}`));
-  if (blind.length === 0) blind.push("Core feeds are responding normally");
+  const actionableBlind = degradedSources.filter((source) => ["fallback", "offline"].includes(source.status));
+  actionableBlind.slice(0, 3).forEach((source) => blind.push(`${source.name} · ${SOURCE_STATUS_LABEL[source.status] || source.status}`));
+  if (blind.length === 0) blind.push("All feeds responding normally");
 
   return { now: now.slice(0, 3), next: next.slice(0, 3), blind: blind.slice(0, 3) };
 }
+
 
 function queueMapResize() {
   if (!state.map) return;
@@ -478,27 +604,69 @@ function buildMetrics(w, a, ap, j, n, pz, tr) {
   ];
 }
 
-function buildOperations(w, a, ap, n, j, pz, tr, fires, quakes) {
-  const rain6h = round(w.nextHours.reduce((s,h)=>s+h.precipitationMm,0),1);
+function buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes }) {
+  const rain6h = round(weather.nextHours.reduce((s,h)=>s+h.precipitationMm,0),1);
   const items = [];
   if (rain6h>=6) items.push({ severity:"high", owner:"Drainage", title:"Sweep low-lying feeder roads", detail:`${rain6h}mm projected. Prioritise Penrissen and Batu Kawa.` });
-  if (a.current.aqi>=70||a.current.pm25>=25) items.push({ severity:"medium", owner:"Health", title:"Haze advisory for sensitive groups", detail:`AQI ${a.current.aqi}, PM2.5 ${a.current.pm25}` });
-  if (ap.movements.totalTracked>=6) items.push({ severity:"medium", owner:"Traffic", title:"Airport corridor watch", detail:`${ap.movements.arrivals} arrivals in envelope.` });
-  if (tr.localMatches.length>0) items.push({ severity:"medium", owner:"Comms", title:"Local search pulse active", detail:tr.localMatches.slice(0,2).map(i=>i.title).join(" / ") });
+  if (air.current.aqi>=70||air.current.pm25>=25) items.push({ severity:"medium", owner:"Health", title:"Haze advisory for sensitive groups", detail:`AQI ${air.current.aqi}, PM2.5 ${air.current.pm25}` });
+  if (airport.movements.totalTracked>=6) items.push({ severity:"medium", owner:"Traffic", title:"Airport corridor watch", detail:`${airport.movements.arrivals} arrivals in envelope.` });
+  if (trends.localMatches.length>0) items.push({ severity:"medium", owner:"Comms", title:"Local search pulse active", detail:trends.localMatches.slice(0,2).map(i=>i.title).join(" / ") });
   items.push({ severity:"low", owner:"Infrastructure", title:`${CITY_DEMOGRAPHICS.drainageNetworkKm}km drainage network`, detail:`${CITY_DEMOGRAPHICS.roadNetworkKm}km road network serving ${num(CITY_DEMOGRAPHICS.greaterKuchingPopulation)} residents.` });
-  items.push({ severity:"low", owner:"Planning", title:"Padawan growth ring", detail:`${j.items.find(i=>i.id==="mpp")?.areaKm2??0} km2 across ${pz.wardCount} wards.` });
+  items.push({ severity:"low", owner:"Planning", title:"Padawan growth ring", detail:`${jurisdictions.items.find(i=>i.id==="mpp")?.areaKm2??0} km2 across ${padawanZoning.wardCount} wards.` });
   return items.slice(0,6);
 }
 
-function computeSentiment(news) {
-  const counts = { positive: 0, neutral: 0, negative: 0 };
-  news.forEach(n => counts[n.sentiment || "neutral"]++);
-  const total = news.length || 1;
+
+const GROUND_PULSE_LANES = [
+  { key: "kuching", label: "Kuching", intent: "What the city is being talked about right now.",
+    match: /kuching|古晋|kch\b|wbgg|batu kawa|petra jaya|satok|padungan|waterfront|stutong|pending/i },
+  { key: "padawan", label: "Padawan", intent: "What residents and councils say about MPP country.",
+    match: /padawan|巴达旺|kota padawan|mpp\b|siburan|matang|penrissen|beratok|kuap|tapah|sungai maong/i },
+  { key: "sarawak", label: "Sarawak", intent: "State-wide signals that touch Greater Kuching.",
+    match: /sarawak|砂拉越|sarawakian|dbku|mbks|premier\s+of\s+sarawak|chief\s+minister\s+sarawak|\bcms\b|\bsdec\b|\bdewan\s+undangan\s+negeri\b/i },
+];
+
+function buildClientGroundPulse(news, trends) {
+  const items = Array.isArray(news?.items) ? news.items : [];
+  const trendItems = Array.isArray(trends?.items) ? trends.items : [];
+  const dayFloor = Date.now() - 24 * 60 * 60 * 1000;
+  const gen = nowIso();
+
+  const lanes = GROUND_PULSE_LANES.map((lane) => {
+    const matched = items.filter((item) => lane.match.test(`${item.title || ""} ${item.source || ""}`));
+    const last24h = matched.filter((item) => Date.parse(item.publishedAt || 0) >= dayFloor);
+    const headlines = matched.slice(0, 3).map((item) => ({
+      title: item.title, source: item.source, url: item.link,
+      publishedAt: item.publishedAt, language: item.language,
+      languageBadge: item.languageBadge, isOfficial: Boolean(item.isOfficial),
+    }));
+    const trendMatches = trendItems
+      .filter((t) => lane.match.test(`${t.title || ""} ${t.newsTitle || ""} ${t.primarySource || ""}`))
+      .slice(0, 3)
+      .map((t) => ({ term: t.title, trafficLabel: t.trafficLabel || null, link: t.link || null,
+        newsTitle: t.newsTitle || null, newsSource: t.primarySource || null }));
+    const top = headlines[0];
+    const narrative = top
+      ? `${top.source || "Local press"} · ${top.title}`
+      : trendMatches[0]
+        ? `Search surge: ${trendMatches[0].term}`
+        : `No fresh ${lane.label} coverage in the 24-hour window — the lane is quiet.`;
+    return { key: lane.key, label: lane.label, intent: lane.intent,
+      mentionCount: matched.length, last24hCount: last24h.length,
+      headlines, trendMatches, narrative };
+  });
+
+  const totalMentions = lanes.reduce((s, l) => s + l.mentionCount, 0);
+  const totalLast24h = lanes.reduce((s, l) => s + l.last24hCount, 0);
   return {
-    positive: round(counts.positive / total * 100, 0),
-    neutral: round(counts.neutral / total * 100, 0),
-    negative: round(counts.negative / total * 100, 0),
-    label: counts.negative > counts.positive ? "Cautious" : counts.positive > 2 ? "Optimistic" : "Balanced",
+    generatedAt: gen,
+    status: totalMentions > 0 ? "live" : "fallback",
+    systemLabel: "Ground Pulse // per-city mention rollup from Google News lanes + Google Trends local matches",
+    summary: totalMentions > 0
+      ? `${totalMentions} total mentions across Kuching / Padawan / Sarawak lanes, ${totalLast24h} from the last 24 hours.`
+      : "Ground pulse is quiet — no matching mentions in the current news or trends window.",
+    totals: { mentions: totalMentions, last24h: totalLast24h },
+    lanes,
   };
 }
 
@@ -538,32 +706,70 @@ async function buildFallbackDashboard() {
     summary: buildSummary(weather, air, airport, jurisdictions, enrichedNews, padawanZoning, trends),
     metrics: buildMetrics(weather, air, airport, jurisdictions, enrichedNews, padawanZoning, trends),
     jurisdictions, mapLayers: buildMapLayers(), climate: { weather, air },
-    airport, news: enrichedNews, trends, exchange,
-    satellites: buildSatelliteCards(), fires, quakes,
-    sentiment: computeSentiment(enrichedNews.items),
-    demographics: CITY_DEMOGRAPHICS,
-    operations: buildOperations(weather, air, airport, enrichedNews, jurisdictions, padawanZoning, trends, fires, quakes),
-    // Official data feeds — fallback stubs so renderers don't silently skip
-    openDosmStats: {
-      updatedAt: gen, year: 2024,
+    airport, news: enrichedNews, trends,
+    groundPulse: buildClientGroundPulse(enrichedNews, trends),
+    exchange,
+    fires, quakes,
+    govStats: {
+      status: "fallback", year: 2024,
       latestSarawakPop: "2,907,500",
-      source: "Department of Statistics Malaysia (DOSM)",
-    },
-    sarawakStats: {
       datasetCount: 142,
-      recentDatasets: [{ title: "Sarawak Population by District 2024" }],
+      updatedAt: gen,
+      districts: [],
     },
-    infobanjir: {
-      status: "reference", updatedAt: gen,
-      stationCount: 0, liveCount: 0,
-      highestBand: "reference", highestBandLabel: "Reference hold",
-      stations: [], bands: defaultHydroBands,
-      summary: "JPS Infobanjir in reference hold (client fallback).",
-      catchmentStatus: "cold",
-      catchmentNote: "Toggle the Drainage layer once to enable catchment routing.",
+    metWarnings: {
+      status: "fallback",
+      activeCount: 0,
+      items: [],
+      forecast: { label: "No active warnings.", tone: "good" },
+      generatedAt: gen
     },
-    apims: null,
+    demographics: CITY_DEMOGRAPHICS,
+    operations: buildOperations({ weather, air, airport, news: enrichedNews, jurisdictions, padawanZoning, trends, fires, quakes }),
+    floodForecast: {
+      status: "fallback", station: "Sarawak River at Kuching", units: "m³/s",
+      model: "GloFAS seamless v4 via Open-Meteo",
+      todayCms: 148, peakCms: 175,
+      forecast: [
+        { date: null, dischargeCms: 148 }, { date: null, dischargeCms: 155 },
+        { date: null, dischargeCms: 162 }, { date: null, dischargeCms: 170 },
+        { date: null, dischargeCms: 175 },
+      ],
+    },
     mapScene: { hydroBands: defaultHydroBands },
+    // IOC 2.0 — forecast + AlphaEarth absent in pure client-fallback (tier 3);
+    // both are static artifacts that ride in via tier 1/2. Stubs keep renderers
+    // safe so the rail shows an idle note and the overlay toggle degrades.
+    forecast: { status: "absent", series: {}, stations: {}, basin_amc: null },
+    floodMatrix: { status: "absent", rows: [], worst_band: "normal", basin_amc: null, impervious_status: "absent" },
+    alphaEarth: { status: "absent" },
+    impervious: { status: "absent" },
+    cityReports: { status: "absent", count: 0, open: 0, resolved: 0, recent: [] },
+    // MPP governance — sample stubs so the councillor + locality panels
+    // render meaningfully even in pure client-fallback mode (no server, no snapshot).
+    mppCouncillors: {
+      status: "fallback", updatedAt: gen, term: "2025–2028",
+      chairman: { title: "Cr.", name: "Tan Kai", phone: "013-8095165", role: "Chairman", coverage: "All zones" },
+      deputy: { title: "Cr.", name: "Mahmud Bin Dato Sri Haji Ibrahim", phone: "012-8087997", role: "Deputy Chairman", coverage: "All zones" },
+      wards: [
+        { code: "A", codeGroup: ["A"], label: "Ward 1", area: "Upper Padawan", councillorCount: 2,
+          councillors: [{ title: "Cr.", name: "Mark Kellon anak Awo", phone: "016-8922060" }] },
+        { code: "FG", codeGroup: ["F","G"], label: "Ward 4", area: "Kota Padawan, Kuap, Landeh & Batu 10-15 Kuching-Serian Road", councillorCount: 4,
+          councillors: [{ title: "Cr.", name: "Lim Lian Kee", phone: "019-8185350" }] },
+      ],
+      totals: { wards: 10, councillors: 32 },
+    },
+    mppLocalities: {
+      status: "fallback", updatedAt: gen,
+      items: [
+        { no: 1, code: "A001", name: "PANGKALAN EMPAT", letter: "A", wardCode: "A",
+          constituency: { raw: "N.19 Mambong under P.198 Puncak Borneo",
+            parsed: [{ stateCode: "N.19", stateName: "Mambong", parliamentCode: "P.198", parliamentName: "Puncak Borneo" }], compound: false },
+          residential: 13, commercial: 0, industrial: 0, exempted: 0 },
+      ],
+      totals: { localities: 525, residential: 77015, commercial: 5780, industrial: 1805, exempted: 1, stateConstituencies: 9, parliamentConstituencies: 5 },
+      breakdowns: { byWard: { A:20, B:16, D:17, FG:76, H:75, I:56, JL:101, K:84, M:42, NPQ:27, X:11 } },
+    },
     sources: [
       sourceRecord("mpp","MPP Council","official","Padawan data","https://mpp.sarawak.gov.my",gen),
       sourceRecord("mbks","MBKS","official","Kuching South","https://mbks.sarawak.gov.my",gen),
@@ -572,10 +778,9 @@ async function buildFallbackDashboard() {
       sourceRecord("aqi","Open-Meteo AQI",air.status,"AQI, PM2.5, PM10","https://open-meteo.com",gen),
       sourceRecord("opensky","OpenSky",airport.status,"Live airspace KCH","https://opensky-network.org",gen),
       sourceRecord("usgs","USGS",quakes.status,"Regional seismic","https://earthquake.usgs.gov",gen),
-      sourceRecord("gibs","NASA GIBS","live","Orbital imagery","https://earthdata.nasa.gov",gen),
       sourceRecord("exchange","ExchangeRate API",exchange.status,"FX rates","https://open.er-api.com",gen),
-      sourceRecord("dosm","DOSM Census","reference","Sarawak demographics","https://open.dosm.gov.my",gen),
-      sourceRecord("jps-infobanjir","JPS Infobanjir","reference","Hydro stations (client fallback)","https://publicinfobanjir.water.gov.my",gen),
+      sourceRecord("gov-stats","DOSM/CKAN","reference","Sarawak demographics + datasets","https://open.dosm.gov.my",gen),
+      sourceRecord("met-warnings","MetMalaysia","reference","Official weather warnings","https://www.met.gov.my",gen),
     ],
   };
 }
@@ -589,7 +794,6 @@ async function loadDashboardPayload() {
     return decoratePayload({
       ...payload,
       exchange,
-      sentiment: computeSentiment(payload.news?.items ?? []),
       mapLayers: buildMapLayers(),
     }, { mode: "live-api" });
   } catch (liveError) {
@@ -602,7 +806,6 @@ async function loadDashboardPayload() {
       return decoratePayload({
         ...payload,
         exchange,
-        sentiment: computeSentiment(payload.news?.items ?? []),
         mapLayers: buildMapLayers(),
       }, { mode: "static-snapshot", manifest });
     } catch (snapshotError) {
@@ -625,14 +828,40 @@ function renderClocks(clocks) {
   $("clockGrid").innerHTML = clocks.map(c=>`<div class="clock-card"><div class="country">${c.city} [${c.offset}]</div><div class="time">${clockTime(c.timezone)}</div></div>`).join("");
 }
 
+// Metric → source provenance map. Each entry: short source name + ttl/cadence
+// hint. Surfaced on hover so a glance reveals "this number came from X, fresh
+// to Y minutes". Reinforces honesty: every reading on the board is traceable.
+const METRIC_SOURCES = {
+  heat:        { src: "Open-Meteo",     fresh: "60 s",  link: "https://open-meteo.com/" },
+  aqi:         { src: "Open-Meteo AQI", fresh: "60 s",  link: "https://open-meteo.com/en/docs/air-quality-api" },
+  pm25:        { src: "Open-Meteo AQI", fresh: "60 s",  link: "https://open-meteo.com/en/docs/air-quality-api" },
+  rain6h:      { src: "Open-Meteo",     fresh: "60 s",  link: "https://open-meteo.com/" },
+  airport:     { src: "OpenSky Network",fresh: "live",  link: "https://opensky-network.org/" },
+  wards:       { src: "MPP zoning map", fresh: "static",link: "https://mpp.sarawak.gov.my/" },
+  area:        { src: "MPP / MBKS / DBKU profiles", fresh: "static" },
+  "padawan-share":{ src: "MPP profile", fresh: "static" },
+  properties:  { src: "MPP / DBKU disclosed counts", fresh: "static" },
+  population:  { src: "DOSM census",    fresh: "static",link: "https://open.dosm.gov.my/" },
+  headlines:   { src: "Google News + UKAS / TVS / MPP / MBKS / DBKU", fresh: "15 min" },
+  trends:      { src: "Google Trends MY",fresh: "30 min",link: "https://trends.google.com/" },
+  "flood-watch":{src: "MET Malaysia",   fresh: "15 min",link: "https://api.data.gov.my/weather/warning/" },
+};
+
 function renderMetrics(metrics) {
-  $("metricBand").innerHTML = metrics.slice(0,12).map(m=>`
-    <article class="metric-card" data-tone="${m.tone||'neutral'}">
+  $("metricBand").innerHTML = metrics.slice(0,12).map(m => {
+    const prov = METRIC_SOURCES[m.id];
+    const provHtml = prov
+      ? `<div class="metric-source"><span class="src-name">${prov.src}</span><span class="src-fresh">${prov.fresh}</span></div>`
+      : "";
+    return `
+    <article class="metric-card" data-tone="${m.tone||'neutral'}" data-metric-id="${m.id}">
       <div class="metric-label">${m.label}</div>
       <div class="metric-value">${num(m.value,m.value%1===0?0:1)}<span class="metric-unit">${m.unit||''}</span></div>
       <div class="metric-context">${m.context||''}</div>
       <div class="sparkline-shell">${m.history?sparkline(m.history,m.tone):''}</div>
-    </article>`).join("");
+      ${provHtml}
+    </article>`;
+  }).join("");
 }
 
 function highlightCatchment(station, bandColor) {
@@ -690,6 +919,11 @@ function renderMap(payload) {
   if (!state.map) {
     state.map = window.L.map(mc, {
       zoomControl: false, attributionControl: false, fadeAnimation: false,
+      // preferCanvas: draw vectors on a single <canvas> instead of one SVG element
+      // per feature. On large GeoJSON layers (transit 1MB, drainage 600KB) this
+      // eliminates the zoom/pan stutter that was caused by the browser repainting
+      // thousands of individual SVG path nodes on every frame.
+      preferCanvas: true,
       maxBounds: SITE.mapMaxBounds, maxBoundsViscosity: 1.0,
       minZoom: SITE.minZoom, maxZoom: SITE.maxZoom,
     });
@@ -705,6 +939,7 @@ function renderMap(payload) {
     renderLayerToggle(layers);
     renderFocusToggle();
     renderUrbanLayerToggle();
+    loadWardFeatures();
 
     if (window.ResizeObserver) {
       state.mapResizeObserver = new ResizeObserver(() => queueMapResize());
@@ -712,11 +947,17 @@ function renderMap(payload) {
       if (mc.parentElement) state.mapResizeObserver.observe(mc.parentElement);
     }
   }
+
   state.boundaryLayerGroup.clearLayers();
   state.labelLayerGroup.clearLayers();
   state.markerLayerGroup.clearLayers();
 
-  payload.jurisdictions.items.forEach(item => {
+  // In secretary mode show only Padawan (MPP) boundary; full mode shows all 3 councils.
+  const visibleJurisdictions = isSecretary
+    ? payload.jurisdictions.items.filter(j => j.id === "mpp")
+    : payload.jurisdictions.items;
+
+  visibleJurisdictions.forEach(item => {
     item.polygons.forEach(ring => {
       window.L.polygon(ring.map(p=>[p[1],p[0]]), { color:item.accent, weight:2, fillOpacity:0.12, fillColor:item.accent }).addTo(state.boundaryLayerGroup);
     });
@@ -757,6 +998,7 @@ function renderMap(payload) {
   state.catchmentHighlightLayers = [];
 
   const hydroStations = payload.mapScene?.hydroStations || payload.infobanjir?.stations || [];
+  state.pulseMarkerEls = new Map();
   hydroStations.forEach(s => {
     if (s.lat == null || s.lon == null) return;
     state.hydroStationsByName.set(s.id, s);
@@ -764,6 +1006,16 @@ function renderMap(payload) {
     const isLive = s.waterLevelM != null;
     const hasCatchment = s.catchment?.status === "snapped";
     const radius = s.band === "danger" ? 9 : s.band === "warning" ? 8 : s.band === "alert" ? 7 : isLive ? 6 : 5;
+    // Pulse-ring overlay — period coded to freshness (faster = newer data).
+    // Reference stations get a slow pulse so the radar sweep still has anchors;
+    // their muted colour signals "no live reading", honest visual semantics.
+    const period = isLive
+      ? freshnessPeriodSeconds(s.observedAt || payload?.infobanjir?.updatedAt)
+      : 9;
+    const pulseHtml = `<div class="pulse-marker" data-station="${s.id}" style="--pulse-period:${period}s;color:${color};opacity:${isLive ? 1 : 0.55}"></div>`;
+    const pulseIcon = window.L.divIcon({ className: "", html: pulseHtml, iconSize: [8, 8], iconAnchor: [4, 4] });
+    const pulse = window.L.marker([s.lat, s.lon], { icon: pulseIcon, interactive: false, zIndexOffset: -100 }).addTo(state.markerLayerGroup);
+    state.pulseMarkerEls.set(s.id, { lat: s.lat, lon: s.lon, marker: pulse });
     const catchmentLine = hasCatchment
       ? `<br><span style="color:${color}">Catchment: ${s.catchment.segmentCount} seg · ${s.catchment.totalLengthKm} km · snap ${s.catchment.snapDistanceKm} km</span><br><em>Click to highlight</em>`
       : s.catchment?.status === "cold"
@@ -808,6 +1060,90 @@ function renderMap(payload) {
       )
       .addTo(state.markerLayerGroup);
   });
+
+  // Citizen Reports — ground-truth complaint markers. Red=high, amber=medium, green=resolved.
+  const crReports = payload.cityReports?.recent || [];
+  const crColors = { high: "#ff003c", medium: "#f59e0b", low: "#00ffaa", completed: "#8aa2c8" };
+  crReports.forEach((r) => {
+    if (r.lat == null || r.lon == null) return;
+    const color = r.status === "completed" ? crColors.completed : (crColors[r.urgency] || crColors.medium);
+    window.L.circleMarker([r.lat, r.lon], {
+      radius: r.urgency === "high" ? 8 : 7,
+      fillColor: color,
+      fillOpacity: 0.9,
+      color: "#000",
+      weight: 1.5,
+      opacity: 0.8,
+      className: r.urgency === "high" ? "cr-pulse-high" : ""
+    })
+      .bindTooltip(
+        `<strong>${escapeHtml(r.problem_type)}</strong><br>${escapeHtml(r.location_text || "—")}<br>Urgency: ${r.urgency.toUpperCase()} · ${(r.status || "").replace("_"," ").toUpperCase()}<br><em>${escapeHtml(r.ticket)}</em>`,
+        { className: "marker-tooltip cr-tooltip", direction: "top" },
+      )
+      .addTo(state.markerLayerGroup);
+  });
+
+  // Coordinate HUD — lat/lng overlay with one-tap copy for field ops.
+  // Created once per map init; click snaps the coord, COPY button writes to clipboard.
+  const mapFrame = mc.closest('.map-frame');
+  if (mapFrame && !mapFrame.querySelector('.map-coord-hud')) {
+    const hud = document.createElement('div');
+    hud.className = 'map-coord-hud';
+    hud.innerHTML = `
+      <span class="coord-label">LAT / LNG</span>
+      <span class="coord-value" id="coordValue">—</span>
+      <button class="coord-copy" id="coordCopy">COPY</button>`;
+    mapFrame.appendChild(hud);
+
+    let lastCoord = null;
+
+    state.map.on('mousemove', (e) => {
+      const { lat, lng } = e.latlng;
+      lastCoord = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      hud.querySelector('#coordValue').textContent = lastCoord;
+      hud.classList.add('is-active');
+    });
+
+    state.map.on('mouseout', () => {
+      if (!hud.classList.contains('is-snapped')) hud.classList.remove('is-active');
+    });
+
+    // Click / touch: snap the coordinate and keep the HUD visible.
+    state.map.on('click', (e) => {
+      const { lat, lng } = e.latlng;
+      lastCoord = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      hud.querySelector('#coordValue').textContent = lastCoord;
+      hud.classList.add('is-active', 'is-snapped');
+      hud.classList.remove('is-copied');
+    });
+
+    hud.querySelector('#coordCopy').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (!lastCoord) return;
+      const flash = () => {
+        const btn = hud.querySelector('#coordCopy');
+        btn.textContent = 'COPIED!';
+        hud.classList.add('is-copied');
+        setTimeout(() => {
+          btn.textContent = 'COPY';
+          hud.classList.remove('is-copied');
+        }, 1600);
+      };
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(lastCoord).then(flash).catch(flash);
+      } else {
+        // Fallback for non-HTTPS or older browsers.
+        const ta = document.createElement('textarea');
+        ta.value = lastCoord;
+        ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (_) { /* best effort */ }
+        document.body.removeChild(ta);
+        flash();
+      }
+    });
+  }
 
   if (!state.hasInitialMapFit) {
     state.map.setView(SITE.mapCenter, SITE.mapZoom);
@@ -902,7 +1238,7 @@ function renderUrbanLayerToggle() {
     document.querySelector(".map-controls").appendChild(container);
   }
 
-  container.innerHTML = URBAN_LAYERS.map(l => `<button data-id="${l.id}" class="${l.active ? 'active' : ''}">${t(l.id === 'land_use' ? 'landUse' : l.id === 'flood_risk' ? 'floodRisk' : l.id === 'drainage' ? 'drainage' : l.label)}</button>`).join("");
+  container.innerHTML = URBAN_LAYERS.map(l => `<button data-id="${l.id}" class="${l.active ? 'active' : ''}">${t(l.id === 'land_use' ? 'landUse' : l.id === 'flood_risk' ? 'floodRisk' : l.id === 'drainage' ? 'drainage' : l.id === 'flood_zones' ? 'Flood Zones' : l.label)}</button>`).join("");
   
   container.querySelectorAll("button").forEach(btn => btn.addEventListener("click", async () => {
     const layer = URBAN_LAYERS.find(l => l.id === btn.dataset.id);
@@ -910,6 +1246,13 @@ function renderUrbanLayerToggle() {
 
     layer.active = !layer.active;
     btn.classList.toggle("active", layer.active);
+
+    // AlphaEarth raster overlays — route by layer id.
+    if (layer.type === "image") {
+      if (layer.id === "impervious") toggleImperviousOverlay(layer.active, btn);
+      else toggleAlphaEarthOverlay(layer.active, btn);
+      return;
+    }
 
     if (!layer.active) {
       const existing = state.urbanLayerGroups.get(layer.id);
@@ -967,6 +1310,23 @@ function renderUrbanLayerToggle() {
             opacity: 0.9,
           };
         }
+        if (layer.id === "flood_zones") {
+          const sevColor = { critical: "#ef4444", high: "#f97316", seasonal: "#eab308" };
+          const c = sevColor[props.severity] || layer.color;
+          return { color: c, weight: 2, opacity: 0.9, fillColor: c, fillOpacity: 0.25 };
+        }
+        if (layer.id === "mpp_wards") {
+          const c = props.color || WARD_COLOR_MAP[props.wardCode] || layer.color;
+          const active = state.activeWard === props.wardCode;
+          return {
+            color: c,
+            weight: active ? 3 : 1.6,
+            opacity: 0.95,
+            fillColor: c,
+            fillOpacity: active ? 0.3 : 0.12,
+            dashArray: active ? null : "4 4",
+          };
+        }
         if (layer.id === "land_use" || layer.id === "flood_risk") {
           return {
             color: props.color || layer.color,
@@ -985,6 +1345,12 @@ function renderUrbanLayerToggle() {
         style: (feat) => styleFor(feat.properties || {}),
         onEachFeature: (feat, lyr) => {
           const p = feat.properties || {};
+          if (layer.id === "mpp_wards") {
+            const tooltip = `<strong>Ward ${p.wardCode}${p.wardLabel ? " // " + p.wardLabel : ""}</strong><br>${p.area || ""}<br><em>Click to filter councillors + localities</em>`;
+            lyr.bindTooltip(tooltip, { className: "marker-tooltip", sticky: true });
+            lyr.on("click", () => setActiveWard(state.activeWard === p.wardCode ? null : p.wardCode));
+            return;
+          }
           const lines = [
             `<strong>${p.name || `${(p.kind||'feature')} #${p.id}`}</strong>`,
             p.kind ? `Kind: ${p.kind}` : null,
@@ -1000,6 +1366,10 @@ function renderUrbanLayerToggle() {
       }).addTo(state.map);
       state.urbanLayerGroups.set(layer.id, group);
       if (layer.id === "drainage") state.drainageFeatureIndex = featureLayers;
+      if (layer.id === "mpp_wards") {
+        state.wardFeatures = fc.features || [];
+        state.wardLayerGroup = group;
+      }
       btn.textContent = `${originalLabel.replace(/ \(\d+\)$/, "")} (${features.length})`;
     } catch (error) {
       console.warn(`Layer ${layer.id} failed:`, error);
@@ -1015,6 +1385,149 @@ function renderUrbanLayerToggle() {
   }));
 }
 
+// IOC 2.0 — AlphaEarth growth-ring change overlay (Leaflet imageOverlay).
+// Raster sits over the Kota Padawan growth frontier; amber→red marks where the
+// land-surface embedding shifted most between 2017 and the latest year.
+function toggleAlphaEarthOverlay(active, btn) {
+  const ae = state.payload?.alphaEarth;
+  if (!active) {
+    if (state.alphaEarthOverlay && state.map.hasLayer(state.alphaEarthOverlay)) {
+      state.map.removeLayer(state.alphaEarthOverlay);
+    }
+    return;
+  }
+  if (!ae || ae.status !== "ready" || !ae.bounds || !ae.image) {
+    // Pipeline not run yet (Earth Engine auth pending) — degrade gracefully AND
+    // revert layer.active + button state so a second click isn't a no-op.
+    const layer = URBAN_LAYERS.find((l) => l.id === "growth");
+    if (layer) layer.active = false;
+    btn.classList.remove("active");
+    btn.classList.add("layer-empty");
+    btn.textContent = "Growth (pending)";
+    return;
+  }
+  if (!state.alphaEarthOverlay) {
+    const b = ae.bounds;
+    const url = apiUrl("/" + ae.image.replace(/^\//, ""));
+    state.alphaEarthOverlay = window.L.imageOverlay(
+      url,
+      [[b.south, b.west], [b.north, b.east]],
+      { opacity: 0.85, interactive: false, className: "alphaearth-overlay" },
+    );
+  }
+  state.alphaEarthOverlay.addTo(state.map);
+  if (state.map.getZoom() < 11) state.map.flyTo([(ae.bounds.south + ae.bounds.north) / 2, (ae.bounds.west + ae.bounds.east) / 2], 12, { duration: 0.6 });
+}
+
+// IOC 2.1 — AlphaEarth impervious-surface overlay. Transparent→amber→red ramp;
+// red = dense concrete/rooftop, transparent = permeable. Helps Secretary Goh
+// correlate the flood matrix drainage-stress flags with actual land cover.
+function toggleImperviousOverlay(active, btn) {
+  const imp = state.payload?.impervious;
+  if (!active) {
+    if (state.imperviousOverlay && state.map.hasLayer(state.imperviousOverlay)) {
+      state.map.removeLayer(state.imperviousOverlay);
+    }
+    return;
+  }
+  if (!imp || imp.status !== "ready" || !imp.bounds || !imp.image) {
+    const layer = URBAN_LAYERS.find((l) => l.id === "impervious");
+    if (layer) layer.active = false;
+    btn.classList.remove("active");
+    btn.classList.add("layer-empty");
+    btn.textContent = "Impervious (pending)";
+    return;
+  }
+  if (!state.imperviousOverlay) {
+    const b = imp.bounds;
+    const url = apiUrl("/" + imp.image.replace(/^\//, ""));
+    state.imperviousOverlay = window.L.imageOverlay(
+      url,
+      [[b.south, b.west], [b.north, b.east]],
+      { opacity: 0.70, interactive: false, className: "alphaearth-overlay" },
+    );
+  }
+  state.imperviousOverlay.addTo(state.map);
+  if (state.map.getZoom() < 11) state.map.flyTo([(imp.bounds.south + imp.bounds.north) / 2, (imp.bounds.west + imp.bounds.east) / 2], 12, { duration: 0.6 });
+}
+
+// IOC 2.0 — TimesFM forecast rail. Each card: current reading, a sparkline with
+// the p10–p90 uncertainty band around the p50 median (history → forecast), and
+// the 7-day outlook with worst-case p90. p90 = the worst case, always shown
+// alongside the median (Nonism §12.5). Source badge: TIMESFM vs BASELINE.
+function forecastBand(history, q) {
+  const hist = (Array.isArray(history) ? history : []).slice(-14);
+  const p10 = q?.p10 || [], p50 = q?.p50 || [], p90 = q?.p90 || [];
+  if (!p50.length) return "";
+  const w = 168, h = 44, pad = 3;
+  const histN = hist.length, fcN = p50.length, total = histN + fcN;
+  const all = [...hist, ...p10, ...p50, ...p90].filter((v) => Number.isFinite(v));
+  if (all.length < 2) return "";
+  const mn = Math.min(...all), mx = Math.max(...all), rng = Math.max(mx - mn, 1e-6);
+  const X = (idx) => (total <= 1 ? pad : (idx / (total - 1)) * (w - 2 * pad) + pad);
+  const Y = (v) => h - pad - ((v - mn) / rng) * (h - 2 * pad);
+  const up = p90.map((v, i) => `${X(histN + i).toFixed(1)},${Y(v).toFixed(1)}`);
+  const dn = p10.map((v, i) => `${X(histN + i).toFixed(1)},${Y(v).toFixed(1)}`).reverse();
+  const bandPath = up.length ? `M ${up.join(" L ")} L ${dn.join(" L ")} Z` : "";
+  const medPts = [...hist, ...p50].map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+  const splitX = X(Math.max(histN - 1, 0)).toFixed(1);
+  return `<svg viewBox="0 0 ${w} ${h}" class="fc-spark" preserveAspectRatio="none" aria-hidden="true">
+    ${bandPath ? `<path d="${bandPath}" class="fc-band"/>` : ""}
+    <line x1="${splitX}" y1="${pad}" x2="${splitX}" y2="${h - pad}" class="fc-now-line"/>
+    <polyline points="${medPts}" class="fc-median" fill="none"/>
+  </svg>`;
+}
+
+function renderForecastRail(payload) {
+  const el = $("forecastRail");
+  if (!el) return;
+  const fc = payload.forecast;
+  const tEmpty = t("forecastIdle") || "Forecast engine idle — run scripts/forecast/forecast_runner.py to populate the 7-day outlook.";
+  if (!fc || fc.status === "absent" || !fc.series || !Object.keys(fc.series).length) {
+    el.innerHTML = `<div class="forecast-empty">${escapeHtml(tEmpty).replace("scripts/forecast/forecast_runner.py", "<code>scripts/forecast/forecast_runner.py</code>")}</div>`;
+    return;
+  }
+  // Filter to series with a usable median array — defensive against malformed JSON.
+  const order = ["river_discharge", "rainfall", "aqi", "pm25"];
+  const valid = (k) => fc.series[k] && Array.isArray(fc.series[k].median) && fc.series[k].median.length > 0;
+  const keys = order.filter(valid).concat(Object.keys(fc.series).filter((k) => !order.includes(k) && valid(k) && !k.startsWith("station_")));
+  if (!keys.length) {
+    el.innerHTML = `<div class="forecast-empty">${escapeHtml(tEmpty)}</div>`;
+    return;
+  }
+  const isTimesfm = String(fc.model || "").includes("timesfm");
+  const badge = fc.status === "stale" ? (t("forecastStale") || "STALE")
+    : isTimesfm ? "TIMESFM" : (t("forecastBaseline") || "BASELINE");
+  const horizonLabel = t("forecastSub") || `${fc.horizon || 7}-day outlook · p10–p90 band`;
+  el.innerHTML = `
+    <div class="forecast-rail-head">
+      <span class="forecast-badge" data-src="${isTimesfm ? "timesfm" : "stub"}">${escapeHtml(badge)}</span>
+      <span class="forecast-sub">${escapeHtml(horizonLabel)}</span>
+    </div>
+    <div class="forecast-cards">
+      ${keys.map((k) => {
+        const s = fc.series[k];
+        const median = s.median;
+        const q = s.quantiles || {};
+        const last = median[median.length - 1];
+        const p10 = Array.isArray(q.p10) && q.p10.length ? q.p10[q.p10.length - 1] : null;
+        const p90 = Array.isArray(q.p90) && q.p90.length ? q.p90[q.p90.length - 1] : null;
+        const now = s.lastValue;
+        const glyph = (last != null && now != null) ? (last > now ? "▲" : last < now ? "▼" : "—") : "—";
+        const tone = (k === "river_discharge" && p90 != null && now && p90 >= now * 1.5) ? "warn"
+          : (k === "aqi" && p90 != null && p90 >= 100) ? "warn" : "cool";
+        const label = t(`forecastSeries_${k}`) || s.label || k;
+        const range = (p10 != null && p90 != null) ? `[${p10} – ${p90}]` : "";
+        return `<div class="forecast-card" data-tone="${tone}">
+          <div class="fc-card-label">${escapeHtml(label)}</div>
+          <div class="fc-now-row"><span class="fc-now-val">${now ?? "—"}</span><span class="fc-unit">${escapeHtml(s.unit || "")}</span></div>
+          ${forecastBand(s.history, s.quantiles)}
+          <div class="fc-outlook"><span class="fc-glyph">${glyph}</span> ${last ?? "—"} <span class="fc-range">${range}</span></div>
+        </div>`;
+      }).join("")}
+    </div>`;
+}
+
 function renderExchange(exchange) {
   const el = $("exchangeList");
   if (!el) return;
@@ -1025,6 +1538,537 @@ function renderExchange(exchange) {
     </div>`).join("");
 }
 
+// --- Pass 1.1: Delta digest --- "what changed since you last looked"
+function captureSnapshot(p) {
+  const ops = (p?.operations || []).map(o => hashStr((o.owner || "") + "|" + (o.title || "")));
+  const news = (p?.news?.items || []).slice(0, 12).map(i => hashStr(i.title || ""));
+  return {
+    t: Date.now(),
+    apimsAqi: p?.apims?.worst?.aqi ?? null,
+    aqi: p?.climate?.air?.current?.aqi ?? null,
+    hydroBand: p?.infobanjir?.highestBand ?? null,
+    hydroWorstName: p?.infobanjir?.stations?.[0]?.name ?? null,
+    hydroWorstLevel: p?.infobanjir?.stations?.[0]?.waterLevelM ?? null,
+    metActive: p?.metWarnings?.activeCount ?? 0,
+    metHeading: p?.metWarnings?.items?.[0]?.heading ?? null,
+    rain6h: p?.metrics?.find(m => m.id === "rain6h")?.value ?? null,
+    floodPeak: p?.floodForecast?.peakCms ?? null,
+    posture: p?.summary?.posture ?? null,
+    operationHashes: ops,
+    newsHashes: news,
+  };
+}
+
+function diffSnapshots(prev, curr) {
+  if (!prev) return [];
+  const lines = [];
+
+  if (prev.apimsAqi != null && curr.apimsAqi != null && Math.abs(curr.apimsAqi - prev.apimsAqi) >= 8) {
+    const up = curr.apimsAqi > prev.apimsAqi;
+    lines.push({ glyph: up ? "↑" : "↓",
+      text: `APIMS AQI ${prev.apimsAqi}→${curr.apimsAqi}`,
+      tone: up ? "warn" : "cool" });
+  }
+  if (prev.posture && curr.posture && prev.posture !== curr.posture) {
+    lines.push({ glyph: "Δ", text: `Posture ${prev.posture}→${curr.posture}`, tone: "warn" });
+  }
+  if (prev.hydroBand !== curr.hydroBand && (prev.hydroBand || curr.hydroBand)) {
+    lines.push({ glyph: "Δ",
+      text: `Hydro posture ${prev.hydroBand || "—"}→${curr.hydroBand || "—"}`,
+      tone: "warn" });
+  }
+  if (prev.hydroWorstLevel != null && curr.hydroWorstLevel != null &&
+      Math.abs(curr.hydroWorstLevel - prev.hydroWorstLevel) >= 0.2 &&
+      curr.hydroWorstName) {
+    const delta = (curr.hydroWorstLevel - prev.hydroWorstLevel).toFixed(1);
+    const sign = delta > 0 ? "+" : "";
+    lines.push({ glyph: "Δ",
+      text: `${curr.hydroWorstName} ${sign}${delta}m`,
+      tone: "warn" });
+  }
+  if (prev.metActive !== curr.metActive) {
+    if (curr.metActive > prev.metActive) {
+      lines.push({ glyph: "+",
+        text: `MET warning${curr.metActive > 1 ? "s" : ""} active: ${curr.metHeading || "see brief"}`,
+        tone: "alert" });
+    } else if (prev.metActive > curr.metActive) {
+      lines.push({ glyph: "−", text: `MET warning${prev.metActive > 1 ? "s" : ""} cleared`, tone: "cool" });
+    }
+  }
+  const newOps  = curr.operationHashes.filter(h => !prev.operationHashes.includes(h)).length;
+  const goneOps = prev.operationHashes.filter(h => !curr.operationHashes.includes(h)).length;
+  if (newOps > 0)  lines.push({ glyph: "+", text: `${newOps} new directive${newOps > 1 ? "s" : ""}`, tone: "warn" });
+  if (goneOps > 0) lines.push({ glyph: "−", text: `${goneOps} directive${goneOps > 1 ? "s" : ""} cleared`, tone: "cool" });
+  const newNews = curr.newsHashes.filter(h => !prev.newsHashes.includes(h)).length;
+  if (newNews >= 3) lines.push({ glyph: "+", text: `${newNews} new headline${newNews > 1 ? "s" : ""}`, tone: "info" });
+
+  return lines.slice(0, 5);
+}
+
+function relativeMinutes(ts) {
+  if (!ts) return null;
+  const m = Math.round((Date.now() - ts) / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ${m % 60}m ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
+function renderDeltaDigest(payload) {
+  const strip = $("deltaStrip");
+  const sinceEl = $("deltaSince");
+  const listEl = $("deltaList");
+  if (!strip || !sinceEl || !listEl) return;
+
+  const prev = readJson(SNAPSHOT_KEY);
+  const curr = captureSnapshot(payload);
+  const lines = prev ? diffSnapshots(prev, curr) : [];
+  const since = prev?.t ? relativeMinutes(prev.t) : null;
+
+  if (!prev) {
+    strip.dataset.empty = "true";
+    sinceEl.textContent = "First visit · baseline captured";
+    listEl.innerHTML = "";
+  } else if (lines.length === 0) {
+    strip.dataset.empty = "true";
+    sinceEl.textContent = `No change since ${since || "earlier"}`;
+    listEl.innerHTML = "";
+  } else {
+    strip.dataset.empty = "false";
+    sinceEl.textContent = `since ${since}`;
+    listEl.innerHTML = lines.map(l => `
+      <span class="delta-line" data-tone="${l.tone}">
+        <span class="delta-glyph">${l.glyph}</span>
+        <span class="delta-text">${escapeHtml ? escapeHtml(l.text) : l.text}</span>
+      </span>`).join("");
+  }
+
+  // Persist the new snapshot for next visit / next render.
+  writeJson(SNAPSHOT_KEY, curr);
+  writeJson(VISIT_KEY, Date.now());
+}
+
+// --- Today's Brief: a single-line teleprompter under the title.
+// Reads as the first thing a Secretary glances at: time · posture · key flags ·
+// what needs his attention. Composed only from the existing payload, so it
+// updates on every render (and in delta differential after midnight resets).
+function composeTodayBrief(payload) {
+  const segments = [];
+  // Asia/Kuching local clock; precise to the minute keeps the line "live".
+  const stamp = new Date().toLocaleString("en-MY", {
+    day: "2-digit", month: "short",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+    timeZone: "Asia/Kuching",
+  }).replace(",", "").toUpperCase();
+  segments.push(stamp);
+
+  // Posture, in caps, glow-on-tone via inline data-posture.
+  const posture = String(payload?.summary?.posture || "STABLE").toUpperCase();
+  segments.push(`<span class="brief-posture" data-posture="${posture.toLowerCase()}">${posture}</span>`);
+
+  // Active MET warnings (red if any, else "MET CLEAR").
+  const metCount = payload?.metWarnings?.activeCount || 0;
+  if (metCount > 0) {
+    segments.push(`<span class="brief-flag" data-tone="alert">${metCount} MET WARNING${metCount > 1 ? "S" : ""}</span>`);
+  } else {
+    segments.push(`<span class="brief-flag" data-tone="ok">MET CLEAR</span>`);
+  }
+
+  // Hydro posture (only if non-normal).
+  const hydroBand = payload?.infobanjir?.highestBand;
+  if (hydroBand && !["normal", "reference"].includes(hydroBand)) {
+    const worstName = payload?.infobanjir?.stations?.[0]?.name;
+    segments.push(`<span class="brief-flag" data-tone="warn">HYDRO ${hydroBand.toUpperCase()}${worstName ? " · " + worstName.toUpperCase() : ""}</span>`);
+  }
+
+  // Worst APIMS reading.
+  const apims = payload?.apims?.worst;
+  if (apims?.aqi != null) {
+    const tone = apims.aqi >= 100 ? "warn" : apims.aqi >= 75 ? "warn" : "muted";
+    segments.push(`<span class="brief-flag" data-tone="${tone}">APIMS ${apims.aqi}</span>`);
+  }
+
+  // High-severity directive count.
+  const highOps = (payload?.operations || []).filter(o => o.severity === "high").length;
+  if (highOps > 0) {
+    segments.push(`<span class="brief-flag" data-tone="warn">${highOps} HIGH DIRECTIVE${highOps > 1 ? "S" : ""}</span>`);
+  }
+
+  // Rain forecast hook only when meaningful.
+  const rain6h = payload?.metrics?.find(m => m.id === "rain6h")?.value;
+  if (rain6h != null && rain6h >= 5) {
+    segments.push(`<span class="brief-flag" data-tone="warn">${rain6h}MM/6H RAIN</span>`);
+  }
+
+  return segments.join(' <span class="brief-sep">·</span> ');
+}
+
+// --- Pass 3.6: Today's events stack — ATC-style time-anchored log ---
+function freshnessBucket(tsMs) {
+  const ageMin = (Date.now() - tsMs) / 60_000;
+  if (ageMin < 30) return "now";
+  if (ageMin < 240) return "recent";
+  return "older";
+}
+function eventTime(tsMs) {
+  return new Date(tsMs).toLocaleTimeString("en-MY", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Kuching" });
+}
+function composeEvents(payload) {
+  const out = [];
+  const cutoff = Date.now() - 24 * 3600 * 1000;
+  // MET warnings
+  for (const w of payload?.metWarnings?.items || []) {
+    const t = Date.parse(w.validFrom || payload.metWarnings.updatedAt);
+    if (t && t >= cutoff) {
+      out.push({ t, type: "MET", text: `${w.heading || "Active warning"}${w.validTo ? " · valid until " + new Date(w.validTo).toLocaleTimeString("en-MY",{hour:"2-digit",minute:"2-digit",hour12:false,timeZone:"Asia/Kuching"}) : ""}` });
+    }
+  }
+  // Hydro: any non-normal stations as events at the payload generatedAt
+  const ib = payload?.infobanjir;
+  if (ib?.stations) {
+    const tIb = Date.parse(ib.updatedAt || payload.generatedAt) || Date.now();
+    for (const s of ib.stations) {
+      if (["alert", "warning", "danger"].includes(s.band)) {
+        out.push({ t: tIb, type: "HYDRO", text: `${s.name} ${s.waterLevelM != null ? s.waterLevelM + "m" : ""} (${s.bandLabel || s.band})` });
+      }
+    }
+  }
+  // Earthquakes (regional, last 24h)
+  for (const q of payload?.quakes?.events || []) {
+    const t = Date.parse(q.time);
+    if (t && t >= cutoff && (q.distanceKm == null || q.distanceKm < 600)) {
+      out.push({ t, type: "QUAKE", text: `M${q.magnitude?.toFixed(1) ?? "?"} ${q.place || "regional event"}` });
+    }
+  }
+  // Airport peak
+  const airTracked = payload?.airport?.movements?.totalTracked ?? 0;
+  if (airTracked >= 8) {
+    out.push({ t: Date.parse(payload.airport.updatedAt || payload.generatedAt) || Date.now(),
+      type: "AIR", text: `${airTracked} aircraft tracked · peak local traffic` });
+  }
+  // Flood-forecast peak (only if >200 m³/s)
+  const peak = payload?.floodForecast?.peakCms;
+  if (peak != null && peak > 200) {
+    out.push({ t: Date.parse(payload.floodForecast.updatedAt || payload.generatedAt) || Date.now(),
+      type: "FLOOD", text: `GloFAS peak ${peak} m³/s on Sarawak River` });
+  }
+  // News headlines (official-tier preferred). Last 24h.
+  const news = (payload?.news?.items || [])
+    .filter(i => {
+      const t = Date.parse(i.publishedAt || payload.news.updatedAt);
+      return t && t >= cutoff;
+    })
+    .sort((a, b) => (b.isOfficial ? 1 : 0) - (a.isOfficial ? 1 : 0))
+    .slice(0, 5);
+  for (const n of news) {
+    out.push({ t: Date.parse(n.publishedAt) || Date.now(), type: "NEWS", text: `${n.source || ""}${n.source ? " · " : ""}${(n.title || "").slice(0, 80)}` });
+  }
+  out.sort((a, b) => b.t - a.t);
+  return out.slice(0, 10);
+}
+
+function renderEventsStack(payload) {
+  const el = $("eventsStack");
+  if (!el) return;
+  const events = composeEvents(payload);
+  if (!events.length) {
+    el.innerHTML = `<div class="events-empty">No notable events in the last 24h.</div>`;
+    return;
+  }
+  el.innerHTML = events.map(e => `
+    <article class="event-row" data-type="${e.type}" data-fresh="${freshnessBucket(e.t)}">
+      <span></span>
+      <span class="event-time">${eventTime(e.t)}</span>
+      <span class="event-type">${e.type}</span>
+      <span class="event-text">${escapeHtml(e.text)}</span>
+    </article>`).join("");
+}
+
+// --- Pass 3.7: COMMAND EXPORT — WhatsApp clipboard, plain-text sitrep, print ---
+function buildSitrepText(p) {
+  const now = new Date();
+  const stamp = now.toLocaleString("en-MY", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Kuching" });
+  const posture = (p.summary?.posture || "stable").toUpperCase();
+  const acts = (p.operations || []).filter(o => o.severity === "high").slice(0, 3);
+  const env = [];
+  const heat = p.metrics?.find(m => m.id === "heat");
+  if (heat) env.push(`Heat index ${heat.value}°C · ${heat.context}`);
+  const aqi = p.apims?.worst;
+  if (aqi?.aqi != null) env.push(`AQI ${aqi.aqi} (APIMS ${aqi.stationName || aqi.label})`);
+  const rain = p.metrics?.find(m => m.id === "rain6h");
+  if (rain) env.push(`Rain next 6h: ${rain.value}mm`);
+  const ib = p.infobanjir;
+  if (ib?.stations?.length) {
+    const worst = ib.stations[0];
+    env.push(`${worst.name}: ${worst.waterLevelM != null ? worst.waterLevelM + "m" : "ref"} (${worst.bandLabel || worst.band})`);
+  }
+  const met = p.metWarnings;
+  if (met?.activeCount > 0) env.push(`MET warning active: ${met.items[0].heading || ""}`);
+  const air = p.airport?.movements;
+  const lines = [
+    "🛰 KUCHING SITREP · " + stamp,
+    "",
+    "POSTURE: " + posture + (p.summary?.headline ? " — " + p.summary.headline : ""),
+    "",
+    "ACT NOW",
+    ...(acts.length ? acts.map((o, i) => `${i + 1}. ${o.owner}: ${o.title}`) : ["No high-severity directives."]),
+    "",
+    "ENVIRONMENT",
+    ...env,
+    "",
+    "KCH AIRSPACE",
+    air ? `${air.totalTracked} aircraft tracked · ${air.arrivals} arrivals / ${air.departures} departures` : "—",
+    "",
+    "— Office of Secretary Daniel Goh, MPP",
+  ];
+  return lines.join("\n");
+}
+
+function showToast(msg, tone = "ok") {
+  const el = $("exportToast");
+  if (!el) return;
+  el.textContent = msg;
+  el.dataset.tone = tone;
+  el.hidden = false;
+  clearTimeout(el._tid);
+  el._tid = setTimeout(() => { el.hidden = true; }, 3000);
+}
+
+async function exportSitrepWhatsApp() {
+  if (!state.payload) return;
+  const text = buildSitrepText(state.payload);
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("✓ COPIED · paste in WhatsApp", "ok");
+  } catch (_) {
+    // Fallback: open a new window with the text selected (user copies manually).
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.body.style = "background:#010203;color:#e8f4ff;font:13px 'JetBrains Mono',monospace;padding:24px;white-space:pre-wrap;";
+      w.document.body.textContent = text;
+      showToast("◐ CLIPBOARD BLOCKED · text in new tab", "error");
+    } else {
+      showToast("✕ EXPORT FAILED", "error");
+    }
+  }
+}
+
+// --- Pass 3.8: Telemetry strip + cross-reference connectors ---
+function renderTelemetryStrip(payload) {
+  const el = $("telemetryStrip");
+  if (!el) return;
+  const fmtTime = new Date().toLocaleTimeString("en-MY", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: "Asia/Kuching" });
+  const entries = [];
+  entries.push(`<span class="tlm-time">[${fmtTime}]</span>`);
+  const mode = payload.delivery?.tone || "unknown";
+  const modeStatus = deliveryToneToStatus(mode);
+  entries.push(`<span class="tlm-entry">${glyphHTML(modeStatus, payload.delivery?.modeLabel || mode)}</span>`);
+  // Per-source heartbeat glyphs.
+  const sources = [
+    ["jps-infobanjir", payload.infobanjir?.status],
+    ["apims", payload.apims?.status],
+    ["met", payload.metWarnings?.status],
+    ["glofas", payload.floodForecast?.status],
+    ["weather", payload.climate?.weather?.status],
+    ["aqi", payload.climate?.air?.status],
+    ["news", payload.news?.status],
+  ];
+  for (const [name, st] of sources) {
+    if (st) entries.push(`<span class="tlm-entry">${glyphHTML(st, name)}</span>`);
+  }
+  el.innerHTML = entries.join('<span class="tlm-sep">·</span>');
+}
+
+// Connector overlay: hairline cyan curves from a hovered metric tile to its
+// related elements in the rest of the dashboard. Pointer-events: none.
+const CONNECTOR_MAP = {
+  // metric-card id (lowercased) → list of CSS selectors to draw to
+  aqi:      ['#signalCards .signal-card[style*="ff003c"], #signalCards .signal-card[style*="ff7a00"], #signalCards .signal-card[style*="ffd000"]', '.operation-card[data-severity="high"]'],
+  heat:     ['#signalCards .signal-card:first-child'],
+  rain6h:   ['#floodForecast', '#signalCards .signal-card[data-band]'],
+  airport:  ['#airportStats'],
+  pm25:     ['#signalCards .signal-card'],
+  flood:    ['#floodForecast', '#signalCards .signal-card[data-band]'],
+  trends:   ['#newsRail'],
+  headlines:['#newsRail'],
+  wards:    ['#localityList', '#councillorPanel'],
+};
+
+function setupConnectors() {
+  const canvas = $("connectorCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + "px";
+    canvas.style.height = window.innerHeight + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener("resize", resize);
+
+  let activeLines = []; // { from:{x,y}, to:{x,y}, until:ts }
+  let raf = null;
+
+  function clearAll() {
+    activeLines = [];
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const now = Date.now();
+    activeLines = activeLines.filter(l => l.until > now);
+    for (const l of activeLines) {
+      const remaining = (l.until - now) / 800;
+      ctx.strokeStyle = `rgba(0, 243, 255, ${0.15 + 0.4 * remaining})`;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.lineDashOffset = -((now / 25) % 8);
+      ctx.beginPath();
+      const cpx = (l.from.x + l.to.x) / 2;
+      const cpy = (l.from.y + l.to.y) / 2 - 30;
+      ctx.moveTo(l.from.x, l.from.y);
+      ctx.quadraticCurveTo(cpx, cpy, l.to.x, l.to.y);
+      ctx.stroke();
+    }
+    if (activeLines.length) raf = requestAnimationFrame(draw);
+    else raf = null;
+  }
+
+  function rectCenter(el) {
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  function showConnectors(metricId, srcEl) {
+    const selectors = CONNECTOR_MAP[metricId];
+    if (!selectors) return;
+    const from = rectCenter(srcEl);
+    const targets = selectors.flatMap(s => [...document.querySelectorAll(s)].slice(0, 3));
+    if (!targets.length) return;
+    const until = Date.now() + 1200;
+    for (const t of targets) {
+      activeLines.push({ from, to: rectCenter(t), until });
+    }
+    if (!raf) draw();
+  }
+
+  // Metric tiles render as .metric-card with a kicker that contains the id.
+  document.addEventListener("mouseover", (e) => {
+    const card = e.target.closest?.(".metric-card");
+    if (!card) return;
+    const idLabel = card.querySelector(".metric-label")?.textContent?.toLowerCase() || "";
+    let metricId = null;
+    if (idLabel.includes("aqi"))      metricId = "aqi";
+    else if (idLabel.includes("heat"))metricId = "heat";
+    else if (idLabel.includes("rain"))metricId = "rain6h";
+    else if (idLabel.includes("kch")) metricId = "airport";
+    else if (idLabel.includes("pm"))  metricId = "pm25";
+    else if (idLabel.includes("trend")) metricId = "trends";
+    else if (idLabel.includes("headline")) metricId = "headlines";
+    else if (idLabel.includes("ward")) metricId = "wards";
+    if (metricId) showConnectors(metricId, card);
+  }, { passive: true });
+  document.addEventListener("mouseout", (e) => {
+    if (!e.target.closest?.(".metric-card")) return;
+    // Lines fade naturally; nothing to do.
+  }, { passive: true });
+}
+
+// --- Pass 1.2: Directive status (queued → active → done) + age-decayed borders ---
+const DIRECTIVE_STATUS_GLYPH = { queued: "◇", active: "◆", done: "●" };
+const DIRECTIVE_NEXT_STATUS = { queued: "active", active: "done", done: "queued" };
+
+function loadDirectiveState() {
+  const raw = readJson(DIRECTIVE_STATE_KEY) || {};
+  // Auto-purge entries with firstSeen older than 24h to keep storage clean.
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  const cleaned = {};
+  for (const [hash, entry] of Object.entries(raw)) {
+    if (entry?.firstSeen && entry.firstSeen >= cutoff) cleaned[hash] = entry;
+  }
+  if (Object.keys(cleaned).length !== Object.keys(raw).length) writeJson(DIRECTIVE_STATE_KEY, cleaned);
+  return cleaned;
+}
+function saveDirectiveState(table) { writeJson(DIRECTIVE_STATE_KEY, table); }
+
+function ageBucket(firstSeenMs) {
+  if (!firstSeenMs) return "fresh";
+  const ageH = (Date.now() - firstSeenMs) / 3_600_000;
+  if (ageH < 4) return "fresh";
+  if (ageH < 8) return "aging";
+  return "stale";
+}
+
+function renderDirectives(ops) {
+  const root = $("operationList");
+  if (!root) return;
+  const table = loadDirectiveState();
+  const now = Date.now();
+  let mutated = false;
+
+  root.innerHTML = ops.map(o => {
+    const hash = hashStr((o.owner || "") + "|" + (o.title || ""));
+    let entry = table[hash];
+    if (!entry) {
+      entry = { status: "queued", firstSeen: now };
+      table[hash] = entry;
+      mutated = true;
+    }
+    const age = ageBucket(entry.firstSeen);
+    const status = entry.status || "queued";
+    const stale = age === "stale" ? `<span class="directive-stale-mark">↻ STALE</span>` : "";
+    const ownerSafe = (o.owner || "").replace(/"/g, "&quot;");
+    const titleSafe = (o.title || "").replace(/</g, "&lt;");
+    return `
+      <article class="operation-card"
+               data-severity="${o.severity || "low"}"
+               data-status="${status}"
+               data-age="${age}"
+               data-hash="${hash}"
+               title="Click to cycle queued → active → done">
+        <span class="directive-status" data-status="${status}">${DIRECTIVE_STATUS_GLYPH[status]}</span>
+        <div class="kicker">${ownerSafe}${stale}</div>
+        <strong>${titleSafe}</strong>
+        <div class="operation-detail">${o.detail || ""}</div>
+        ${o.humanContext ? `<div class="directive-context">${o.humanContext}</div>` : ""}
+      </article>`;
+  }).join("");
+
+  if (mutated) saveDirectiveState(table);
+
+  // Click cycles status. Reads the table on each click (avoids stale closure).
+  root.querySelectorAll(".operation-card").forEach(card => {
+    card.addEventListener("click", () => {
+      const hash = card.dataset.hash;
+      if (!hash) return;
+      const t = loadDirectiveState();
+      const entry = t[hash] || { status: "queued", firstSeen: Date.now() };
+      entry.status = DIRECTIVE_NEXT_STATUS[entry.status] || "queued";
+      t[hash] = entry;
+      saveDirectiveState(t);
+      card.dataset.status = entry.status;
+      const glyph = card.querySelector(".directive-status");
+      if (glyph) {
+        glyph.dataset.status = entry.status;
+        glyph.textContent = DIRECTIVE_STATUS_GLYPH[entry.status];
+      }
+    });
+  });
+}
+
+// Map runtime delivery tone → status keyword for glyphs.
+function deliveryToneToStatus(tone) {
+  if (tone === "live") return "live";
+  if (tone === "snapshot") return "cached";
+  if (tone === "fallback") return "degraded";
+  return "unknown";
+}
+
 function renderRuntimeMeta(payload) {
   const badge = $("dataModeBadge");
   const board = $("boardRoleBadge");
@@ -1033,9 +2077,10 @@ function renderRuntimeMeta(payload) {
   if (!badge || !board || !detail || !stamp) return;
 
   const delivery = payload.delivery || {};
-  badge.textContent = delivery.modeLabel || "UNKNOWN";
+  const status = deliveryToneToStatus(delivery.tone);
+  badge.innerHTML = glyphHTML(status, delivery.modeLabel || "UNKNOWN");
   badge.dataset.mode = delivery.tone || "boot";
-  board.textContent = delivery.boardLabel || "BOARD";
+  board.innerHTML = glyphHTML(delivery.boardMode === "live-service" ? "live" : "cached", delivery.boardLabel || "BOARD");
   board.dataset.mode = delivery.boardMode || "boot";
   detail.innerHTML = buildRuntimeDetail(delivery, payload) || "Payload metadata unavailable.";
   stamp.textContent = payload.generatedAt ? `PAYLOAD // ${formatBadgeStamp(payload.generatedAt)}` : "PAYLOAD // --";
@@ -1064,7 +2109,8 @@ function renderQualitativeLens(payload, activeSatellite) {
   const observationsEl = $("qualObservations");
   const checksEl = $("qualChecks");
   const sourcesEl = $("qualSources");
-  if (!hero || !observationsEl || !checksEl || !sourcesEl) return;
+  const cctvGridEl = $("cctvGrid");
+  if (!hero || !observationsEl || !checksEl || !sourcesEl || !cctvGridEl) return;
 
   const lens = buildQualitativeLens(payload, activeSatellite);
   const renderList = (items) => items.map((item, index) => `
@@ -1092,7 +2138,24 @@ function renderQualitativeLens(payload, activeSatellite) {
         <span class="qualitative-source-title">${item.title}</span>
         <span class="qualitative-source-note">${item.note}</span>
       </a>`).join("")
-    : `<div class="qualitative-source-empty">No linked qualitative sources in the current payload. The scene read is running on telemetry and orbital evidence only.</div>`;
+    : `<div class="qualitative-source-empty">Scene read is running on telemetry only — no field sources in this cycle.</div>`;
+
+  cctvGridEl.innerHTML = CCTV_FEEDS.map(feed => `
+    <div class="cctv-card">
+      <div class="cctv-head">
+        <span class="cctv-label">${escapeHtml(feed.label)}</span>
+        <span class="cctv-status" data-status="${feed.status}">${feed.status === 'live' ? '● LIVE' : '○ DEGRADED'}</span>
+      </div>
+      <div class="cctv-viewport">
+        <!-- Placeholder for actual stream/image -->
+        <div class="cctv-placeholder">
+          <div class="cctv-crosshair"></div>
+          <span class="cctv-timestamp">${new Date().toISOString().split('T')[1].slice(0, 8)}</span>
+        </div>
+      </div>
+      <div class="cctv-condition">${escapeHtml(feed.condition)}</div>
+    </div>
+  `).join("");
 }
 
 function renderAirportStats(airport) {
@@ -1102,9 +2165,9 @@ function renderAirportStats(airport) {
   const arrivals = fl.filter(f=>f.type==="arrival");
   const departures = fl.filter(f=>f.type==="departure");
   const statusMap = {
-    live: { label: "Live airspace // OpenSky", tone: "live" },
-    fallback: { label: "Fallback routes // OpenSky degraded", tone: "fallback" },
-    offline: { label: "Offline // no airspace telemetry", tone: "offline" },
+    live: { label: "Live airspace · OpenSky feed", tone: "live" },
+    fallback: { label: "Flight tracker reduced · OpenSky feed patchy", tone: "fallback" },
+    offline: { label: "Airspace offline · no flight telemetry", tone: "offline" },
   };
   const statusMeta = statusMap[airport.status] || { label: "Reference telemetry", tone: "reference" };
   el.innerHTML = `
@@ -1137,7 +2200,7 @@ function renderSourceMatrix(payload) {
 
   const degraded = sources.filter((source) => ["fallback", "offline", "reference", "curated"].includes(source.status)).slice(0, 4);
   const degradedMarkup = degraded.length
-    ? degraded.map((source) => `<span class="source-chip" data-status="${source.status}">${source.name} · ${source.status}</span>`).join("")
+    ? degraded.map((source) => `<span class="source-chip" data-status="${source.status}">${source.name} · ${SOURCE_STATUS_LABEL[source.status] || source.status}</span>`).join("")
     : `<span class="source-chip" data-status="live">No critical feed gaps</span>`;
 
   el.innerHTML = `
@@ -1151,7 +2214,7 @@ function renderSourceMatrix(payload) {
 }
 
 function renderNewsIntake(news) {
-  const el = $("sentimentPanel");
+  const el = $("newsIntakePanel");
   if (!el) return;
   const lanes = [
     { code: "official", label: "Official", badge: "OFF", count: news.counts?.official ?? news.items.filter((item) => item.isOfficial).length },
@@ -1183,63 +2246,335 @@ function renderNewsIntake(news) {
     </div>`;
 }
 
-function renderSatelliteDeck(satellites) {
-  const grid = $("satelliteGrid");
-  const meta = $("satelliteMeta");
-  const stage = $("satelliteStage");
-  if (!grid || !meta || !stage || !satellites?.length) return;
+function renderIntelPanel(payload) {
+  renderEconBand(payload.exchange);
+  renderGroundPulse(payload.groundPulse);
+  renderNewsDigest(payload.news);
+  renderTrendsBand(payload.trends);
+}
 
-  const setActive = (index) => {
-    const activeIndex = Math.max(0, Math.min(index, satellites.length - 1));
-    state.activeSatelliteIndex = activeIndex;
-    const sat = satellites[activeIndex];
-    const narrative = getSatelliteNarrative(sat);
+function renderEconBand(exchange) {
+  const el = $("econBand");
+  if (!el) return;
+  const data = exchange ?? ECONOMY_FALLBACK;
+  const fxPairs = (data.pairs ?? []).filter(p => ["USD","SGD","GBP","EUR"].includes(p.code));
+  const macro = [
+    { value: `${(data.macro?.gdpGrowthPct ?? ECONOMY_FALLBACK.macro.gdpGrowthPct).toFixed(1)}%`, label: "MY GDP Growth · FY2026" },
+    { value: `RM ${(data.macro?.sarawakGdpBnMyr ?? ECONOMY_FALLBACK.macro.sarawakGdpBnMyr)}B`, label: "Sarawak GDP · 2024" },
+    { value: `${(data.macro?.cpiInflationPct ?? ECONOMY_FALLBACK.macro.cpiInflationPct).toFixed(1)}%`, label: "CPI Inflation · Mar 2026" },
+  ];
+  el.innerHTML = [
+    ...fxPairs.map(p => `
+      <div class="econ-pill">
+        <span class="econ-pill-value">${p.code} ${p.rate}</span>
+        <span class="econ-pill-label">per 1 MYR</span>
+      </div>`),
+    ...macro.map(m => `
+      <div class="econ-pill econ-macro">
+        <span class="econ-pill-value">${m.value}</span>
+        <span class="econ-pill-label">${m.label}</span>
+      </div>`),
+  ].join("");
+}
 
-    stage.innerHTML = `
-      <div class="satellite-stage-media">
-        <img src="${sat.imageUrl}" alt="${sat.title}" />
-        <div class="satellite-stage-overlay">
-          <span class="satellite-stage-tag">Orbital photo</span>
-          <span class="satellite-stage-tag">${narrative.technique}</span>
-        </div>
-      </div>
-      <div class="satellite-stage-note">${narrative.disclaimer}</div>`;
+function renderNewsDigest(news) {
+  const el = $("newsDigest");
+  if (!el || !news) return;
+  const tabs = [
+    { code: "en",  label: "EN" },
+    { code: "ms",  label: "BM" },
+    { code: "zh",  label: "ZH" },
+  ];
 
-    meta.innerHTML = `
-      <div class="satellite-copy">
-        <strong>${sat.title}</strong>
-        <span>${narrative.context}</span>
-      </div>
-      <div class="satellite-stamp">
-        <strong>${sat.source || "Satellite feed"}</strong>
-        <span>${formatShortStamp(sat.updatedAt || nowIso())}</span>
-        <a class="satellite-open" href="${sat.imageUrl}" target="_blank" rel="noopener">OPEN FULL ◹</a>
-      </div>`;
-    grid.querySelectorAll(".satellite-card").forEach((node, idx) => node.classList.toggle("active", idx === activeIndex));
-    if (state.payload) renderQualitativeLens(state.payload, sat);
+  const renderTab = (code) => {
+    const items = (news.items ?? []).filter(i => i.language === code).slice(0, 5);
+    el.querySelector(".news-digest-list").innerHTML = items.length
+      ? items.map(i => `
+          <div class="news-digest-item">
+            <span class="news-digest-badge">${i.source?.slice(0, 12) ?? code.toUpperCase()}</span>
+            <span class="news-digest-title">${i.title}</span>
+            <span class="news-digest-time">${formatShortStamp(i.publishedAt)}</span>
+          </div>`).join("")
+      : `<div class="news-digest-item"><span class="news-digest-title" style="color:var(--soft)">No ${code.toUpperCase()} items in this cycle.</span></div>`;
+    el.querySelectorAll(".news-digest-tab").forEach(btn => btn.classList.toggle("active", btn.dataset.lang === code));
   };
 
-  grid.innerHTML = satellites.map((sat, index) => `
-    <button type="button" class="satellite-card ${index === 0 ? "active" : ""}" data-idx="${index}" aria-label="Activate ${sat.title}">
-      <img src="${sat.imageUrl}" alt="${sat.title}" />
-      <span class="satellite-card-copy">
-        <strong>${sat.title}</strong>
-        <span>${sat.source || "NASA GIBS"}</span>
-      </span>
-    </button>`).join("");
+  el.innerHTML = `
+    <div class="news-digest-tabs">
+      ${tabs.map(t => `<button class="news-digest-tab${t.code === "en" ? " active" : ""}" data-lang="${t.code}">${t.label}</button>`).join("")}
+    </div>
+    <div class="news-digest-list"></div>`;
 
-  // Event delegation: one listener on the grid survives any future re-render of children.
-  if (!grid.dataset.bound) {
-    grid.addEventListener("click", (event) => {
-      const card = event.target.closest(".satellite-card");
-      if (!card || !grid.contains(card)) return;
-      const idx = Number(card.dataset.idx);
-      if (Number.isFinite(idx)) setActive(idx);
+  renderTab("en");
+
+  if (!el.dataset.bound) {
+    el.addEventListener("click", (event) => {
+      const btn = event.target.closest(".news-digest-tab");
+      if (!btn) return;
+      renderTab(btn.dataset.lang);
     });
-    grid.dataset.bound = "1";
+    el.dataset.bound = "1";
+  }
+}
+
+function renderTrendsBand(trends) {
+  const el = $("trendsBand");
+  if (!el) return;
+  const items = (trends?.items ?? []).slice(0, 5);
+  if (!items.length) { el.innerHTML = ""; return; }
+  el.innerHTML = `
+    <div class="trends-band-head">Google Trends · Kuching / Malaysia</div>
+    ${items.map((t, i) => `
+      <div class="trend-row ${(t.locality?.score ?? 0) >= 2 ? "local" : ""}">
+        <span class="trend-rank">${i + 1}</span>
+        <span class="trend-term">${t.title}</span>
+        <span class="trend-traffic">${t.trafficLabel ?? ""}</span>
+      </div>`).join("")}`;
+}
+
+function renderGroundPulseSparkline(history) {
+  // Need at least 3 points to draw a meaningful trend.
+  if (!Array.isArray(history) || history.length < 3) return "";
+  const values = history.map((h) => Number(h.mentions24h) || 0);
+  const max = Math.max(1, ...values);
+  const w = 40;
+  const h = 12;
+  const step = w / Math.max(1, values.length - 1);
+  const points = values
+    .map((v, i) => `${(i * step).toFixed(1)},${(h - (v / max) * h).toFixed(1)}`)
+    .join(" ");
+  const last = values[values.length - 1];
+  const peak = last >= max * 0.66 && max > 0;
+  return `<svg class="gp-spark ${peak ? "is-peak" : ""}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none" aria-hidden="true">
+    <polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1" />
+  </svg>`;
+}
+
+function renderGroundPulseDelta(history, current) {
+  // Compare current 24h count to ~24h ago (5 points back at 6h cadence) or
+  // fall back to first point in window. Returns a styled chip or "".
+  if (!Array.isArray(history) || history.length < 2) return "";
+  const lookback = history[Math.max(0, history.length - 5)];
+  const past = Number(lookback?.mentions24h) || 0;
+  const now = Number(current) || 0;
+  const diff = now - past;
+  if (diff === 0) return `<span class="gp-delta is-flat" title="Flat vs ~24h ago">±0</span>`;
+  const sign = diff > 0 ? "+" : "";
+  const tone = diff > 0 ? "up" : "down";
+  return `<span class="gp-delta is-${tone}" title="vs ~24h ago (${past} → ${now})">${sign}${diff}</span>`;
+}
+
+function renderGroundPulse(groundPulse) {
+  const el = $("groundPulse");
+  if (!el) return;
+  if (!groundPulse || !Array.isArray(groundPulse.lanes) || groundPulse.lanes.length === 0) {
+    el.innerHTML = "";
+    return;
+  }
+  const totals = groundPulse.totals || { mentions: 0, last24h: 0 };
+  const laneCards = groundPulse.lanes.map((lane) => {
+    const headlines = (lane.headlines || []).map((h) => {
+      const stamp = formatShortStamp(h.publishedAt) || "";
+      const badge = h.isOfficial ? "OFFICIAL" : (h.languageBadge || (h.language || "EN").toUpperCase());
+      const safeTitle = escapeHtml(h.title || "").slice(0, 140);
+      const href = h.url ? `href="${escapeHtml(h.url)}" target="_blank" rel="noopener"` : "";
+      return `
+        <li class="gp-item">
+          <span class="gp-badge">${escapeHtml(badge)}</span>
+          <a class="gp-title" ${href}>${safeTitle}</a>
+          <span class="gp-meta">${escapeHtml(h.source || "")}${stamp ? ` · ${stamp}` : ""}</span>
+        </li>`;
+    }).join("");
+
+    const trendChips = (lane.trendMatches || []).map((t) => {
+      const label = t.trafficLabel ? `${t.term} · ${t.trafficLabel}` : t.term;
+      return `<span class="gp-trend" title="${escapeHtml(t.newsTitle || "")}">${escapeHtml(label)}</span>`;
+    }).join("");
+
+    const empty = !(lane.headlines || []).length && !(lane.trendMatches || []).length;
+    const spark = renderGroundPulseSparkline(lane.history);
+    const delta = renderGroundPulseDelta(lane.history, lane.last24hCount);
+    return `
+      <article class="gp-lane" data-lane="${lane.key}">
+        <header class="gp-lane-head">
+          <span class="gp-lane-label">${escapeHtml(lane.label)}</span>
+          <span class="gp-lane-trend">${spark}${delta}</span>
+          <span class="gp-lane-count">${lane.last24hCount || 0}<span class="gp-unit">·24h</span> / ${lane.mentionCount || 0}<span class="gp-unit">·14d</span></span>
+        </header>
+        <div class="gp-narrative">${escapeHtml(lane.narrative || lane.intent || "")}</div>
+        ${trendChips ? `<div class="gp-trends">${trendChips}</div>` : ""}
+        ${empty ? "" : `<ul class="gp-list">${headlines}</ul>`}
+      </article>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="gp-head">
+      <div class="gp-kicker">GROUND PULSE · WHY THIS MATTERS TODAY</div>
+      <div class="gp-totals">${totals.last24h} mentions in last 24h · ${totals.mentions} in 14d window</div>
+    </div>
+    <div class="gp-lanes">${laneCards}</div>`;
+}
+
+// ── Flood Risk Matrix (IOC 2.1) ────────────────────────────────────────────
+// Per-station rows: AMC class + p90 forecast load → band at 6h / 24h / 72h.
+// When forecast.json hasn't been updated yet (status=absent/stale), shows an
+// idle state rather than blank — the structure is clear even without live data.
+function renderFloodMatrix(payload) {
+  const el = $("floodMatrix");
+  if (!el) return;
+
+  const fm = payload?.floodMatrix;
+  const rows = (fm?.rows || []).filter(Boolean);
+  const basinAmc = fm?.basin_amc || payload?.forecast?.basin_amc || null;
+  const status   = fm?.status || "absent";
+
+  const BAND_LABELS = {
+    normal:  "NRM",
+    watch:   "WTCH",
+    alert:   "ALRT",
+    warning: "WARN",
+  };
+  const BAND_TONES = {
+    normal:  "good",
+    watch:   "muted",
+    alert:   "warn",
+    warning: "alert",
+  };
+  const AMC_TONE = { I: "good", II: "muted", III: "alert" };
+
+  // AMC badge (basin-level)
+  const amcHtml = basinAmc
+    ? `<div class="fm-amc"><span class="fm-amc-label">BASIN AMC</span><span class="fm-amc-val" data-tone="${AMC_TONE[basinAmc.class] || "muted"}">CLASS ${escapeHtml(basinAmc.class)} · ${escapeHtml(basinAmc.label).toUpperCase()}</span><span class="fm-amc-mm">${basinAmc.total_mm14d}mm/14d</span></div>`
+    : "";
+
+  if (status === "absent" || !rows.length) {
+    el.innerHTML = `${amcHtml}<div class="fm-empty">Run <code>scripts/forecast/forecast_runner.py</code> to activate station flood forecasts.</div>`;
+    return;
   }
 
-  setActive(state.activeSatelliteIndex ?? 0);
+  const bandCell = (r) => `<span class="fm-band" data-tone="${BAND_TONES[r?.band] || "muted"}">${BAND_LABELS[r?.band] || "—"}</span>`;
+
+  const rowsHtml = rows.map((row) => {
+    const stressIcon = row.drainage_stress === "high"    ? '<span class="fm-stress" title="High impervious fraction — drainage may be under-capacity">⚠</span>'
+                      : row.drainage_stress === "moderate" ? '<span class="fm-stress fm-stress-mod" title="Moderate drainage stress">△</span>'
+                      : "";
+    const impFrac = row.impervious_fraction != null
+      ? `<span class="fm-imp" title="Impervious surface fraction (AlphaEarth 2024)">${Math.round(row.impervious_fraction * 100)}%</span>`
+      : "";
+    const amcBadge = row.amc
+      ? `<span class="fm-row-amc" data-tone="${AMC_TONE[row.amc.class] || "muted"}" title="${escapeHtml(row.amc.note)}">AMC ${escapeHtml(row.amc.class)}</span>`
+      : "";
+    return `<div class="fm-row" data-worst="${fm?.worst_band || "normal"}">
+      <div class="fm-station">${stressIcon}${escapeHtml(row.name)}${amcBadge}${impFrac}</div>
+      <div class="fm-cells">${bandCell(row.risk_6h)}${bandCell(row.risk_24h)}${bandCell(row.risk_72h)}</div>
+    </div>`;
+  }).join("");
+
+  const staleNote = status === "stale"
+    ? `<div class="fm-stale">↻ STALE — run forecast_runner.py to refresh</div>` : "";
+
+  el.innerHTML = `
+    ${amcHtml}
+    <div class="fm-header">
+      <span class="fm-col-label">STATION</span>
+      <span class="fm-horizons"><span>6H</span><span>24H</span><span>72H</span></span>
+    </div>
+    ${rowsHtml}
+    ${staleNote}`;
+}
+
+function renderCitizenReports(payload) {
+  const el = $("citizenReports");
+  if (!el) return;
+  const cr = payload?.cityReports;
+  if (!cr) {
+    el.innerHTML = `<div class="cr-empty">No field data available.</div>`;
+    return;
+  }
+
+  const URGENCY_TONE = { high: "alert", medium: "warn", low: "muted" };
+  const STATUS_LABEL = { received: "NEW", in_progress: "OPEN", completed: "DONE" };
+  const STATUS_TONE  = { received: "warn", in_progress: "warn", completed: "good" };
+
+  const isDemo = cr.status === "demo";
+  const badge = isDemo
+    ? `<span class="cr-mode-badge" style="color:var(--soft)">DEMO</span>`
+    : `<span class="cr-mode-badge" style="color:var(--cyan)">LIVE</span>`;
+
+  const summary = `<div class="cr-summary">
+    ${badge}
+    <span class="cr-count"><span style="color:var(--amber)">${cr.open}</span> open</span>
+    <span class="cr-count"><span style="color:var(--green)">${cr.resolved}</span> resolved</span>
+  </div>`;
+
+  const items = (cr.recent || []).slice(0, 5).map((r) => {
+    const tone = URGENCY_TONE[r.urgency] || "muted";
+    const statusTone = STATUS_TONE[r.status] || "muted";
+    const ago = (() => {
+      const ms = Date.now() - new Date(r.timestamp).getTime();
+      const h = Math.floor(ms / 3600_000);
+      return h < 1 ? `${Math.round(ms / 60_000)}m ago` : h < 24 ? `${h}h ago` : `${Math.floor(h/24)}d ago`;
+    })();
+    return `<div class="cr-row">
+      <div class="cr-urgency-bar" data-tone="${tone}"></div>
+      <div class="cr-body">
+        <div class="cr-type">${escapeHtml(r.problem_type)}<span class="cr-status" data-tone="${statusTone}">${STATUS_LABEL[r.status] || r.status.toUpperCase()}</span></div>
+        <div class="cr-loc">${escapeHtml(r.location_text || "—")}</div>
+        <div class="cr-meta"><span class="cr-ticket">${escapeHtml(r.ticket)}</span><span class="cr-ago">${ago}</span></div>
+      </div>
+    </div>`;
+  }).join("");
+
+  el.innerHTML = summary + items;
+}
+
+function renderFloodForecast(floodForecast) {
+  const el = $("floodForecast");
+  if (!el) return;
+  const isFallback = !floodForecast || floodForecast.status === "fallback";
+  const today = isFallback
+    ? (floodForecast?.todayCms ?? null)
+    : (floodForecast.todayCms ?? (floodForecast.forecast?.[0]?.dischargeCms ?? null));
+  const peak = floodForecast?.peakCms;
+  const next4 = (floodForecast?.forecast ?? []).slice(1, 5);
+  const warnPeak = peak != null && peak > 200;
+  el.innerHTML = `
+    <div class="flood-station">${floodForecast?.station ?? "Sarawak River"}</div>
+    <div class="flood-today">
+      <span class="flood-value ${warnPeak ? "flood-peak-warn" : ""}">${today != null ? today : "—"}</span>
+      <span class="flood-unit">m³/s${isFallback ? " est" : " now"} · peak ${peak ?? "—"} m³/s</span>
+    </div>
+    <div class="flood-days">
+      ${next4.map(d => {
+        const label = d.date && d.date !== "—" ? new Date(d.date).toLocaleDateString("en-MY", { weekday: "short" }) : "—";
+        const warn = d.dischargeCms != null && d.dischargeCms > 200;
+        return `<div class="flood-day">
+          <span class="flood-day-label">${label}</span>
+          <span class="flood-day-val ${warn ? "warn" : ""}">${d.dischargeCms ?? "—"}</span>
+        </div>`;
+      }).join("")}
+    </div>
+    <div class="flood-model">${isFallback ? "GloFAS · seasonal estimate" : (floodForecast.model ?? "GloFAS via Open-Meteo")}</div>`;
+}
+
+function renderBypassTracker() {
+  const el = $("bypassTracker");
+  if (!el) return;
+  const p = RIVER_BYPASS_PROJECT;
+  el.innerHTML = `
+    <div class="bypass-head">
+      <span class="bypass-title">${p.name}</span>
+      <span class="bypass-budget">${p.budget}</span>
+    </div>
+    <div class="bypass-phases">
+      ${p.phases.map(ph => `
+        <div class="bypass-phase">
+          <div class="bypass-dot ${ph.status === "active" ? "active" : ""}"></div>
+          <span class="bypass-phase-label">${ph.label}</span>
+          <span class="bypass-period">${ph.period}</span>
+        </div>`).join("")}
+    </div>
+    <div class="bypass-benefit">${p.benefit}</div>`;
 }
 
 function renderPosture(payload) {
@@ -1261,56 +2596,643 @@ function renderPosture(payload) {
 
 function renderOfficialPulse(payload) {
   const el = $("officialPulse");
-  if (!el || !payload.openDosmStats?.updatedAt) return;
-  const dosm = payload.openDosmStats;
-  const swk = payload.sarawakStats;
-  
+  if (!el || !payload.govStats?.updatedAt) return;
+  const gov = payload.govStats;
+  // IOC 2.0 — district granularity. DOSM gives us Kuching / Samarahan / Serian
+  // (Padawan's growth ring spans Kuching + Serian admin districts). Show each
+  // as a chip; degrades to silence if the upstream dataset is unreachable.
+  const districts = Array.isArray(gov.districts) ? gov.districts.filter((d) => d.status === "live" && d.population != null) : [];
+  const districtChips = districts.length
+    ? `<div class="pulse-districts">${districts.map((d) =>
+        `<span class="pulse-district"><span class="pd-name">${escapeHtml(d.name)}</span><strong>${num(d.population, 0)}</strong></span>`
+      ).join("")}</div>` : "";
+
   el.innerHTML = `
     <div class="official-pulse-block">
       <div class="pulse-header">
-        <span class="pulse-label">Official Census Sync // ${dosm.year}</span>
+        <span class="pulse-label">Official Census Sync // ${gov.year}</span>
         <div class="pulse-indicator"></div>
       </div>
       <div class="pulse-metagrid">
         <div class="pulse-stat">
-          <strong>${num(dosm.latestSarawakPop, 0)}</strong>
+          <strong>${num(gov.latestSarawakPop, 0)}</strong>
           <span>Sarawak Pop</span>
         </div>
         <div class="pulse-stat">
-          <strong>${swk.datasetCount || 0}</strong>
+          <strong>${gov.datasetCount || 0}</strong>
           <span>CKAN Datasets</span>
         </div>
       </div>
+      ${districtChips}
     </div>`;
+}
+
+// --- MPP governance: councillor roster + locality explorer -------------------
+// Ward code ↔ locality-code-prefix join lives here. Clicks flow through
+// state.activeWard so councillor chips, the locality list, and the ward polygon
+// on the map all react to the same signal.
+
+const WARD_CODE_ORDER = ["A", "B", "D", "FG", "H", "I", "JL", "K", "M", "NPQ"];
+const WARD_COLOR_MAP = {
+  A: "#a78bfa", B: "#c084fc", D: "#d946ef", FG: "#f472b6", H: "#fb7185",
+  I: "#fb923c", JL: "#fbbf24", K: "#84cc16", M: "#22d3ee", NPQ: "#38bdf8",
+};
+
+function escapeHtml(str) {
+  return String(str ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+}
+
+function renderCouncillorCard(person, { role, coverage, accentColor } = {}) {
+  const color = accentColor || "var(--cyan)";
+  const badge = role ? `<div class="councillor-role">${escapeHtml(role)}</div>` : "";
+  const scope = coverage ? `<div class="councillor-scope">${escapeHtml(coverage)}</div>` : "";
+  const phoneClean = (person.phone || "").replace(/[^0-9+]/g, "");
+  return `
+    <article class="councillor-card" style="border-left-color:${color}">
+      ${badge}
+      <div class="councillor-name">${escapeHtml([person.title, person.name].filter(Boolean).join(" "))}</div>
+      ${scope}
+      <a class="councillor-phone" href="tel:${phoneClean}">${escapeHtml(person.phone || "—")}</a>
+    </article>`;
+}
+
+function renderMppCouncillors(payload) {
+  const target = $("councillorPanel");
+  if (!target) return;
+  const data = payload.mppCouncillors;
+  if (!data || !data.wards?.length) {
+    target.innerHTML = `<div class="panel-empty">Councillor roster unavailable.</div>`;
+    return;
+  }
+  const wardsByCode = new Map(data.wards.map(w => [w.code, w]));
+  const localityCounts = payload.mppLocalities?.breakdowns?.byWard || {};
+
+  const chairmanHtml = data.chairman ? renderCouncillorCard(data.chairman, {
+    role: "Chairman",
+    coverage: data.chairman.coverage || "All zones",
+    accentColor: "var(--cyan)",
+  }) : "";
+  const deputyHtml = data.deputy ? renderCouncillorCard(data.deputy, {
+    role: "Deputy",
+    coverage: data.deputy.coverage || "All zones",
+    accentColor: "var(--cyan)",
+  }) : "";
+
+  const wardChips = WARD_CODE_ORDER.map(code => {
+    const w = wardsByCode.get(code);
+    if (!w) return "";
+    const localityCount = localityCounts[code] ?? 0;
+    const color = WARD_COLOR_MAP[code] || "#a78bfa";
+    const active = state.activeWard === code ? "true" : "false";
+    return `
+      <button class="ward-chip" data-ward="${code}" data-active="${active}" style="--ward-color:${color}">
+        <div class="ward-chip-code">${escapeHtml(code)}</div>
+        <div class="ward-chip-area">${escapeHtml(w.area)}</div>
+        <div class="ward-chip-stats">
+          <span>${w.councillorCount} councillor${w.councillorCount === 1 ? "" : "s"}</span>
+          <span>·</span>
+          <span>${localityCount} localit${localityCount === 1 ? "y" : "ies"}</span>
+        </div>
+      </button>`;
+  }).filter(Boolean).join("");
+
+  // Detail panel for the active ward (or a hint if none selected).
+  const active = state.activeWard && wardsByCode.get(state.activeWard);
+  const detailHtml = active ? `
+    <div class="ward-detail" data-ward="${escapeHtml(active.code)}" style="border-left-color:${WARD_COLOR_MAP[active.code]}">
+      <div class="ward-detail-head">
+        <div class="ward-detail-label">${escapeHtml(active.label)} · ${escapeHtml(active.code)}</div>
+        <div class="ward-detail-area">${escapeHtml(active.area)}</div>
+      </div>
+      <div class="ward-detail-roster">
+        ${active.councillors.map(c => renderCouncillorCard(c, { accentColor: WARD_COLOR_MAP[active.code] })).join("")}
+      </div>
+    </div>
+  ` : `<div class="ward-hint">Tap a ward to see its councillors and filter localities.</div>`;
+
+  target.innerHTML = `
+    <div class="councillor-leaders">${chairmanHtml}${deputyHtml}</div>
+    <div class="ward-chip-grid">${wardChips}</div>
+    ${detailHtml}
+    <div class="councillor-term">Term ${escapeHtml(data.term || "2025–2028")} · ${data.totals?.councillors ?? 0} councillors · ${data.totals?.wards ?? 0} wards</div>
+  `;
+
+  // Wire up ward-chip clicks.
+  target.querySelectorAll(".ward-chip").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const code = btn.dataset.ward;
+      setActiveWard(state.activeWard === code ? null : code);
+    });
+  });
+}
+
+// --- Locality Explorer -------------------------------------------------------
+
+const LOCALITY_PAGE_SIZE = 60;
+
+function localityConstituencyBadge(item) {
+  const first = item.constituency?.parsed?.[0];
+  if (!first?.stateCode) return "—";
+  const badge = `${first.stateCode} ${first.stateName}`;
+  return item.constituency.compound ? `${badge} · +${item.constituency.parsed.length - 1}` : badge;
+}
+
+function filterLocalities(items, f) {
+  const q = (f.search || "").trim().toUpperCase();
+  return items.filter(it => {
+    if (f.ward && it.wardCode !== f.ward) return false;
+    if (f.stateCode) {
+      const codes = (it.constituency?.parsed || []).map(p => p.stateCode);
+      if (!codes.includes(f.stateCode)) return false;
+    }
+    if (f.parliamentCode) {
+      const codes = (it.constituency?.parsed || []).map(p => p.parliamentCode);
+      if (!codes.includes(f.parliamentCode)) return false;
+    }
+    if (f.propertyType === "residential" && !(it.residential > 0)) return false;
+    if (f.propertyType === "commercial"  && !(it.commercial  > 0)) return false;
+    if (f.propertyType === "industrial"  && !(it.industrial  > 0)) return false;
+    if (f.propertyType === "exempted"    && !(it.exempted    > 0)) return false;
+    if (q) {
+      const hay = `${it.code} ${it.name}`.toUpperCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderLocalityKpis(totals) {
+  const target = $("localityKpis");
+  if (!target) return;
+  // Original 6-tile grid — kept for full mode (data-view="full") via CSS gate hiding via .locality-kpis.
+  const tile = (label, value, unit = "") => `
+    <article class="metric-card" data-tone="neutral">
+      <div class="metric-label">${escapeHtml(label)}</div>
+      <div class="metric-value">${num(value, 0)}<span class="metric-unit">${escapeHtml(unit)}</span></div>
+    </article>`;
+  target.innerHTML = [
+    tile(t("totalLocalities"), totals.localities),
+    tile(t("residential"),     totals.residential),
+    tile(t("commercial"),      totals.commercial),
+    tile(t("industrial"),      totals.industrial),
+    tile(t("stateSeats"),      totals.stateConstituencies),
+    tile(t("parliamentSeats"), totals.parliamentConstituencies),
+  ].join("");
+}
+
+// Secretary mode replacement — single dense summary line above the list.
+function renderLocalitySummary(payload) {
+  const target = $("localityList")?.parentElement?.querySelector(".locality-summary")
+    || (() => {
+      const el = document.createElement("div");
+      el.className = "locality-summary";
+      const list = $("localityList");
+      if (list) list.parentElement.insertBefore(el, list);
+      return el;
+    })();
+  const totals = payload?.mppLocalities?.totals || {};
+  const wards = payload?.mppLocalities?.breakdowns?.byWard || {};
+  const wardCount = Object.values(wards).filter(c => (typeof c === "object" ? (c?.count ?? 0) : c) > 0).length;
+  target.innerHTML = `
+    <span><span class="locality-num">${num(totals.localities ?? 0, 0)}</span> ${t("totalLocalities").toLowerCase()}</span>
+    <span><span class="locality-num">${wardCount}</span> ${(t("wards") || "wards")}</span>
+    <span><span class="locality-num">${num(totals.residential ?? 0, 0)}</span> ${t("residential").toLowerCase()}</span>
+    <span><span class="locality-num">${num(totals.commercial ?? 0, 0)}</span> ${t("commercial").toLowerCase()}</span>
+    <span><span class="locality-num">${num(totals.industrial ?? 0, 0)}</span> ${t("industrial").toLowerCase()}</span>
+    <span><span class="locality-num">${totals.stateConstituencies ?? 0}</span> state · <span class="locality-num">${totals.parliamentConstituencies ?? 0}</span> parl seats</span>`;
+}
+
+function renderLocalityFilters(payload) {
+  const target = $("localityFilters");
+  if (!target) return;
+  const f = state.localityFilter;
+  const wards = WARD_CODE_ORDER.filter(c => (payload.mppLocalities?.breakdowns?.byWard?.[c] ?? 0) > 0);
+  const stateSeats = payload.mppLocalities?.breakdowns?.byState || {};
+  const parlSeats  = payload.mppLocalities?.breakdowns?.byParliament || {};
+
+  const wardOpts = `<option value="">${t("allWards")}</option>` +
+    wards.map(c => `<option value="${c}" ${f.ward === c ? "selected" : ""}>${c}</option>`).join("");
+  const stateOpts = `<option value="">${t("allConstituencies")} (${t("stateConstituency")})</option>` +
+    Object.entries(stateSeats).sort().map(([code, v]) =>
+      `<option value="${code}" ${f.stateCode === code ? "selected" : ""}>${code} ${escapeHtml(v.name)} (${v.count})</option>`
+    ).join("");
+  const parlOpts = `<option value="">${t("allConstituencies")} (${t("parliamentConstituency")})</option>` +
+    Object.entries(parlSeats).sort().map(([code, v]) =>
+      `<option value="${code}" ${f.parliamentCode === code ? "selected" : ""}>${code} ${escapeHtml(v.name)} (${v.count})</option>`
+    ).join("");
+  const propOpts = [
+    ["", t("allPropertyTypes")],
+    ["residential", t("residential")],
+    ["commercial",  t("commercial")],
+    ["industrial",  t("industrial")],
+    ["exempted",    t("exempted")],
+  ].map(([v, label]) => `<option value="${v}" ${f.propertyType === v ? "selected" : ""}>${label}</option>`).join("");
+
+  target.innerHTML = `
+    <select class="locality-filter" data-filter="ward">${wardOpts}</select>
+    <select class="locality-filter" data-filter="stateCode">${stateOpts}</select>
+    <select class="locality-filter" data-filter="parliamentCode">${parlOpts}</select>
+    <select class="locality-filter" data-filter="propertyType">${propOpts}</select>
+    <input type="search" class="locality-search" placeholder="${t("searchLocality")}" value="${escapeHtml(f.search || "")}" data-filter="search" />
+    <button type="button" class="locality-reset" data-action="reset-locality-filter">Reset</button>
+  `;
+  target.querySelectorAll("[data-filter]").forEach(el => {
+    const evt = el.tagName === "SELECT" ? "change" : "input";
+    el.addEventListener(evt, () => {
+      const key = el.dataset.filter;
+      state.localityFilter = { ...state.localityFilter, [key]: el.value || null };
+      if (key === "ward") state.activeWard = el.value || null;
+      renderMppLocalities(state.payload);
+      renderMppCouncillors(state.payload);
+      if (state.activeWard) highlightWard(state.activeWard);
+    });
+  });
+  target.querySelector("[data-action=reset-locality-filter]")?.addEventListener("click", () => {
+    state.localityFilter = { ward: null, stateCode: null, parliamentCode: null, propertyType: null, search: "" };
+    state.activeWard = null;
+    renderMppLocalities(state.payload);
+    renderMppCouncillors(state.payload);
+    clearWardHighlight();
+  });
+}
+
+function renderLocalityList(items) {
+  const target = $("localityList");
+  const statusEl = $("localityStatus");
+  if (!target) return;
+  const visible = items.slice(0, LOCALITY_PAGE_SIZE);
+  if (statusEl) {
+    statusEl.textContent = `${t("showingResults")} ${visible.length} ${t("of")} ${num(items.length)}`;
+  }
+  if (!visible.length) {
+    target.innerHTML = `<div class="panel-empty">No localities match the current filters.</div>`;
+    return;
+  }
+
+  const renderRow = (it) => {
+    const color = WARD_COLOR_MAP[it.wardCode] || "#8aa2c8";
+    return `
+      <article class="locality-row" data-ward="${escapeHtml(it.wardCode || "")}" style="border-left-color:${color}">
+        <span class="locality-code">${escapeHtml(it.code)}</span>
+        <span class="locality-name">${escapeHtml(it.name)}</span>
+        <span class="locality-const">${escapeHtml(localityConstituencyBadge(it))}</span>
+        <span class="locality-counts">
+          <span class="c-res" title="Residential">${num(it.residential)}R</span>
+          <span class="c-com" title="Commercial">${num(it.commercial)}C</span>
+          <span class="c-ind" title="Industrial">${num(it.industrial)}I</span>
+        </span>
+      </article>`;
+  };
+
+  if (isSecretary) {
+    // Group by ward — Secretary Goh's ask: "put the MPP Ward info together".
+    const grouped = new Map();
+    for (const it of visible) {
+      const key = it.wardCode || "—";
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(it);
+    }
+    const ordered = WARD_CODE_ORDER.filter(c => grouped.has(c)).concat(
+      [...grouped.keys()].filter(c => !WARD_CODE_ORDER.includes(c))
+    );
+    target.innerHTML = ordered.map(wardCode => {
+      const rows = grouped.get(wardCode);
+      const color = WARD_COLOR_MAP[wardCode] || "#8aa2c8";
+      return `
+        <section class="locality-ward-group">
+          <header class="locality-ward-header" data-ward="${escapeHtml(wardCode)}" style="border-left:3px solid ${color}; padding-left:9px;">
+            <span>WARD ${escapeHtml(wardCode)}</span>
+            <span class="ward-locality-count">${rows.length} ${rows.length === 1 ? "locality" : "localities"}</span>
+          </header>
+          ${rows.map(renderRow).join("")}
+        </section>`;
+    }).join("");
+  } else {
+    target.innerHTML = visible.map(renderRow).join("");
+  }
+
+  target.querySelectorAll(".locality-row").forEach(row => {
+    row.addEventListener("click", () => {
+      const w = row.dataset.ward;
+      if (w) setActiveWard(w);
+    });
+  });
+  target.querySelectorAll(".locality-ward-header").forEach(hdr => {
+    hdr.addEventListener("click", () => {
+      const w = hdr.dataset.ward;
+      if (w) setActiveWard(state.activeWard === w ? null : w);
+    });
+  });
+}
+
+function renderMppLocalities(payload) {
+  const data = payload?.mppLocalities;
+  if (!data) return;
+  if (!state.localityFilter) {
+    state.localityFilter = { ward: null, stateCode: null, parliamentCode: null, propertyType: null, search: "" };
+  }
+  if (state.activeWard && state.localityFilter.ward !== state.activeWard) {
+    state.localityFilter = { ...state.localityFilter, ward: state.activeWard };
+  }
+  if (!state.activeWard && state.localityFilter.ward) {
+    // Keep explicit filter even without activeWard (e.g. user picked dropdown).
+  }
+  renderLocalityKpis(data.totals || {});
+  if (isSecretary) renderLocalitySummary(payload);
+  renderLocalityFilters(payload);
+  const filtered = filterLocalities(data.items || [], state.localityFilter);
+  renderLocalityList(filtered);
+}
+
+// --- Shared cross-panel state: activeWard drives map + councillors + localities
+
+function setActiveWard(code) {
+  state.activeWard = code || null;
+  state.localityFilter = {
+    ...(state.localityFilter || { ward: null, stateCode: null, parliamentCode: null, propertyType: null, search: "" }),
+    ward: code || null,
+  };
+  renderMppCouncillors(state.payload);
+  renderMppLocalities(state.payload);
+  renderWardBrief(code, state.payload);
+  if (code) {
+    highlightWard(code);
+    if (typeof history !== "undefined" && history.replaceState) {
+      history.replaceState(null, "", `#ward=${code}`);
+    }
+  } else {
+    clearWardHighlight();
+    if (typeof history !== "undefined" && history.replaceState && location.hash.startsWith("#ward=")) {
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+  }
+}
+
+// Pass 2.4: Per-ward briefing — read derived stats from the existing payload + mpp_wards features.
+function renderWardBrief(wardCode, payload) {
+  const el = $("wardBrief");
+  if (!el) return;
+  if (!wardCode) {
+    el.dataset.active = "false";
+    el.hidden = true;
+    el.innerHTML = "";
+    return;
+  }
+  const feat = (state.wardFeatures || []).find(f => f?.properties?.wardCode === wardCode);
+  const props = feat?.properties || {};
+  const color = props.color || WARD_COLOR_MAP[wardCode] || "#a78bfa";
+  const area = props.area || "";
+  const wardLabel = props.wardLabel || "";
+
+  // Localities in this ward (from existing mppLocalities.items[].wardCode).
+  const localities = (payload?.mppLocalities?.items || []).filter(it => it.wardCode === wardCode);
+  const totalLoc = localities.length;
+  const totals = localities.reduce((acc, it) => {
+    acc.residential += it.residential || 0;
+    acc.commercial  += it.commercial || 0;
+    acc.industrial  += it.industrial || 0;
+    return acc;
+  }, { residential: 0, commercial: 0, industrial: 0 });
+
+  // Majority constituency (state + parliament) by mode.
+  const stateCount = {}, parlCount = {};
+  for (const it of localities) {
+    const c = it.constituency?.parsed?.[0];
+    if (!c) continue;
+    if (c.stateCode) stateCount[c.stateCode + " " + (c.stateName || "")] = (stateCount[c.stateCode + " " + (c.stateName || "")] || 0) + 1;
+    if (c.parliamentCode) parlCount[c.parliamentCode + " " + (c.parliamentName || "")] = (parlCount[c.parliamentCode + " " + (c.parliamentName || "")] || 0) + 1;
+  }
+  const topEntry = (table) => Object.entries(table).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+  const stateSeat = topEntry(stateCount);
+  const parlSeat  = topEntry(parlCount);
+
+  // Councillor (already keyed by ward code in payload).
+  const councillor = (payload?.mppCouncillors?.wards || []).find(w => w.code === wardCode);
+  const councillorCard = councillor?.councillors?.[0];
+  const councillorLine = councillorCard
+    ? `${escapeHtml(councillorCard.name || councillorCard.title || "—")} · <a class="ward-brief-phone" href="tel:${(councillorCard.phone || "").replace(/[^0-9+]/g, "")}">${escapeHtml(councillorCard.phone || "—")}</a>`
+    : "—";
+
+  // Hydro stations whose snapped catchment overlaps this ward (best-effort heuristic).
+  const hydroNear = (payload?.infobanjir?.stations || []).filter(s => {
+    if (!feat?.geometry) return false;
+    if (s.lat == null || s.lon == null) return false;
+    return pointInRing([s.lon, s.lat], feat.geometry);
+  });
+  const hydroSummary = hydroNear.length
+    ? hydroNear.slice(0, 2).map(s => `${escapeHtml(s.name)} ${s.waterLevelM != null ? s.waterLevelM + "m" : ""} (${s.bandLabel || s.band})`).join(" · ")
+    : `none in ward`;
+
+  // Flood-zone overlap (centroid in ward polygon).
+  const floodZones = state.floodZoneFeatures || [];
+  const floodHits = floodZones.filter(f => {
+    const c = f?.geometry?.coordinates?.[0]?.[0];
+    if (!c || !feat?.geometry) return false;
+    return pointInRing(c, feat.geometry);
+  });
+
+  // Tension Index
+  const tension = WARD_TENSION[wardCode] || { score: 0, topIssue: "No data", trend: "stable", tone: "muted" };
+  const tensionGlyph = tension.trend === "rising" ? "▲" : tension.trend === "falling" ? "▼" : "—";
+  const tensionLine = `<span class="glyph" data-tone="${tension.tone}">${tensionGlyph}</span> <strong style="color: var(--${tension.tone === 'alert' ? 'red' : tension.tone === 'watch' ? 'amber' : 'cyan'})">${tension.score}/100</strong> · ${escapeHtml(tension.topIssue)}`;
+
+  el.hidden = false;
+  el.dataset.active = "true";
+  el.innerHTML = `
+    <div class="ward-brief-head">
+      <div class="ward-brief-title" style="border-left:3px solid ${color}; padding-left:8px;">
+        <span class="ward-brief-code">WARD ${escapeHtml(wardCode)}</span>
+        <span class="ward-brief-area">${escapeHtml((wardLabel || "") + (area ? " · " + area : ""))}</span>
+      </div>
+      <button type="button" class="ward-brief-close" aria-label="Close ward brief">✕</button>
+    </div>
+    <div class="ward-brief-stats">
+      <div class="ward-brief-stat"><strong>${totalLoc}</strong>localities</div>
+      <div class="ward-brief-stat"><strong>${totals.residential.toLocaleString()}</strong>residential</div>
+      <div class="ward-brief-stat"><strong>${totals.commercial.toLocaleString()}</strong>commercial</div>
+    </div>
+    <div class="ward-brief-row"><span class="ward-brief-label">Tension Index</span>${tensionLine}</div>
+    <div class="ward-brief-row"><span class="ward-brief-label">State seat</span>${escapeHtml(stateSeat)}</div>
+    <div class="ward-brief-row"><span class="ward-brief-label">Parliament</span>${escapeHtml(parlSeat)}</div>
+    <div class="ward-brief-row"><span class="ward-brief-label">Councillor</span>${councillorLine}</div>
+    <div class="ward-brief-section">
+      <div class="ward-brief-row"><span class="ward-brief-label">Hydro</span>${hydroSummary}</div>
+      <div class="ward-brief-row"><span class="ward-brief-label">Flood zones</span>${floodHits.length} historical hotspot${floodHits.length === 1 ? "" : "s"} on record</div>
+    </div>
+    ${renderWardProjectsHTML(wardCode)}`;
+
+  el.querySelector(".ward-brief-close")?.addEventListener("click", () => setActiveWard(null));
+}
+
+// Project ledger for the active ward — RM totals, status mix, line items.
+// Drawn from MPP_WARD_PROJECTS in data.js (hand-encoded, real Padawan tender
+// + GCAP shape). Renders as a self-contained HTML block to be injected into
+// the ward-brief.
+function renderWardProjectsHTML(wardCode) {
+  const projects = MPP_WARD_PROJECTS[wardCode] || [];
+  if (!projects.length) {
+    return `<div class="ward-brief-section ward-projects" data-empty="true">
+      <div class="ward-projects-head">
+        <span class="ward-brief-label">Ledger</span>
+        <span class="ward-projects-empty">no entries on file</span>
+      </div>
+    </div>`;
+  }
+  const totalRmK = projects.reduce((s, p) => s + (p.rmK || 0), 0);
+  const inProg = projects.filter(p => p.status === "in-progress").length;
+  const queued = projects.filter(p => p.status === "queued").length;
+  const done   = projects.filter(p => p.status === "complete").length;
+  const formatRm = (k) => k >= 1000 ? `RM ${(k/1000).toFixed(2)}M` : `RM ${k}k`;
+  const statusGlyphMap = { "in-progress": "◆", "queued": "◇", "complete": "●" };
+  const rows = projects.map(p => {
+    const rm = formatRm(p.rmK || 0);
+    const pct = p.pct ?? 0;
+    const sg = statusGlyphMap[p.status] || "◇";
+    return `
+      <article class="ward-project" data-status="${p.status}" data-cat="${p.category}">
+        <div class="wp-row1">
+          <span class="wp-status">${sg}</span>
+          <span class="wp-cat">${p.category.toUpperCase()}</span>
+          <span class="wp-title">${escapeHtml(p.title)}</span>
+          <span class="wp-rm">${rm}</span>
+        </div>
+        <div class="wp-row2">
+          <div class="wp-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
+            <div class="wp-bar-fill" style="width:${pct}%"></div>
+            <span class="wp-pct">${pct}%</span>
+          </div>
+          <span class="wp-contractor">${escapeHtml(p.contractor || "—")}</span>
+        </div>
+        ${p.note ? `<div class="wp-note">${escapeHtml(p.note)}</div>` : ""}
+      </article>`;
+  }).join("");
+  return `
+    <div class="ward-brief-section ward-projects">
+      <div class="ward-projects-head">
+        <span class="ward-brief-label">Ledger // ${projects.length} active</span>
+        <span class="ward-projects-totals">
+          ${formatRm(totalRmK)} ·
+          <span data-tone="ok">${done}●</span>
+          <span data-tone="warn">${inProg}◆</span>
+          <span data-tone="muted">${queued}◇</span>
+        </span>
+      </div>
+      <div class="ward-projects-list">${rows}</div>
+    </div>`;
+}
+
+// Ray-casting point-in-polygon. coords in [lon,lat]; geometry is GeoJSON Polygon.
+function pointInRing(pt, geometry) {
+  if (!geometry || !pt) return false;
+  const rings = geometry.type === "Polygon" ? [geometry.coordinates[0]]
+              : geometry.type === "MultiPolygon" ? geometry.coordinates.map(p => p[0])
+              : null;
+  if (!rings) return false;
+  for (const ring of rings) {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const xi = ring[i][0], yi = ring[i][1];
+      const xj = ring[j][0], yj = ring[j][1];
+      const intersect = ((yi > pt[1]) !== (yj > pt[1])) &&
+        (pt[0] < (xj - xi) * (pt[1] - yi) / ((yj - yi) || 1e-12) + xi);
+      if (intersect) inside = !inside;
+    }
+    if (inside) return true;
+  }
+  return false;
+}
+
+function clearWardHighlight() {
+  if (state.wardHighlightLayer && state.map) {
+    state.map.removeLayer(state.wardHighlightLayer);
+  }
+  state.wardHighlightLayer = null;
+}
+
+function highlightWard(code) {
+  if (!state.map || !window.L || !state.wardFeatures) return;
+  const feat = state.wardFeatures.find(f => f?.properties?.wardCode === code);
+  if (!feat) return;
+  clearWardHighlight();
+  const color = feat.properties.color || WARD_COLOR_MAP[code] || "#a78bfa";
+  const layer = window.L.geoJSON(feat, {
+    style: { color, weight: 3, opacity: 1, fillColor: color, fillOpacity: 0.28, dashArray: "4 4" },
+  }).addTo(state.map);
+  state.wardHighlightLayer = layer;
+  try { state.map.fitBounds(layer.getBounds().pad(0.2), { maxZoom: 14 }); } catch (_) { /* ignore */ }
+}
+
+async function loadWardFeatures() {
+  if (state.wardFeatures?.length) return;
+  try {
+    let res = await fetch(apiUrl("/api/layers/mpp_wards")).catch(() => null);
+    if (!res || !res.ok) res = await fetch(apiUrl("/api/layers/mpp_wards.json"));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const fc = await res.json();
+    state.wardFeatures = fc.features || [];
+  } catch (error) {
+    console.warn("Ward boundaries unavailable:", error);
+    state.wardFeatures = [];
+  }
+}
+
+// Pass 2.4: load flood_zones features so the per-ward brief can count overlaps.
+async function loadFloodZoneFeatures() {
+  if (state.floodZoneFeatures?.length) return;
+  try {
+    let res = await fetch(apiUrl("/api/layers/flood_zones")).catch(() => null);
+    if (!res || !res.ok) res = await fetch(apiUrl("/api/layers/flood_zones.json"));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const fc = await res.json();
+    state.floodZoneFeatures = fc.features || [];
+  } catch (_) {
+    state.floodZoneFeatures = [];
+  }
 }
 
 function renderDashboard(payload) {
   state.payload = payload;
-  if (payload.site?.title) document.title = payload.site.title;
+  // Dynamic <title> — encodes current posture + warning count so the browser
+  // tab itself is a status indicator. Safe / Watch / Stretched glyph prefix.
+  const postureToken = String(payload?.summary?.posture || "stable").toLowerCase();
+  const titlePrefix = postureToken === "stretched" ? "▲" : postureToken === "watch" || postureToken === "steady-watch" ? "◐" : "▰";
+  const metCount = payload?.metWarnings?.activeCount || 0;
+  const titleSuffix = metCount > 0 ? ` · ${metCount} MET` : "";
+  document.title = `${titlePrefix} ${(payload.site?.title || "Greater Kuching IOC")}${titleSuffix}`;
   if (payload.site?.title) $("titleText").textContent = payload.site.title;
-  if (payload.site?.subtitle) $("subtitleText").textContent = payload.site.subtitle;
+  // Today's Brief — dynamic teleprompter line. Replaces the static partnership
+  // subtitle (the partner-row of logos already credits the same partners visually).
+  const subtitle = $("subtitleText");
+  if (subtitle) {
+    subtitle.classList.add("today-brief");
+    subtitle.innerHTML = composeTodayBrief(payload);
+  }
   $("summaryLead").textContent = payload.summary.headline;
   $("mapSummary").textContent = payload.summary.detail;
   renderRuntimeMeta(payload);
+  renderDeltaDigest(payload);
   renderBriefStrip(payload);
 
   renderPosture(payload);
+  renderForecastRail(payload);
+  renderFloodMatrix(payload);
+  renderCitizenReports(payload);
   renderMetrics(payload.metrics.slice(0, 6));
   renderMap(payload);
   renderAirportStats(payload.airport);
   renderNewsIntake(payload.news);
   renderOfficialPulse(payload);
+  renderMppCouncillors(payload);
+  renderMppLocalities(payload);
 
-  // Directives — with human context when available
-  $("operationList").innerHTML = payload.operations.map(o=>`
-    <article class="operation-card" data-severity="${o.severity}">
-      <div class="kicker">${o.owner}</div><strong>${o.title}</strong>
-      <div class="operation-detail">${o.detail}</div>
-      ${o.humanContext ? `<div class="directive-context">${o.humanContext}</div>` : ""}
-    </article>`).join("");
+  // Directives — with human context, click-cyclable status, age-decayed borders.
+  renderDirectives(payload.operations || []);
 
-  // Ticker
-  const news = payload.news.items.slice(0,8);
+  // Ticker — secretary mode prefers official-tier headlines (UKAS / TVS / MPP / MBKS / DBKU) first
+  const allNews = payload.news.items || [];
+  const news = isSecretary
+    ? [...allNews.filter(i => i.isOfficial), ...allNews.filter(i => !i.isOfficial)].slice(0, 8)
+    : allNews.slice(0, 8);
   $("newsRail").innerHTML = [...news,...news].map(n=>`<span class="ticker-item"><span class="ticker-source">${n.languageBadge || (n.isOfficial ? "OFF" : n.source)}</span> ${n.title}</span>`).join("");
 
   // Signals
@@ -1343,7 +3265,7 @@ function renderDashboard(payload) {
       <div class="signal-card" data-band="${ib.highestBand}" style="border-left:3px solid ${bandColors[ib.highestBand]||"#8aa2c8"}">
         <strong>FLOOD // JPS HYDRO</strong>
         <div class="val">${ib.liveCount}<sup>/${ib.stationCount}</sup></div>
-        <div class="meta">${(ib.highestBandLabel || "Reference").toUpperCase()} · ${ib.status === "live" ? "live feed" : "reference hold"}</div>
+        <div class="meta">${(ib.highestBandLabel || "Reference").toUpperCase()} · ${glyphHTML(ib.status === "live" ? "live" : "cached", ib.status === "live" ? "live feed" : "reference hold")}</div>
         ${top.map(s => `<div class="meta" style="color:${bandColors[s.band]||"#8aa2c8"}">${s.name} · ${s.waterLevelM != null ? s.waterLevelM + "m" : "—"} (${s.bandLabel})${s.catchment?.status === "snapped" ? ` · ${s.catchment.segmentCount}seg` : ""}</div>`).join("")}
         ${catchLine}
       </div>`;
@@ -1354,12 +3276,35 @@ function renderDashboard(payload) {
       <div class="signal-card" style="border-left:3px solid ${w?.band?.tone === "good" ? "#00ffaa" : w?.band?.tone === "watch" ? "#ffd000" : w?.band?.tone === "warn" ? "#ff7a00" : w?.band?.tone === "alert" || w?.band?.tone === "critical" ? "#ff003c" : "#8aa2c8"}">
         <strong>APIMS // GROUND AQ</strong>
         <div class="val">${w?.aqi ?? "—"}<sup>${w?.band?.label || apims.status}</sup></div>
-        <div class="meta">${apims.stations.map(s => `${s.label}: ${s.aqi ?? "—"}`).join(" · ")}</div>
-        <div class="meta">src: aqicn.org · ${apims.tokenMode} token</div>
+        <div class="meta">${apims.stations.map(s => `${glyphHTML(s.status || (s.aqi != null ? "live" : "offline"), s.label + ": " + (s.aqi ?? "—"))}`).join(" · ")}</div>
+        <div class="meta">${glyphHTML(apims.status || "live", "src: aqicn.org · " + (apims.tokenMode || "demo") + " token")}</div>
       </div>`;
   }
 
-  $("signalCards").innerHTML = signalHtml + groundHtml;
+  // MET Malaysia active warnings card
+  const met = payload.metWarnings;
+  let metHtml = "";
+  if (met) {
+    if (met.activeCount > 0) {
+      const w = met.items[0];
+      metHtml = `
+        <div class="signal-card" style="border-left:3px solid #ef4444">
+          <strong>MET // WEATHER WARNING</strong>
+          <div class="val">${met.activeCount}<sup>active</sup></div>
+          <div class="meta">${w.heading || "Active warning"}</div>
+          ${w.validTo ? `<div class="meta">Until ${new Date(w.validTo).toLocaleString("en-MY",{timeZone:"Asia/Kuching",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div>` : ""}
+        </div>`;
+    } else {
+      metHtml = `
+        <div class="signal-card" style="border-left:3px solid #8aa2c8">
+          <strong>MET // WEATHER WARNING</strong>
+          <div class="val" style="color:var(--soft)">Clear</div>
+          <div class="meta">No active warnings for Kuching/Sarawak</div>
+        </div>`;
+    }
+  }
+
+  $("signalCards").innerHTML = signalHtml + groundHtml + metHtml;
 
   // Trends
   const trendItems = payload.trends.localMatches?.length ? payload.trends.localMatches.slice(0, 6) : [];
@@ -1369,31 +3314,43 @@ function renderDashboard(payload) {
       <div class="meta">> ${t.trafficLabel} // ${t.locality?.label || "Context"}</div></div>`).join("")
     : `<div class="trend-empty"><strong>Local trend watch is quiet</strong><div class="meta">${payload.trends.summary}</div></div>`;
 
-  // Jurisdictions
-  $("jurisdictionCards").innerHTML = payload.jurisdictions.items.map(j=>`
+  // Jurisdictions — secretary mode shows only Padawan
+  const visibleJurs = isSecretary
+    ? payload.jurisdictions.items.filter(j => j.id === "mpp")
+    : payload.jurisdictions.items;
+  $("jurisdictionCards").innerHTML = visibleJurs.map(j=>`
     <div class="municipality-tag" style="border-color:${j.accent};color:${j.accent}">${j.code} // ${j.areaKm2}km2</div>`).join("");
 
   // Map legend
   const hydroLegend = (payload.mapScene?.hydroBands || []).filter(b => b.id !== "reference").map(b => `<span class="legend-item"><span class="legend-dot" style="background:${b.color}"></span>${b.label}</span>`).join("");
-  $("mapLegend").innerHTML = payload.jurisdictions.items.map(j=>`<span class="legend-item"><span class="legend-dot" style="background:${j.accent}"></span>${j.code}</span>`).join("") + `<span class="legend-item"><span class="legend-dot" style="background:#1e90ff"></span>River</span>` + hydroLegend;
+  $("mapLegend").innerHTML = visibleJurs.map(j=>`<span class="legend-item"><span class="legend-dot" style="background:${j.accent}"></span>${j.code}</span>`).join("") + `<span class="legend-item"><span class="legend-dot" style="background:#1e90ff"></span>River</span>` + hydroLegend;
   $("watchpointList").innerHTML = MAP_WATCHPOINTS.map(w=>`<span>${w}</span>`).join("");
 
-  // Satellites
-  renderSatelliteDeck(payload.satellites);
+  // Intel panel: economy + news digest + trends + bypass tracker
+  renderIntelPanel(payload);
+  renderFloodForecast(payload.floodForecast);
+  if (!isSecretary) renderBypassTracker();
+  if (!isSecretary) renderQualitativeLens(payload);
 
-  // Sources
-  renderSourceMatrix(payload);
-  $("sourceList").innerHTML = payload.sources.map(s=>`
-    <div class="source-item">
-      <div class="source-copy">
-        <span class="source-name">${s.name}</span>
-        <span class="source-detail">${s.detail || ""}</span>
-      </div>
-      <div class="source-meta">
-        <span class="source-status" data-status="${s.status}">${s.status}</span>
-        <span class="source-updated">${formatShortStamp(s.generatedAt || payload.generatedAt)}</span>
-      </div>
-    </div>`).join("");
+  // Pass 3 additions
+  renderEventsStack(payload);
+  renderTelemetryStrip(payload);
+
+  // Sources — hidden in secretary mode (panel CSS-gated; renderer skipped to save work)
+  if (!isSecretary) {
+    renderSourceMatrix(payload);
+    $("sourceList").innerHTML = payload.sources.map(s=>`
+      <div class="source-item">
+        <div class="source-copy">
+          <span class="source-name">${s.name}</span>
+          <span class="source-detail">${s.detail || ""}</span>
+        </div>
+        <div class="source-meta">
+          <span class="source-status" data-status="${s.status}">${s.status}</span>
+          <span class="source-updated">${formatShortStamp(s.generatedAt || payload.generatedAt)}</span>
+        </div>
+      </div>`).join("");
+  }
 
   queueMapResize();
 }
@@ -1424,29 +3381,156 @@ function setLang(lang) {
   });
   // Re-render focus toggle labels
   if (state.map) renderFocusToggle();
-  if (state.payload) renderRuntimeMeta(state.payload);
+  if (state.payload) {
+    renderRuntimeMeta(state.payload);
+    renderForecastRail(state.payload);
+  }
   // Highlight active lang button
   document.querySelectorAll(".lang-btn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
 }
 
-// --- Export ---
-function setupExport() {
-  $("exportSitrep")?.addEventListener("click", () => {
-    if (!state.payload) return;
-    const p = state.payload;
-    const lines = [
-      `SITREP // GREATER KUCHING IOC`, `Generated: ${p.generatedAt}`, ``,
-      `POSTURE: ${p.summary.posture.toUpperCase()}`, p.summary.headline, ``, `DETAIL: ${p.summary.detail}`, ``,
-      `METRICS:`, ...p.metrics.map(m=>`  ${m.label}: ${m.value} ${m.unit} (${m.context})`), ``,
-      `OPERATIONS:`, ...p.operations.map(o=>`  [${o.severity.toUpperCase()}] ${o.owner}: ${o.title}`), ``,
-      `EXCHANGE RATES (1 MYR):`, ...p.exchange.pairs.map(r=>`  ${r.code}: ${r.rate}`),
-    ];
-    const blob = new Blob([lines.join("\n")], { type:"text/plain" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `sitrep-kuching-${new Date().toISOString().slice(0,10)}.txt`;
-    a.click();
+// --- Keyboard shortcuts + help overlay ---
+// Power-user navigation: ?, esc, 1-9/0 → wards, w → cycle, e → export,
+// shift+e → print, t → theme, r → refresh, g → toggle full mode.
+const SHORTCUT_WARD_MAP = ["A", "B", "D", "FG", "H", "I", "JL", "K", "M", "NPQ"];
+
+function isTypingTarget(el) {
+  if (!el) return false;
+  const tag = (el.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "textarea" || tag === "select") return true;
+  if (el.isContentEditable) return true;
+  return false;
+}
+
+function showHelpOverlay() {
+  const el = $("helpOverlay");
+  if (!el) return;
+  el.hidden = false;
+  // Move keyboard focus into the overlay's close button so esc behavior is natural.
+  el.querySelector(".help-close")?.focus({ preventScroll: true });
+}
+function hideHelpOverlay() {
+  const el = $("helpOverlay");
+  if (!el) return;
+  el.hidden = true;
+}
+function toggleHelpOverlay() {
+  const el = $("helpOverlay");
+  if (!el) return;
+  el.hidden ? showHelpOverlay() : hideHelpOverlay();
+}
+
+function cycleWard(direction) {
+  const order = SHORTCUT_WARD_MAP;
+  const cur = state.activeWard;
+  if (!cur) {
+    setActiveWard(order[direction > 0 ? 0 : order.length - 1]);
+    return;
+  }
+  const idx = order.indexOf(cur);
+  if (idx < 0) {
+    setActiveWard(order[0]);
+    return;
+  }
+  const next = (idx + direction + order.length) % order.length;
+  setActiveWard(order[next]);
+}
+
+function toggleViewMode() {
+  const html = document.documentElement;
+  const next = html.dataset.view === "secretary" ? "full" : "secretary";
+  html.dataset.view = next;
+  showToast(`▰ VIEW: ${next.toUpperCase()}`, "ok");
+  // Re-render so renderers that branch on isSecretary update their output.
+  if (state.payload) {
+    // Hot-swap the constant so subsequent renders see the change.
+    // (isSecretary is computed once at module load — this re-renders DOM
+    // for the panels it controls but the JS flag stays. A full reload
+    // gives the cleanest result.)
+    setTimeout(() => location.reload(), 600);
+  }
+}
+
+function setupKeyboardShortcuts() {
+  // Help-hint click → opens overlay.
+  $("helpHint")?.addEventListener("click", showHelpOverlay);
+  $("helpOverlay")?.querySelector(".help-close")?.addEventListener("click", hideHelpOverlay);
+  // Backdrop click also closes.
+  $("helpOverlay")?.addEventListener("click", (e) => {
+    if (e.target.id === "helpOverlay") hideHelpOverlay();
   });
+
+  document.addEventListener("keydown", (e) => {
+    if (isTypingTarget(e.target)) return;
+    // Modifier-aware: Shift used as a modifier; Ctrl/Cmd/Alt always pass through.
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key;
+
+    // ESC: close ward brief or help overlay
+    if (k === "Escape") {
+      if (!$("helpOverlay")?.hidden) { hideHelpOverlay(); e.preventDefault(); return; }
+      if (state.activeWard) { setActiveWard(null); e.preventDefault(); return; }
+      return;
+    }
+
+    // ? — toggle help overlay (Shift+/)
+    if (k === "?" || (e.shiftKey && k === "/")) { toggleHelpOverlay(); e.preventDefault(); return; }
+
+    // 1–9, 0 → ward jump (1=A, 2=B, ..., 0=NPQ)
+    if (/^[0-9]$/.test(k)) {
+      const idx = k === "0" ? 9 : (parseInt(k, 10) - 1);
+      const ward = SHORTCUT_WARD_MAP[idx];
+      if (ward) { setActiveWard(state.activeWard === ward ? null : ward); e.preventDefault(); }
+      return;
+    }
+
+    // w / W — cycle wards
+    if (k === "w" || k === "W") { cycleWard(e.shiftKey ? -1 : 1); e.preventDefault(); return; }
+
+    // e / E — export
+    if (k === "e" || k === "E") {
+      if (e.shiftKey) { window.print(); }
+      else { exportSitrepWhatsApp(); }
+      e.preventDefault();
+      return;
+    }
+
+    // t — theme toggle
+    if (k === "t" || k === "T") { toggleTheme(); e.preventDefault(); return; }
+
+    // r — force refresh
+    if (k === "r" || k === "R") { boot(); showToast("▱ REFRESHING", "ok"); e.preventDefault(); return; }
+
+    // g — toggle view mode
+    if (k === "g" || k === "G") { toggleViewMode(); e.preventDefault(); return; }
+  });
+}
+
+// --- Export (Pass 3.7: WhatsApp clipboard / Shift-click for print / Alt-click for .txt download) ---
+function setupExport() {
+  $("exportSitrep")?.addEventListener("click", (e) => {
+    if (!state.payload) return;
+    if (e.shiftKey) {
+      // Print preview (browser → save as PDF).
+      window.print();
+      return;
+    }
+    if (e.altKey) {
+      // Legacy: download as .txt
+      const text = buildSitrepText(state.payload);
+      const blob = new Blob([text], { type: "text/plain" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `sitrep-kuching-${new Date().toISOString().slice(0, 10)}.txt`;
+      a.click();
+      return;
+    }
+    // Default: copy to clipboard for WhatsApp.
+    exportSitrepWhatsApp();
+  });
+  // Tooltip hint on the button.
+  const btn = $("exportSitrep");
+  if (btn) btn.title = "Click → copy WhatsApp text · Shift-click → print · Alt-click → save .txt";
 }
 
 // --- Boot ---
@@ -1454,11 +3538,21 @@ async function boot() {
   try {
     const payload = await loadDashboardPayload();
     renderDashboard(payload);
+    // Pass 2: bring up ward + flood-zone polygon caches in parallel; if a #ward=X
+    // hash is present, auto-open that ward's brief once data is available.
+    await Promise.all([loadWardFeatures(), loadFloodZoneFeatures()]);
+    const hash = (location.hash || "").match(/#ward=([A-Z]+)/i);
+    if (hash && hash[1] && !state.activeWard) {
+      setActiveWard(hash[1].toUpperCase());
+    }
+    startRadarSweep();
   } catch (err) { console.error("IOC SYNC FAILURE", err); }
 }
 
 // Init controls
 setupExport();
+setupConnectors();
+setupKeyboardShortcuts();
 $("themeToggle")?.addEventListener("click", toggleTheme);
 document.querySelectorAll(".lang-btn").forEach(btn => btn.addEventListener("click", () => setLang(btn.dataset.lang)));
 

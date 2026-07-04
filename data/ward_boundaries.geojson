@@ -1,0 +1,191 @@
+{
+  "type": "FeatureCollection",
+  "name": "MPP Resident Councillor Wards 2025-2028",
+  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+  "metadata": {
+    "source": "Hand-crafted approximations based on MPP Resident Councillors System 2025-2028 area descriptions.",
+    "accuracy": "Operational recognisability only. Not cadastral boundaries. Use for map-panel visual linkage, not for legal or property decisions.",
+    "term": "2025-2028"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "wardCode": "A",
+        "wardLabel": "Ward 1",
+        "area": "Upper Padawan",
+        "color": "#a78bfa",
+        "centroid": [110.23, 1.20]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [110.15, 1.30], [110.19, 1.28], [110.24, 1.25], [110.28, 1.22],
+          [110.31, 1.18], [110.29, 1.15], [110.23, 1.15], [110.17, 1.18],
+          [110.14, 1.22], [110.13, 1.27], [110.15, 1.30]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "wardCode": "B",
+        "wardLabel": "Ward 2",
+        "area": "Upper Padawan: Biperoh & Bengoh",
+        "color": "#c084fc",
+        "centroid": [110.24, 1.28]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [110.19, 1.33], [110.24, 1.33], [110.29, 1.30], [110.31, 1.27],
+          [110.28, 1.22], [110.24, 1.25], [110.19, 1.28], [110.17, 1.30],
+          [110.19, 1.33]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "wardCode": "D",
+        "wardLabel": "Ward 3",
+        "area": "Mambong & Puncak Borneo",
+        "color": "#d946ef",
+        "centroid": [110.34, 1.34]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [110.29, 1.38], [110.34, 1.39], [110.40, 1.37], [110.42, 1.33],
+          [110.39, 1.29], [110.35, 1.27], [110.31, 1.27], [110.29, 1.30],
+          [110.29, 1.34], [110.29, 1.38]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "wardCode": "FG",
+        "wardLabel": "Ward 4",
+        "area": "Kota Padawan, Kuap, Landeh & Batu 10-15 Kuching-Serian Road",
+        "color": "#f472b6",
+        "centroid": [110.345, 1.43]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [110.29, 1.47], [110.33, 1.48], [110.38, 1.47], [110.41, 1.44],
+          [110.43, 1.40], [110.40, 1.37], [110.34, 1.39], [110.29, 1.38],
+          [110.27, 1.41], [110.27, 1.45], [110.29, 1.47]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "wardCode": "H",
+        "wardLabel": "Ward 5",
+        "area": "3rd Mile Maong Bazaar, Arang, Semeba & Kung Phin",
+        "color": "#fb7185",
+        "centroid": [110.335, 1.505]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [110.30, 1.53], [110.34, 1.535], [110.38, 1.52], [110.39, 1.49],
+          [110.38, 1.47], [110.33, 1.48], [110.29, 1.47], [110.28, 1.50],
+          [110.29, 1.525], [110.30, 1.53]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "wardCode": "I",
+        "wardLabel": "Ward 6",
+        "area": "Kota Sentosa & Batu Kitang",
+        "color": "#fb923c",
+        "centroid": [110.29, 1.485]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [110.245, 1.515], [110.28, 1.50], [110.29, 1.47], [110.27, 1.45],
+          [110.23, 1.455], [110.21, 1.48], [110.22, 1.51], [110.245, 1.515]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "wardCode": "JL",
+        "wardLabel": "Ward 7",
+        "area": "Batu Kawah & Datuk Stephen Yong Road",
+        "color": "#fbbf24",
+        "centroid": [110.28, 1.518]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [110.26, 1.545], [110.30, 1.545], [110.32, 1.525], [110.30, 1.53],
+          [110.28, 1.50], [110.245, 1.515], [110.22, 1.51], [110.23, 1.535],
+          [110.26, 1.545]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "wardCode": "K",
+        "wardLabel": "Ward 8",
+        "area": "Matang",
+        "color": "#84cc16",
+        "centroid": [110.225, 1.555]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [110.18, 1.585], [110.22, 1.595], [110.26, 1.585], [110.26, 1.545],
+          [110.23, 1.535], [110.19, 1.535], [110.17, 1.555], [110.17, 1.575],
+          [110.18, 1.585]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "wardCode": "M",
+        "wardLabel": "Ward 9",
+        "area": "Batu Kawah Township, Stapok & Sunny Hill Batu Kawah",
+        "color": "#22d3ee",
+        "centroid": [110.295, 1.524]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [110.275, 1.545], [110.315, 1.54], [110.33, 1.52], [110.32, 1.505],
+          [110.30, 1.50], [110.28, 1.50], [110.26, 1.51], [110.255, 1.535],
+          [110.275, 1.545]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "wardCode": "NPQ",
+        "wardLabel": "Ward 10",
+        "area": "Telaga Air, Sibu Laut & Kawasan Kpg. Tg. Bako",
+        "color": "#38bdf8",
+        "centroid": [110.17, 1.64]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [110.11, 1.69], [110.16, 1.71], [110.21, 1.70], [110.24, 1.65],
+          [110.23, 1.61], [110.18, 1.595], [110.14, 1.61], [110.10, 1.64],
+          [110.10, 1.67], [110.11, 1.69]
+        ]]
+      }
+    }
+  ]
+}

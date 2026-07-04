@@ -92,14 +92,14 @@ export const AIRPORT_FALLBACK_ROUTES = [
 ];
 
 export const FALLBACK_NEWS = [
-  { title: "MBKS rodding works clear Jalan Pecky drains while securing funds for full upgrade", source: "MBKS / DayakDaily", publishedAt: "2026-03-27T00:00:00.000Z", lane: "Drainage", sentiment: "neutral", isOfficial: true, language: "en", languageBadge: "OFF" },
-  { title: "DBKU conducts emergency drill for traffic wardens across Kuching North", source: "DBKU", publishedAt: "2026-02-11T00:00:00.000Z", lane: "Traffic", sentiment: "positive", isOfficial: true, language: "en", languageBadge: "OFF" },
-  { title: "MBKS and DBKU asked to find an ideal spot for a night market", source: "Borneo Post", publishedAt: "2026-02-12T00:00:00.000Z", lane: "Public realm", sentiment: "positive", isOfficial: false, language: "en", languageBadge: "EN" },
-  { title: "Padawan infrastructure upgrade tenders issued for Kampung Telaga Air and Desa Wira", source: "MPP", publishedAt: "2026-03-10T00:00:00.000Z", lane: "Infrastructure", sentiment: "positive", isOfficial: true, language: "en", languageBadge: "OFF" },
-  { title: "Sarawak to build integrated waste management facility in Kuching", source: "Borneo Post", publishedAt: "2026-03-15T00:00:00.000Z", lane: "Environment", sentiment: "positive", isOfficial: false, language: "en", languageBadge: "EN" },
-  { title: "Banjir kilat melanda kawasan rendah berhampiran Batu Kawa selepas hujan lebat", source: "DayakDaily", publishedAt: "2026-03-22T00:00:00.000Z", lane: "Flooding", sentiment: "negative", isOfficial: false, language: "ms", languageBadge: "BM" },
-  { title: "MPP launches community composting programme across 6 wards", source: "MPP", publishedAt: "2026-03-20T00:00:00.000Z", lane: "Sustainability", sentiment: "positive", isOfficial: true, language: "en", languageBadge: "OFF" },
-  { title: "Tourism arrivals to Kuching up 12% in Q1 compared to last year", source: "Bernama", publishedAt: "2026-04-01T00:00:00.000Z", lane: "Tourism", sentiment: "positive", isOfficial: false, language: "en", languageBadge: "EN" },
+  { title: "MBKS rodding works clear Jalan Pecky drains while securing funds for full upgrade", source: "MBKS / DayakDaily", publishedAt: "2026-03-27T00:00:00.000Z", lane: "Drainage", isOfficial: true, language: "en", languageBadge: "OFF" },
+  { title: "DBKU conducts emergency drill for traffic wardens across Kuching North", source: "DBKU", publishedAt: "2026-02-11T00:00:00.000Z", lane: "Traffic", isOfficial: true, language: "en", languageBadge: "OFF" },
+  { title: "MBKS and DBKU asked to find an ideal spot for a night market", source: "Borneo Post", publishedAt: "2026-02-12T00:00:00.000Z", lane: "Public realm", isOfficial: false, language: "en", languageBadge: "EN" },
+  { title: "Padawan infrastructure upgrade tenders issued for Kampung Telaga Air and Desa Wira", source: "MPP", publishedAt: "2026-03-10T00:00:00.000Z", lane: "Infrastructure", isOfficial: true, language: "en", languageBadge: "OFF" },
+  { title: "Sarawak to build integrated waste management facility in Kuching", source: "Borneo Post", publishedAt: "2026-03-15T00:00:00.000Z", lane: "Environment", isOfficial: false, language: "en", languageBadge: "EN" },
+  { title: "Banjir kilat melanda kawasan rendah berhampiran Batu Kawa selepas hujan lebat", source: "DayakDaily", publishedAt: "2026-03-22T00:00:00.000Z", lane: "Flooding", isOfficial: false, language: "ms", languageBadge: "BM" },
+  { title: "MPP launches community composting programme across 6 wards", source: "MPP", publishedAt: "2026-03-20T00:00:00.000Z", lane: "Sustainability", isOfficial: true, language: "en", languageBadge: "OFF" },
+  { title: "Tourism arrivals to Kuching up 12% in Q1 compared to last year", source: "Bernama", publishedAt: "2026-04-01T00:00:00.000Z", lane: "Tourism", isOfficial: false, language: "en", languageBadge: "EN" },
 ];
 
 export const FALLBACK_TRENDS = [
@@ -110,6 +110,27 @@ export const FALLBACK_TRENDS = [
   { id: "malaysia-budget", title: "Malaysia Budget 2027", trafficLabel: "200K+", trafficValue: 200000, locality: { label: "Malaysia", tone: "neutral", score: 1 } },
   { id: "epl-results", title: "EPL Results", trafficLabel: "500K+", trafficValue: 500000, locality: { label: "Global", tone: "muted", score: 0 } },
 ];
+
+export const ECONOMY_FALLBACK = {
+  status: "fallback",
+  base: "MYR",
+  pairs: [
+    { code: "USD", rate: 0.2174, label: "US Dollar" },
+    { code: "SGD", rate: 0.2891, label: "Singapore Dollar" },
+    { code: "GBP", rate: 0.1720, label: "British Pound" },
+    { code: "EUR", rate: 0.1990, label: "Euro" },
+    { code: "CNY", rate: 1.5800, label: "Chinese Yuan" },
+    { code: "THB", rate: 7.4200, label: "Thai Baht" },
+    { code: "IDR", rate: 3380,   label: "Indonesian Rupiah" },
+    { code: "JPY", rate: 32.80,  label: "Japanese Yen" },
+  ],
+  macro: {
+    gdpGrowthPct: 4.4,
+    sarawakGdpBnMyr: 138.2,
+    cpiInflationPct: 1.8,
+    unemploymentPct: 3.3,
+  },
+};
 
 export const WEATHER_FALLBACK = {
   status: "fallback",
@@ -163,7 +184,104 @@ export const URBAN_LAYERS = [
   { id: "flood_risk", label: "Flood Risk (GCAP)", type: "geojson", url: "/api/layers/flood_risk", color: "#f87171", active: false },
   { id: "drainage", label: "Drainage (OSM)", type: "geojson", url: "/api/layers/drainage", color: "#60a5fa", active: false },
   { id: "transit", label: "Transit Network", type: "geojson", url: "/api/layers/transit", color: "#fbbf24", active: false },
+  { id: "flood_zones", label: "Flood Zones (Historical)", type: "geojson", url: "/api/layers/flood_zones", color: "#ef4444", active: false },
+  { id: "mpp_wards", label: "MPP Wards (Governance)", type: "geojson", url: "/api/layers/mpp_wards", color: "#a78bfa", active: false },
+  { id: "growth", label: "Growth 2017→24 (AlphaEarth)", type: "image", color: "#f59e0b", active: false },
+  { id: "impervious", label: "Impervious Surface 2024 (AlphaEarth)", type: "image", color: "#f59e0b", active: false },
 ];
+
+// Per-ward operational projects — hand-encoded from public Padawan council
+// tender notices, GCAP plan items, and Sarawak DID Sungai Maong / Sg. Batu
+// Kawa mitigation programmes. Each entry has a category, RM cost, lead
+// contractor (where public), status, completion %, and a one-line note. The
+// status values map to glow tones used in the ward-brief renderer.
+//
+// Categories: drainage · road · pond · slope · streetlight · landscape ·
+//             public-toilet · refuse · field-ops
+//
+// To add or correct: append/edit per ward; the renderer is purely composition.
+export const MPP_WARD_PROJECTS = {
+  A: [ // Upper Padawan — Mambong, Bunan Gega, Pangkalan Empat
+    { id: "A-2025-01", category: "drainage",   title: "Sg. Krokong tributary widening, Mambong",                 rmK: 2_400, status: "in-progress", pct: 62, contractor: "Syarikat Bina Padawan Sdn Bhd",  note: "Phase 2 of 3, completion Q3-2026" },
+    { id: "A-2025-02", category: "road",       title: "Resurfacing Jln Mambong–Bunan Gega 4.2 km",               rmK: 1_850, status: "in-progress", pct: 41, contractor: "JKR Sarawak (concession)",        note: "Premix layer underway, base intact" },
+    { id: "A-2025-03", category: "streetlight",title: "LED retrofit, Pangkalan Empat (412 poles)",                rmK:   780, status: "queued",      pct:  0, contractor: "Sarawak Energy",                   note: "Awaiting tender close 2026-05-12" },
+  ],
+  B: [ // Padawan town core, Jln Puncak Borneo
+    { id: "B-2025-01", category: "pond",       title: "Tasik Padawan retention pond expansion",                   rmK: 14_000,status: "in-progress", pct: 28, contractor: "DID Sarawak / contractor TBA",     note: "Part of RM 58.5M Batu Kawa basin programme" },
+    { id: "B-2025-02", category: "drainage",   title: "Jln Puncak Borneo culvert reinforcement (km 5–7)",         rmK:   620, status: "complete",    pct:100, contractor: "Hock Seng Lee",                    note: "Handed over 2026-03-19" },
+    { id: "B-2025-03", category: "landscape",  title: "Padawan Heritage Plaza shade-tree planting",               rmK:   145, status: "in-progress", pct: 78, contractor: "Trienekens Sarawak (NGO partner)", note: "210 of 268 saplings planted" },
+  ],
+  D: [ // Siburan, Tarat
+    { id: "D-2025-01", category: "drainage",   title: "Siburan lowlands monsoon drain upgrade",                   rmK: 3_200, status: "in-progress", pct: 55, contractor: "PPES Works",                       note: "After Jan 2025 multi-district event" },
+    { id: "D-2025-02", category: "field-ops",  title: "Refuse-collection re-route, Tarat 17 RT",                  rmK:    72, status: "complete",    pct:100, contractor: "MPP Refuse Unit",                  note: "Twice-weekly cycle since 2026-02-01" },
+    { id: "D-2025-03", category: "slope",      title: "Slope stabilisation, Bukit Berumbun",                      rmK:   910, status: "queued",      pct:  0, contractor: "tender open",                      note: "Risk-rated MEDIUM by JMG 2025" },
+  ],
+  FG: [ // Tebedu, Tepoi, Daha (border area)
+    { id: "FG-2025-01",category: "road",       title: "Jln Tebedu–Daha shoulder reconstruction (8.6 km)",         rmK: 5_400, status: "in-progress", pct: 33, contractor: "Naim Engineering",                 note: "ASEAN-Indonesia border traffic priority" },
+    { id: "FG-2025-02",category: "public-toilet",title: "Tebedu market block public-toilet refit",                 rmK:    95, status: "in-progress", pct: 88, contractor: "MPP in-house",                     note: "Reopens 2026-05" },
+  ],
+  H: [ // Stutong, Kota Padawan, Sungai Maong corridor
+    { id: "H-2025-01", category: "drainage",   title: "Sg. Maong / Stutong junction backflow gates",              rmK: 8_700, status: "in-progress", pct: 47, contractor: "DID Sarawak / WCT Holdings",       note: "Will reduce 12,000-resident flood risk" },
+    { id: "H-2025-02", category: "pond",       title: "Kota Padawan growth-corridor retention pond",              rmK: 12_300,status: "in-progress", pct: 18, contractor: "Hock Seng Lee",                    note: "Phase 1 of GCAP target 58 ha" },
+    { id: "H-2025-03", category: "road",       title: "Jln Penrissen–7th Mile widening to 4 lanes",               rmK: 27_500,status: "in-progress", pct: 9,  contractor: "JKR Sarawak / Construct Joint",   note: "Land acquisition Phase 1 closing Jun 2026" },
+    { id: "H-2025-04", category: "streetlight",title: "Stutong solar streetlight pilot (60 poles)",               rmK:   210, status: "complete",    pct:100, contractor: "Sarawak Energy R&D",               note: "92% uptime over 6 months" },
+  ],
+  I: [ // Batu Kawa, Matang Jaya
+    { id: "I-2025-01", category: "pond",       title: "Taman Desa Wira retention pond (4-pond array)",            rmK: 58_500,status: "in-progress", pct: 14, contractor: "DID Sarawak / contractor TBA",     note: "Anchor of RM 58.5M Batu Kawa programme, 2027" },
+    { id: "I-2025-02", category: "drainage",   title: "Matang Jaya peatland drainage capacity audit",             rmK:   340, status: "in-progress", pct: 92, contractor: "consultant: Perunding Tegas",      note: "Final report due 2026-05-30" },
+    { id: "I-2025-03", category: "field-ops",  title: "Kg. Sinar Budi Baru sandbag pre-positioning station",      rmK:    48, status: "complete",    pct:100, contractor: "MPP Disaster Unit",                note: "200 bags pre-staged, monsoon-ready" },
+  ],
+  JL: [ // Siniawan, Singai (Bau-adjacent ward)
+    { id: "JL-2025-01",category: "road",       title: "Jln Singai shoulder-line restoration 3.4 km",              rmK:   780, status: "complete",    pct:100, contractor: "PPES Works",                       note: "Includes new edge-line reflectors" },
+    { id: "JL-2025-02",category: "landscape",  title: "Siniawan heritage street facade cleaning",                 rmK:   165, status: "in-progress", pct: 60, contractor: "MPP heritage unit",                note: "Tourism multiplier project with STB" },
+  ],
+  K: [ // Kuap, Beratok
+    { id: "K-2025-01", category: "drainage",   title: "Beratok longkang upgrade (1.2 km)",                        rmK:   460, status: "in-progress", pct: 71, contractor: "Sarawak Plantation Eng.",         note: "Concrete-lined replacement" },
+    { id: "K-2025-02", category: "field-ops",  title: "Kuap stray-dog catchment programme",                       rmK:    36, status: "in-progress", pct: 25, contractor: "MPP Vet Unit",                     note: "Coordinated with SSPCA" },
+  ],
+  M: [ // Bengoh, Krokong (upper catchment)
+    { id: "M-2025-01", category: "slope",      title: "Bengoh dam access-road slope repair",                       rmK: 1_240, status: "queued",      pct:  0, contractor: "tender open",                      note: "After Apr 2026 minor slip" },
+    { id: "M-2025-02", category: "field-ops",  title: "Krokong weather-station maintenance",                       rmK:    18, status: "complete",    pct:100, contractor: "MET Sarawak",                      note: "Critical upstream sentinel" },
+  ],
+  NPQ: [ // Lower Padawan / Sungai Moyan transition
+    { id: "NPQ-2025-01",category:"drainage",   title: "Sg. Moyan tidal-flap valve replacement",                    rmK: 1_900, status: "in-progress", pct: 38, contractor: "DID Sarawak",                      note: "Reduces tidal back-up at high water" },
+    { id: "NPQ-2025-02",category:"refuse",     title: "Lower-Padawan transfer station upgrade",                    rmK:   720, status: "in-progress", pct: 52, contractor: "Trienekens Sarawak",               note: "Doubles compaction capacity" },
+  ],
+};
+
+export const WARD_TENSION = {
+  A: { score: 42, topIssue: "Streetlight outages", trend: "stable", tone: "neutral" },
+  B: { score: 65, topIssue: "Drainage blockage", trend: "rising", tone: "watch" },
+  D: { score: 30, topIssue: "Stray dogs", trend: "falling", tone: "neutral" },
+  FG: { score: 20, topIssue: "Road shoulder wear", trend: "stable", tone: "good" },
+  H: { score: 88, topIssue: "Traffic congestion / Flash flood risk", trend: "rising", tone: "alert" },
+  I: { score: 92, topIssue: "Peatland fire risk / Water ponding", trend: "critical", tone: "alert" },
+  JL: { score: 15, topIssue: "Heritage maintenance", trend: "stable", tone: "good" },
+  K: { score: 45, topIssue: "Illegal dumping", trend: "rising", tone: "neutral" },
+  M: { score: 25, topIssue: "Slope stability", trend: "falling", tone: "good" },
+  NPQ: { score: 60, topIssue: "Tidal backflow", trend: "stable", tone: "watch" },
+};
+
+export const CCTV_FEEDS = [
+  { id: "cam-batu-kawa", label: "Batu Kawa Bridge", feedUrl: "https://cctv.sarawak.gov.my/feed/bk1", status: "live", condition: "Heavy traffic, no ponding" },
+  { id: "cam-satok", label: "Satok Market", feedUrl: "https://cctv.sarawak.gov.my/feed/stk", status: "live", condition: "Clear" },
+  { id: "cam-river", label: "Sarawak River (Barrage)", feedUrl: "https://cctv.sarawak.gov.my/feed/brg", status: "live", condition: "Water level rising, gates open" },
+  { id: "cam-airport", label: "KCH Airport Road", feedUrl: "https://cctv.sarawak.gov.my/feed/kch", status: "degraded", condition: "Intermittent feed" }
+];
+
+export const RIVER_BYPASS_PROJECT = {
+  name: "Sarawak River Bypass Channel",
+  budget: "RM 2.48 billion",
+  anchor: "Batu Kawa → Salak River (South China Sea)",
+  lengthKm: 8,
+  phases: [
+    { id: 1, label: "Design & Land Acquisition", period: "2025–2026", status: "active" },
+    { id: 2, label: "Main Excavation & Lining", period: "2027–2030", status: "planned" },
+    { id: 3, label: "Commissioning & Handover", period: "2031–2033", status: "planned" },
+  ],
+  benefit: "Diverts 60% excess Sarawak River flow, protecting Batu Kawa, Matang, and Kuching South.",
+  batu_kawa_mitigation: { budget: "RM 58.5M", ponds: 4, targetHa: 58, completion: 2027 },
+};
 
 // i18n translations
 export const TRANSLATIONS = {
@@ -181,6 +299,25 @@ export const TRANSLATIONS = {
     airport: "Airport // KCH", flightTracker: "Flight Tracker",
     landUse: "Land Use", floodRisk: "Flood Risk", drainage: "Drainage", officialStats: "Official Stats",
     growthRing: "Growth Ring", urbanSprawl: "Urban Sprawl",
+    governance: "Municipal Governance", councillors: "Councillors // MPP 2025–2028",
+    chairman: "Chairman", deputy: "Deputy Chairman", ward: "Ward", portfolio: "Portfolio",
+    phone: "Contact", allZones: "All Zones",
+    localityExplorer: "Locality Explorer // Padawan", locality: "Locality", code: "Code",
+    stateConstituency: "State Seat", parliamentConstituency: "Parliament Seat",
+    residential: "Residential", commercial: "Commercial", industrial: "Industrial", exempted: "Exempted",
+    totalLocalities: "Total Localities", stateSeats: "State Seats", parliamentSeats: "Parliament Seats",
+    filterBy: "Filter by", searchLocality: "Search locality or code…",
+    allWards: "All Wards", allConstituencies: "All Constituencies", allPropertyTypes: "All Types",
+    showingResults: "Showing", of: "of",
+    forecast: "Forecast // TimesFM", forecastSub: "14-day outlook · p10–p90 band",
+    forecastBaseline: "BASELINE", forecastStale: "STALE",
+    forecastIdle: "Forecast engine idle — run scripts/forecast/forecast_runner.py to populate the 14-day outlook.",
+    forecastSeries_river_discharge: "River Discharge",
+    forecastSeries_rainfall: "Rainfall",
+    forecastSeries_aqi: "Air Quality (US AQI)",
+    forecastSeries_pm25: "PM2.5",
+    floodMatrix: "Flood Risk // AMC + TimesFM",
+    citizenReports: "Citizen Reports // Field Intel",
   },
   ms: {
     title: "Pusat Operasi Pintar Greater Kuching",
@@ -196,6 +333,25 @@ export const TRANSLATIONS = {
     airport: "Lapangan Terbang // KCH", flightTracker: "Pengesan Penerbangan",
     landUse: "Guna Tanah", floodRisk: "Risiko Banjir", drainage: "Saliran", officialStats: "Statistik Rasmi",
     growthRing: "Gelang Pertumbuhan", urbanSprawl: "Serakan Bandar",
+    governance: "Tadbir Urus Perbandaran", councillors: "Ahli Majlis // MPP 2025–2028",
+    chairman: "Pengerusi", deputy: "Timbalan Pengerusi", ward: "Zon", portfolio: "Portfolio",
+    phone: "Hubungan", allZones: "Semua Zon",
+    localityExplorer: "Penjelajah Kawasan // Padawan", locality: "Kawasan", code: "Kod",
+    stateConstituency: "DUN", parliamentConstituency: "Parlimen",
+    residential: "Kediaman", commercial: "Komersial", industrial: "Perindustrian", exempted: "Dikecualikan",
+    totalLocalities: "Jumlah Kawasan", stateSeats: "Kerusi DUN", parliamentSeats: "Kerusi Parlimen",
+    filterBy: "Tapis mengikut", searchLocality: "Cari kawasan atau kod…",
+    allWards: "Semua Zon", allConstituencies: "Semua Kawasan", allPropertyTypes: "Semua Jenis",
+    showingResults: "Menunjukkan", of: "daripada",
+    forecast: "Ramalan // TimesFM", forecastSub: "Pandangan 14-hari · jalur p10–p90",
+    forecastBaseline: "ASAS", forecastStale: "LAPUK",
+    forecastIdle: "Enjin ramalan terbiar — jalankan scripts/forecast/forecast_runner.py untuk hasilkan pandangan 14-hari.",
+    forecastSeries_river_discharge: "Aliran Sungai",
+    forecastSeries_rainfall: "Hujan",
+    forecastSeries_aqi: "Kualiti Udara (US AQI)",
+    forecastSeries_pm25: "PM2.5",
+    floodMatrix: "Risiko Banjir // AMC + TimesFM",
+    citizenReports: "Laporan Awam // Maklumat Lapangan",
   },
   zh: {
     title: "大古晋智能运营中心",
@@ -211,6 +367,25 @@ export const TRANSLATIONS = {
     airport: "机场 // KCH", flightTracker: "航班追踪",
     landUse: "土地利用", floodRisk: "洪水风险", drainage: "排水系统", officialStats: "官方统计",
     growthRing: "增长环", urbanSprawl: "城市扩张",
+    governance: "市政治理", councillors: "议员名录 // MPP 2025–2028",
+    chairman: "主席", deputy: "副主席", ward: "选区", portfolio: "职务",
+    phone: "联络", allZones: "全部选区",
+    localityExplorer: "地点浏览 // 巴达旺", locality: "地点", code: "代码",
+    stateConstituency: "州议席", parliamentConstituency: "国会议席",
+    residential: "住宅", commercial: "商业", industrial: "工业", exempted: "豁免",
+    totalLocalities: "地点总数", stateSeats: "州议席", parliamentSeats: "国会议席",
+    filterBy: "筛选", searchLocality: "搜索地点或代码…",
+    allWards: "全部选区", allConstituencies: "全部选区", allPropertyTypes: "全部类型",
+    showingResults: "显示", of: "共",
+    forecast: "预报 // TimesFM", forecastSub: "14日展望 · p10–p90 区间",
+    forecastBaseline: "基线", forecastStale: "过时",
+    forecastIdle: "预报引擎空闲 — 运行 scripts/forecast/forecast_runner.py 生成 14 日展望。",
+    forecastSeries_river_discharge: "河道流量",
+    forecastSeries_rainfall: "降雨量",
+    forecastSeries_aqi: "空气质量 (US AQI)",
+    forecastSeries_pm25: "PM2.5",
+    floodMatrix: "洪水风险 // AMC + TimesFM",
+    citizenReports: "市民报告 // 实地情报",
   },
 };
 

@@ -1,10 +1,13 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="dark" data-view="secretary">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=__ASSET_VERSION__" />
+    <link rel="mask-icon" href="./favicon.svg?v=__ASSET_VERSION__" color="#00f3ff" />
+    <meta name="theme-color" content="#010203" />
     <title>Greater Kuching IOC</title>
-    <meta name="description" content="Daniel's Goh Greater Kuching Intelligent Operation Center" />
+    <meta name="description" content="Greater Kuching Intelligent Operation Center — a municipal command surface for Secretary Daniel Goh, MPP." />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
@@ -17,8 +20,8 @@
     <div class="dashboard-shell">
       <header class="masthead">
         <div class="title-block">
-          <div class="eyebrow">DANIEL'S GOH // INTELLIGENT OPERATION CENTER</div>
-          <h1 id="titleText">Greater Kuching Intelligent Operation Center</h1>
+          <div class="eyebrow">OFFICE OF SECRETARY DANIEL GOH // MPP</div>
+          <h1 id="titleText" title="Padawan · 984 km² · 800,000 lives · 11 wards · 525 localities · the growth ring of Greater Kuching. This board is how the council stays ahead of the weather, the river, and the rooftops.">Greater Kuching Intelligent Operation Center</h1>
           <p id="subtitleText" class="summary-lead">In collaboration with depa, PMUA, Axiom, ReTL, Thailand Smart City Office & ASCN</p>
         </div>
         <div class="status-block">
@@ -56,6 +59,12 @@
         </div>
       </div>
 
+      <section id="deltaStrip" class="delta-strip" data-empty="true">
+        <div class="delta-stamp">DELTA //</div>
+        <div id="deltaSince" class="delta-since"></div>
+        <div id="deltaList" class="delta-list"></div>
+      </section>
+
       <section id="metricBand" class="metric-band"></section>
       <section class="brief-strip">
         <article class="brief-card" data-tone="alert">
@@ -86,6 +95,15 @@
           </div>
           <div class="map-frame">
             <div id="mapCanvas" class="map-canvas"></div>
+            <div class="map-vignette" aria-hidden="true"></div>
+            <div class="map-scan-grid" aria-hidden="true"></div>
+            <div class="map-reticle" aria-hidden="true">
+              <span class="map-reticle-tl"></span>
+              <span class="map-reticle-br"></span>
+            </div>
+            <div class="map-compass" aria-hidden="true">
+              <span class="map-compass-label">N</span>
+            </div>
             <div class="radar-scan"></div>
           </div>
           <footer class="map-footer">
@@ -99,9 +117,21 @@
           <div class="panel-inner">
             <div id="postureBlock" class="posture-block"></div>
 
+            <section id="wardBrief" class="ward-brief" data-active="false" hidden></section>
+
+            <div class="section-group">
+              <div class="section-label" data-i18n="forecast">FORECAST // TIMESFM</div>
+              <div id="forecastRail" class="forecast-rail"></div>
+            </div>
+
             <div class="section-group">
               <div class="section-label" data-i18n="directives">DIRECTIVES</div>
               <div id="operationList" class="operation-list"></div>
+            </div>
+
+            <div class="section-group">
+              <div class="section-label" data-i18n="citizenReports">CITIZEN REPORTS // FIELD INTEL</div>
+              <div id="citizenReports" class="citizen-reports"></div>
             </div>
 
             <div class="section-group">
@@ -112,13 +142,33 @@
             <div id="officialPulse"></div>
 
             <div class="section-group">
+              <div class="section-label" data-i18n="councillors">COUNCILLORS // MPP 2025–2028</div>
+              <div id="councillorPanel" class="councillor-panel"></div>
+            </div>
+
+            <div class="section-group">
+              <div class="section-label" data-i18n="floodMatrix">FLOOD RISK // AMC + TIMESFM</div>
+              <div id="floodMatrix" class="flood-matrix"></div>
+            </div>
+
+            <div class="section-group">
+              <div class="section-label">RIVER DISCHARGE</div>
+              <div id="floodForecast" class="flood-forecast"></div>
+            </div>
+
+            <div class="section-group">
               <div class="section-label">KCH AIRSPACE</div>
               <div id="airportStats" class="airport-panel"></div>
             </div>
 
             <div class="section-group">
               <div class="section-label">NEWS DIGEST</div>
-              <div id="sentimentPanel" class="sentiment-panel"></div>
+              <div id="newsIntakePanel" class="sentiment-panel"></div>
+            </div>
+
+            <div class="section-group">
+              <div class="section-label">EVENTS // 24H</div>
+              <div id="eventsStack" class="events-stack"></div>
             </div>
           </div>
         </aside>
@@ -128,15 +178,28 @@
       <div id="exchangeList" style="display:none"></div>
       <div id="trendList" style="display:none"></div>
 
+      <section class="panel locality-panel">
+        <div class="panel-head">
+          <div class="kicker" data-i18n="governance">MUNICIPAL GOVERNANCE</div>
+          <h2 data-i18n="localityExplorer">Locality Explorer // Padawan</h2>
+        </div>
+        <div id="localityKpis" class="locality-kpis"></div>
+        <div id="localityFilters" class="locality-filters"></div>
+        <div id="localityStatus" class="locality-status"></div>
+        <div id="localityList" class="locality-list"></div>
+      </section>
+
       <section class="lower-grid">
-        <section class="panel satellite-panel">
+        <section class="panel intel-panel">
           <div class="panel-head">
-            <div class="kicker">VISUAL EVIDENCE</div>
-            <h2>Orbital Photo Deck</h2>
+            <div class="kicker">ECONOMIC INTELLIGENCE</div>
+            <h2>Economy + Ground Pulse</h2>
           </div>
-          <div id="satelliteStage" class="satellite-stage"></div>
-          <div id="satelliteGrid" class="satellite-grid"></div>
-          <div id="satelliteMeta" class="satellite-meta"></div>
+          <div id="econBand" class="econ-band"></div>
+          <div id="groundPulse" class="ground-pulse"></div>
+          <div id="newsDigest" class="news-digest"></div>
+          <div id="trendsBand" class="trends-band"></div>
+          <div id="bypassTracker" class="bypass-tracker"></div>
         </section>
         <section class="panel qualitative-panel">
           <div class="panel-head">
@@ -159,6 +222,10 @@
               <div class="qualitative-label">Qualitative Sources</div>
               <div id="qualSources" class="qualitative-source-list"></div>
             </section>
+            <section class="qualitative-section">
+              <div class="qualitative-label">CCTV Feeds</div>
+              <div id="cctvGrid" class="cctv-grid"></div>
+            </section>
           </div>
         </section>
         <section class="panel source-panel">
@@ -171,10 +238,59 @@
         </section>
       </section>
 
+      <div id="telemetryStrip" class="telemetry-strip" aria-hidden="true"></div>
+
       <footer class="bottom-bar">
         <span>KCH-IOC // V3.0</span>
-        <button id="exportSitrep" class="action-btn" data-i18n="commandExport">COMMAND EXPORT</button>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button type="button" id="helpHint" class="help-hint" title="Keyboard shortcuts &amp; legend"><kbd>?</kbd> KEYS</button>
+          <button id="exportSitrep" class="action-btn" data-i18n="commandExport">COMMAND EXPORT</button>
+        </div>
       </footer>
+    </div>
+    <canvas id="connectorCanvas" class="connector-canvas" aria-hidden="true"></canvas>
+    <div id="exportToast" class="export-toast" hidden></div>
+    <div id="helpOverlay" class="help-overlay" hidden>
+      <div class="help-overlay-card" role="dialog" aria-labelledby="helpTitle" aria-modal="true">
+        <header class="help-head">
+          <span id="helpTitle" class="help-title">KCH-IOC // KEY MAP</span>
+          <button type="button" class="help-close" aria-label="Close help">✕</button>
+        </header>
+        <section class="help-section">
+          <h3>NAVIGATION</h3>
+          <dl class="help-keys">
+            <dt><kbd>?</kbd></dt>           <dd>show / hide this key map</dd>
+            <dt><kbd>esc</kbd></dt>         <dd>close ward brief or this overlay</dd>
+            <dt><kbd>1</kbd> – <kbd>9</kbd>, <kbd>0</kbd></dt> <dd>jump to ward A, B, D, FG, H, I, JL, K, M, NPQ</dd>
+            <dt><kbd>w</kbd></dt>           <dd>cycle through wards (next)</dd>
+            <dt><kbd>shift</kbd>+<kbd>w</kbd></dt> <dd>cycle through wards (previous)</dd>
+          </dl>
+        </section>
+        <section class="help-section">
+          <h3>EXPORT &amp; ACTIONS</h3>
+          <dl class="help-keys">
+            <dt><kbd>e</kbd></dt>           <dd>copy WhatsApp sitrep to clipboard</dd>
+            <dt><kbd>shift</kbd>+<kbd>e</kbd></dt> <dd>print sitrep (browser → save as PDF)</dd>
+            <dt><kbd>t</kbd></dt>           <dd>toggle dark / light theme</dd>
+            <dt><kbd>r</kbd></dt>           <dd>force refresh (re-fetch payload)</dd>
+            <dt><kbd>g</kbd></dt>           <dd>toggle full mode (show all hidden panels)</dd>
+          </dl>
+        </section>
+        <section class="help-section">
+          <h3>READING THE BOARD</h3>
+          <dl class="help-glyphs">
+            <dt><span class="glyph" data-tone="ok">▰</span></dt><dd>live · last fetch within cache TTL</dd>
+            <dt><span class="glyph" data-tone="muted">▱</span></dt><dd>cached · referenced from baked snapshot</dd>
+            <dt><span class="glyph" data-tone="warn">◐</span></dt><dd>degraded · feed fell back to model / heuristic</dd>
+            <dt><span class="glyph" data-tone="alert">✕</span></dt><dd>offline · upstream feed unreachable</dd>
+            <dt><span class="glyph" data-tone="muted">◇ ◆ ●</span></dt><dd>directive: queued / in-progress / done (click to cycle)</dd>
+            <dt><span class="glyph" data-tone="warn">↻ STALE</span></dt><dd>directive first seen &gt; 8 hours ago</dd>
+          </dl>
+        </section>
+        <footer class="help-foot">
+          Built for the Office of Secretary Daniel Goh, MPP · in collaboration with depa, PMUA, Axiom, ReTL, Thailand Smart City Office &amp; ASCN.
+        </footer>
+      </div>
     </div>
     <script src="./app.js?v=__ASSET_VERSION__" type="module"></script>
   </body>

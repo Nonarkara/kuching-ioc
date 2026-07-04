@@ -3271,14 +3271,27 @@ async function loadAlphaEarth() {
     const files = await fs.readdir(dir).catch(() => []);
     const sidecars = files.filter((f) => f.startsWith("growth-") && f.endsWith(".json")).sort();
     if (!sidecars.length) return { status: "absent" };
-    const doc = JSON.parse(await fs.readFile(path.join(dir, sidecars[sidecars.length - 1]), "utf-8"));
+    
+    const timeline = [];
+    for (const file of sidecars) {
+      const doc = JSON.parse(await fs.readFile(path.join(dir, file), "utf-8"));
+      timeline.push({
+        image: `data/alphaearth/${doc.image}`,
+        bounds: doc.bounds,
+        years: doc.years,
+        stats: doc.stats,
+      });
+    }
+
+    const latest = timeline[timeline.length - 1];
     return {
       status: "ready",
-      image: `data/alphaearth/${doc.image}`,
-      bounds: doc.bounds,
-      years: doc.years,
-      stats: doc.stats,
-      dataset: doc.dataset,
+      image: latest.image,
+      bounds: latest.bounds,
+      years: latest.years,
+      stats: latest.stats,
+      dataset: latest.dataset || "GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL",
+      timeline: timeline,
     };
   }).catch(() => ({ status: "absent" }));
 }

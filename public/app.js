@@ -926,6 +926,7 @@ function renderMap(payload) {
       preferCanvas: true,
       maxBounds: SITE.mapMaxBounds, maxBoundsViscosity: 1.0,
       minZoom: SITE.minZoom, maxZoom: SITE.maxZoom,
+      worldCopyJump: false, // §11.9 — no world-copy tile repetition
     });
     state.boundaryLayerGroup = window.L.layerGroup().addTo(state.map);
     state.markerLayerGroup = window.L.layerGroup().addTo(state.map);
@@ -1391,12 +1392,16 @@ function renderUrbanLayerToggle() {
 function toggleAlphaEarthOverlay(active, btn) {
   const ae = state.payload?.alphaEarth;
   if (!active) {
-    if (state.alphaEarthOverlay && state.map.hasLayer(state.alphaEarthOverlay)) {
-      state.map.removeLayer(state.alphaEarthOverlay);
+    if (state.alphaEarthOverlays) {
+      state.alphaEarthOverlays.forEach(layer => {
+        if (state.map.hasLayer(layer)) state.map.removeLayer(layer);
+      });
     }
+    const sliderContainer = document.getElementById("alphaEarthSlider");
+    if (sliderContainer) sliderContainer.hidden = true;
     return;
   }
-  if (!ae || ae.status !== "ready" || !ae.bounds || !ae.image) {
+  if (!ae || ae.status !== "ready" || !ae.timeline || !ae.timeline.length) {
     // Pipeline not run yet (Earth Engine auth pending) — degrade gracefully AND
     // revert layer.active + button state so a second click isn't a no-op.
     const layer = URBAN_LAYERS.find((l) => l.id === "growth");
@@ -1406,17 +1411,57 @@ function toggleAlphaEarthOverlay(active, btn) {
     btn.textContent = "Growth (pending)";
     return;
   }
-  if (!state.alphaEarthOverlay) {
-    const b = ae.bounds;
-    const url = apiUrl("/" + ae.image.replace(/^\//, ""));
-    state.alphaEarthOverlay = window.L.imageOverlay(
-      url,
-      [[b.south, b.west], [b.north, b.east]],
-      { opacity: 0.85, interactive: false, className: "alphaearth-overlay" },
-    );
+  
+  if (!state.alphaEarthOverlays) {
+    state.alphaEarthOverlays = ae.timeline.map(t => {
+      const b = t.bounds;
+      const url = apiUrl("/" + t.image.replace(/^\//, ""));
+      return window.L.imageOverlay(
+        url,
+        [[b.south, b.west], [b.north, b.east]],
+        { opacity: 0, interactive: false, className: "alphaearth-overlay" }
+      );
+    });
   }
-  state.alphaEarthOverlay.addTo(state.map);
-  if (state.map.getZoom() < 11) state.map.flyTo([(ae.bounds.south + ae.bounds.north) / 2, (ae.bounds.west + ae.bounds.east) / 2], 12, { duration: 0.6 });
+  
+  state.alphaEarthOverlays.forEach(layer => layer.addTo(state.map));
+  
+  initAlphaEarthSlider(ae);
+  
+  const b = ae.bounds;
+  if (state.map.getZoom() < 11) state.map.flyTo([(b.south + b.north) / 2, (b.west + b.east) / 2], 12, { duration: 0.6 });
+}
+
+function initAlphaEarthSlider(ae) {
+  const container = document.getElementById("alphaEarthSlider");
+  const slider = document.getElementById("aeTimeSlider");
+  const label = document.getElementById("aeSliderYear");
+  const ticks = document.getElementById("aeSliderTicks");
+  
+  if (!container || !slider || !ae.timeline) return;
+  
+  const maxIdx = ae.timeline.length - 1;
+  slider.max = maxIdx;
+  
+  ticks.innerHTML = ae.timeline.map((t) => {
+    return `<span>${t.years.b}</span>`;
+  }).join("");
+  
+  function updateSlider() {
+    const idx = parseInt(slider.value, 10);
+    const targetYear = ae.timeline[idx].years.b;
+    label.textContent = targetYear;
+    
+    state.alphaEarthOverlays.forEach((layer, i) => {
+      layer.setOpacity(i === idx ? 0.85 : 0);
+    });
+  }
+  
+  slider.oninput = updateSlider;
+  slider.value = maxIdx;
+  updateSlider();
+  
+  container.hidden = false;
 }
 
 // IOC 2.1 — AlphaEarth impervious-surface overlay. Transparent→amber→red ramp;

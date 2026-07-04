@@ -11,3 +11,7 @@ sa-key.json
 scripts/*/.venv/
 scripts/alphaearth/raw/
 .wrangler/
+
+# Internal handoff docs — never web-served, never committed
+_private/
+server.log

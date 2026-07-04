@@ -104,6 +104,11 @@
             <div class="map-compass" aria-hidden="true">
               <span class="map-compass-label">N</span>
             </div>
+            <div id="alphaEarthSlider" class="alphaearth-slider-container" hidden>
+              <div class="ae-slider-label">URBAN GROWTH <span id="aeSliderYear">2024</span></div>
+              <input type="range" id="aeTimeSlider" min="0" max="1" step="1" value="1" />
+              <div class="ae-slider-ticks" id="aeSliderTicks"></div>
+            </div>
             <div class="radar-scan"></div>
           </div>
           <footer class="map-footer">
@@ -293,5 +298,22 @@
       </div>
     </div>
     <script src="./app.js?v=__ASSET_VERSION__" type="module"></script>
+
+  <!-- NON visitor tracker — fire-and-forget, no cookies -->
+  <script>
+  (function(){
+    if(sessionStorage.getItem('non_v'))return;
+    sessionStorage.setItem('non_v','1');
+    var SH='https://script.google.com/macros/s/AKfycbwzTwBNOseKkvkkjD-LH6B3GWrsFcwS6MTDbn7W5eb3zHxA-swtlHYuwJ3w5PAVXDhU7Q/exec';
+    var b={dashboard:'KUCHING',hostname:location.hostname,page:location.href,
+      referrer:document.referrer||'Direct',userAgent:navigator.userAgent,
+      language:navigator.language,screen:screen.width+'x'+screen.height,
+      timezone:Intl.DateTimeFormat().resolvedOptions().timeZone};
+    function send(p){fetch(SH,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(p)}).catch(function(){});}
+    fetch('https://ipapi.co/json/').then(function(r){return r.json();}).then(function(d){
+      b.ip=d.ip;b.country=d.country_name;b.region=d.region;b.city=d.city;send(b);
+    }).catch(function(){send(b);});
+  })();
+  </script>
   </body>
 </html>

@@ -98,6 +98,12 @@ Per §13: the same mistake never happens twice.
 - **Correct behaviour:** Tropical Kuching AMC thresholds: Class I <100mm/14d (dry), Class II 100–200mm (normal), Class III >200mm (saturated). These are roughly 2.7× the US values and match local hydrology.
 - **How to recognise:** Every station shows Class III in the flood matrix even in sunny weather = thresholds too low for tropics.
 
+## 2026-07-05 · Verify a work-order's claims before relaying; never hand Dr Non a decision-menu
+
+- **What went wrong:** Given Fable 5's `kuching-ioc.md` work order, I summarized its F1/F2/F3 claims (CI broken, Fly tier dead, dual-copy risk) back as a 3-row "needs you" table asking Dr Non to hand me a token / say "go" — before verifying them. He replied "no such things." Two were phantom-to-him (Fly app genuinely doesn't exist; dual-copy is a workspace note, not a defect); the table itself violated §0's "no technical menus — make the call, state it, execute."
+- **Correct behaviour:** A work order is claims to VERIFY (§13.4), not findings to relay. Run the proving command (`gh run list`, `fly status`, `gh secret list`) first. Act on what's real, drop what isn't, never present a chore-menu. A genuinely-blocked item (CI needs a CF API token OAuth can't mint) is stated once as a standing fact, not re-asked every turn.
+- **How to recognise:** You're about to write "needs you:" with >1 item, or repeating a subagent/work-order assertion without having run the command that proves it.
+
 ## 2026-06-14 · uv venvs have no pip binary — use `uv pip install --python path/to/python`
 
 - **What went wrong:** `uv venv` creates venvs without a `pip` script. Running `<venv>/bin/pip install pyproj` fails with "no such file".

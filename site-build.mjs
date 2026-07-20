@@ -9,8 +9,9 @@ export const ROOT_DIR = __dirname;
 export const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 export const INDEX_TEMPLATE_PATH = path.join(PUBLIC_DIR, "index.template.html");
 export const INDEX_OUTPUT_PATH = path.join(PUBLIC_DIR, "index.html");
-export const DEFAULT_PAGES_URL = "https://nonarkara.github.io/kuching-ioc/";
-export const DEFAULT_LIVE_URL = "https://nonarkara-kuching-ioc-live.fly.dev/";
+export const DEFAULT_PAGES_URL = "https://kuching.nonarkara.org/";
+// Production is Cloudflare Pages only — no separate live host.
+export const DEFAULT_LIVE_URL = "https://kuching.nonarkara.org/";
 
 function normalizeUrl(value, fallback) {
   const url = String(value || fallback || "").trim();

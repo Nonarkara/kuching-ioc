@@ -8,18 +8,18 @@ This is Daniel Goh's municipal intelligence dashboard for Greater Kuching, Saraw
 
 A **map-dominant operational dashboard** showing Secretary Goh what is happening across Greater Kuching right now — weather, air quality, flights, flooding, news, satellite imagery, and directives that tell him what to do about it. It runs as:
 
-1. **Live API** on Fly.io (`node server.mjs`) — fresh data on every request
-2. **Static snapshot** on GitHub Pages — baked JSON refreshed every 6 hours by CI
-3. **Client fallback** — browser-only mode using `data.js` constants when both above fail
+1. **Static snapshot** on Cloudflare Pages (`kuching.nonarkara.org`) — baked JSON refreshed by CI on push (+ schedule)
+2. **Local live API** (`node server.mjs`) — used for development and by `build.mjs` to bake the snapshot
+3. **Client fallback** — browser-only mode using `data.js` constants when the snapshot fails
 
-The deployed demo URL: `https://nonarkara.github.io/kuching-ioc/`
+The production URL: `https://kuching.nonarkara.org`
 
 ---
 
 ## Architecture at a Glance
 
 ```
-server.mjs          → Node HTTP server (3000+ lines), 15+ live API integrations
+server.mjs          → Node HTTP server (local + CI bake), 15+ live API integrations
 build.mjs           → Boots server on port 9876, fetches payload + GIS layers, writes to public/api/
 public/
   index.html        → HTML shell — map-dominant 2-column layout
@@ -31,9 +31,7 @@ public/
     dashboard.json  → Pre-baked server payload (committed as baseline)
     layers/         → GeoJSON: drainage, transit, land_use, flood_risk
 .github/workflows/
-  deploy.yml        → GitHub Pages deploy: build → verify → upload (every 6h + on push)
-fly.toml            → Fly.io config (Singapore region, 256MB, auto-scale to 0)
-Dockerfile          → node:20-alpine, serves on port 3000
+  cloudflare-pages.yml → Cloudflare Pages: build → wrangler deploy (on push)
 ```
 
 ---
@@ -42,11 +40,11 @@ Dockerfile          → node:20-alpine, serves on port 3000
 
 `app.js → loadDashboardPayload()` tries sources in order:
 
-1. `fetch("/api/dashboard")` — same-origin live server (Fly.io)
-2. `fetch("./api/dashboard.json")` — pre-baked static snapshot (GitHub Pages)
+1. `fetch("/api/dashboard")` — same-origin live server (local `node server.mjs` only)
+2. `fetch("./api/dashboard.json")` — pre-baked static snapshot (Cloudflare Pages production)
 3. `buildFallbackDashboard()` — client-only using data.js constants + live CORS APIs
 
-**If you add a new field to the server payload**, you must also add it to `buildFallbackDashboard()` in app.js with a reasonable fallback value. Otherwise the field will be `undefined` on GitHub Pages when the static snapshot is stale or missing, and any renderer that depends on it will silently skip.
+**If you add a new field to the server payload**, you must also add it to `buildFallbackDashboard()` in app.js with a reasonable fallback value. Otherwise the field will be `undefined` on Pages when the static snapshot is stale or missing, and any renderer that depends on it will silently skip.
 
 ---
 
@@ -70,7 +68,7 @@ Dockerfile          → node:20-alpine, serves on port 3000
 | Gov Stats | DOSM + Sarawak CKAN | No | 6h |
 | OSM Overpass | Drainage/transit/land use GeoJSON | No | 6h |
 
-"No CORS" sources only work via server.mjs. On GitHub Pages, they come from the baked `dashboard.json` or from `buildFallbackDashboard()` stubs.
+"No CORS" sources only work via server.mjs during local/CI bake. On Cloudflare Pages, they come from the baked `dashboard.json` or from `buildFallbackDashboard()` stubs.
 
 ---
 
@@ -139,19 +137,14 @@ The left rail was intentionally killed. The ASEAN clocks, FX rates, and trend li
 
 ## Deployment
 
-### GitHub Pages (static demo)
+### Cloudflare Pages (production — kuching.nonarkara.org)
 ```bash
 node build.mjs          # Boots server, fetches data, writes public/api/
-# Then push — GitHub Actions deploys public/ to Pages
 git add -A && git commit -m "..." && git push
+# CI: cloudflare-pages.yml → wrangler pages deploy public --project-name=kuching-ioc
 ```
 
-The CI workflow (`deploy.yml`) also runs `node build.mjs` before uploading to Pages, and refreshes every 6 hours via cron. The `AQICN_TOKEN` secret is needed for APIMS ground AQI data.
-
-### Fly.io (live)
-```bash
-fly deploy              # Builds Docker image, deploys to Singapore
-```
+`AQICN_TOKEN` (GitHub Actions secret) improves APIMS ground AQI in the baked snapshot.
 
 ### Local dev
 ```bash

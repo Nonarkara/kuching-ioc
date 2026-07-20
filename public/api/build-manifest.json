@@ -5,8 +5,8 @@
   "assetVersion": "af680831ae7c-154001",
   "deploymentMode": "pages-static",
   "boardLabel": "SNAPSHOT BOARD",
-  "pagesUrl": "https://nonarkara.github.io/kuching-ioc/",
-  "liveUrl": "https://nonarkara-kuching-ioc-live.fly.dev/",
+  "pagesUrl": "https://kuching.nonarkara.org/",
+  "liveUrl": "https://kuching.nonarkara.org/",
   "layers": [
     {
       "id": "drainage",
@@ -39,5 +39,5 @@
       "features": 10
     }
   ],
-  "notes": "FloodDash-grade Padawan flood watch: DID iHYDRO live gauges + action verbs"
+  "notes": "Cloudflare Pages only \u2014 Fly.io retired"
 }

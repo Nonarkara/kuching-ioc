@@ -1,20 +1,19 @@
 # Greater Kuching IOC — Secretary Goh's Super Dashboard
 
-## Live URLs
-- Static snapshot: https://kuching.nonarkara.org (Cloudflare Pages, refreshed every 6h + on push)
-- Live API server: https://nonarkara-kuching-ioc-live.fly.dev/ (Fly.io Singapore, auto-scale to 0)
+## Live URL
+- Production: https://kuching.nonarkara.org (Cloudflare Pages — sole host)
 - Local dev: http://localhost:3000
 
 ## Repo
 GitHub: Nonarkara/kuching-ioc
 
 ## Stack
-Node.js 20+ (server.mjs — 3000+ line HTTP server, 15+ external APIs)
+Node.js 20+ (server.mjs — used locally + in CI `build.mjs` to bake JSON)
 Pure HTML/CSS/JS frontend — no framework, no bundler
 Leaflet 1.9.4 (map), JetBrains Mono + Manrope (Google Fonts)
-No build step for frontend — `build.mjs` only builds static JSON snapshots
+No frontend bundler — `build.mjs` boots an ephemeral server and writes `public/api/*.json`
 
-## Dev (live API mode)
+## Dev (live API mode — local only)
 ```bash
 node server.mjs      # Starts on port 3000
 # open http://localhost:3000
@@ -26,18 +25,16 @@ npm run build:static  # node build.mjs → public/api/*.json
 # Boots ephemeral server on :9876, fetches all data, writes JSON to public/api/
 ```
 
-## Deploy — Cloudflare Pages (static snapshot, primary)
+## Deploy — Cloudflare Pages (production)
 Automated via GitHub Actions on push to main.
+Custom domain: `kuching.nonarkara.org` on project `kuching-ioc`.
 ```bash
 gh workflow run "Deploy to Cloudflare Pages" -R Nonarkara/kuching-ioc
 gh run list -R Nonarkara/kuching-ioc --limit 3
 ```
 CI: `npm ci → node build.mjs → wrangler pages deploy public --project-name=kuching-ioc`
 
-## Deploy — Fly.io (live Node server, Singapore)
-```bash
-fly deploy           # Region: sin, 256MB RAM, auto-scale to 0
-```
+Fly.io was retired — do not redeploy there.
 
 ## Google Sheets Archive
 ```bash

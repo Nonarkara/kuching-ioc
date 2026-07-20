@@ -12,54 +12,22 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Delivery Modes
 
-- `LIVE API`: Same-origin Node runtime serving `/api/dashboard`, `/api/health`, and `/api/layers/:id`.
-- `STATIC SNAPSHOT`: GitHub Pages board using baked `public/api/*.json` built by `node build.mjs`.
-- `CLIENT FALLBACK`: Last-resort browser-side constants when both live API and static snapshot are unavailable.
+- `STATIC SNAPSHOT` (production): Cloudflare Pages at `https://kuching.nonarkara.org` using baked `public/api/*.json` from `node build.mjs` (CI every push + schedule).
+- `LIVE API` (local / CI bake only): Same-origin Node runtime (`node server.mjs`) serving `/api/dashboard`, `/api/health`, and `/api/layers/:id`.
+- `CLIENT FALLBACK`: Last-resort browser-side constants when the static snapshot is unavailable.
 
-The masthead now shows which mode is active, when the payload was generated, when the snapshot was built, and which board URL is the alternate surface.
+## Deployment
 
-## Static Pages Build
+- **Production:** `https://kuching.nonarkara.org` (Cloudflare Pages project `kuching-ioc`)
+- Mirror: `https://kuching-ioc.pages.dev`
 
 ```bash
 npm run build:static
+# CI on push to main also runs build.mjs then:
+# wrangler pages deploy public --project-name=kuching-ioc --branch=main
 ```
 
-That command must produce these Pages artifacts under `public/`:
-
-- `api/dashboard.json`
-- `api/build-manifest.json`
-- `api/layers/drainage.json`
-- `api/layers/transit.json`
-- `api/layers/land_use.json`
-- `api/layers/flood_risk.json`
-- `index.html`
-
-`build.mjs` now renders `public/index.html` from `public/index.template.html`, stamps the asset version from commit SHA or build timestamp, and fails if the Pages artifact contract is incomplete.
-
-## Deployment Surfaces
-
-- Snapshot board: `https://nonarkara.github.io/kuching-ioc/`
-- Live board target: `https://nonarkara-kuching-ioc-live.fly.dev/`
-
-GitHub Pages stays the public kiosk. Fly.io runs the real live IOC with same-origin API routes.
-
-## Fly.io Deploy
-
-Files added for the live runtime:
-
-- [`fly.toml`](/Users/non/Projects/Padawan Municipality Kuching Dashboard/fly.toml)
-- [`Dockerfile`](/Users/non/Projects/Padawan Municipality Kuching Dashboard/Dockerfile)
-- [`.dockerignore`](/Users/non/Projects/Padawan Municipality Kuching Dashboard/.dockerignore)
-
-Deploy flow:
-
-```bash
-fly auth login
-fly secrets set AQICN_TOKEN=your_token_here
-fly deploy
-```
-
-The Fly app serves the same frontend as the local Node server. The HTML is rendered with `LIVE BOARD` metadata and live `/api/*` endpoints on the same origin.
+Fly.io hosting was removed — Cloudflare is the only production surface.
 
 ## V3.0 "Lean Command" Stack
 

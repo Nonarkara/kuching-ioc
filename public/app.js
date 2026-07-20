@@ -226,9 +226,12 @@ function buildRuntimeDetail(delivery, payload) {
   if (delivery.assetVersion) parts.push(`<strong>Asset</strong> ${delivery.assetVersion}`);
   if (delivery.error && delivery.mode === "client-fallback") parts.push("<strong>Gap</strong> static snapshot unavailable");
 
-  const alternateUrl = delivery.boardMode === "pages-static" ? delivery.liveUrl : delivery.pagesUrl;
+  const pagesUrl = delivery.pagesUrl;
+  const liveUrl = delivery.liveUrl;
+  const alternateUrl = delivery.boardMode === "pages-static" ? liveUrl : pagesUrl;
   const alternateLabel = delivery.boardMode === "pages-static" ? "Live board" : "Snapshot board";
-  if (alternateUrl) {
+  const norm = (u) => String(u || "").replace(/\/$/, "");
+  if (alternateUrl && norm(pagesUrl) && norm(liveUrl) && norm(pagesUrl) !== norm(liveUrl)) {
     parts.push(`<strong>Switch</strong> <a href="${alternateUrl}" target="_blank" rel="noopener">${alternateLabel}</a>`);
   }
 

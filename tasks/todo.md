@@ -132,3 +132,8 @@ git add public/data/alphaearth/ public/api/ && git commit -m "data: AlphaEarth 2
 - [x] Reality check (news vs gauges), shelters/PPS, hotlines
 - [x] Multi-point GloFAS (Kuching + Batu Kitang + Batu Kawa)
 - [x] Padawan-focus gauge panel + map fly-to
+
+## ✅ COMPLETED — Retire Fly.io (2026-07-21)
+- [x] Cloudflare Pages sole production host (kuching.nonarkara.org)
+- [x] Remove fly.toml / Dockerfile / .dockerignore
+- [x] Point site-build defaults at kuching.nonarkara.org

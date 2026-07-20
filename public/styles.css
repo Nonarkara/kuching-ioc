@@ -3012,6 +3012,86 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
   .forecast-cards { grid-template-columns: 1fr; }
 }
 
+/* ── Flood Action Card (FloodDash pattern for Greater Kuching) ─────────────
+   Verb-first decision surface. Zero radius. Severity via left border + text. */
+.flood-action-card {
+  border: 1px solid var(--line);
+  background: var(--card-bg);
+  padding: 10px 10px 8px;
+  margin-bottom: 6px;
+  border-left: 3px solid var(--green);
+  font-family: var(--font-mono);
+}
+.flood-action-card[data-band="watch"] { border-left-color: var(--amber); }
+.flood-action-card[data-band="prepare"] { border-left-color: var(--amber); }
+.flood-action-card[data-band="act"] { border-left-color: var(--red); }
+.fa-kicker { font-size: 9px; letter-spacing: .12em; color: var(--soft); text-transform: uppercase; }
+.fa-verb {
+  font-size: 22px; font-weight: 800; line-height: 1.1; margin: 4px 0 2px;
+  color: var(--green); letter-spacing: .04em;
+}
+.flood-action-card[data-band="watch"] .fa-verb,
+.flood-action-card[data-band="prepare"] .fa-verb { color: var(--amber); }
+.flood-action-card[data-band="act"] .fa-verb { color: var(--red); }
+.fa-reason { font-size: 11px; color: var(--ink); line-height: 1.35; margin-bottom: 4px; }
+.fa-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 9px; color: var(--soft); margin-bottom: 6px; }
+.fa-meta strong { color: var(--ink); font-weight: 700; }
+.fa-checklist { display: flex; flex-direction: column; gap: 3px; margin: 0 0 6px; padding: 0; list-style: none; }
+.fa-checklist li {
+  font-size: 10px; color: var(--ink); line-height: 1.35;
+  padding-left: 12px; position: relative;
+}
+.fa-checklist li::before { content: "▸"; position: absolute; left: 0; color: var(--amber); }
+.fa-reality {
+  border-top: 1px solid var(--line); padding-top: 5px; margin-bottom: 6px;
+  font-size: 9px; color: var(--soft);
+}
+.fa-reality strong { color: var(--ink); }
+.fa-reality[data-verdict="CONFIRMED"] strong { color: var(--red); }
+.fa-reality[data-verdict="UNDERSTATED"] strong { color: var(--amber); }
+.fa-reality[data-verdict="OVERSTATED"] strong { color: var(--soft); }
+.fa-reality[data-verdict="CALM"] strong { color: var(--green); }
+.fa-hotlines, .fa-shelters { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+.fa-hotline, .fa-shelter {
+  display: flex; justify-content: space-between; gap: 6px; align-items: baseline;
+  font-size: 9px; color: var(--soft); border: 1px solid var(--line); padding: 4px 6px;
+  min-height: 32px; text-decoration: none;
+}
+.fa-hotline:hover, .fa-shelter:hover { border-color: var(--amber); color: var(--ink); }
+.fa-hotline strong, .fa-shelter strong { color: var(--ink); font-size: 10px; }
+.fa-source { font-size: 8px; color: var(--soft); margin-top: 6px; letter-spacing: .04em; }
+.fa-source a { color: var(--cyan); text-decoration: none; }
+
+.hydro-gauge-panel {
+  border: 1px solid var(--line); background: var(--card-bg);
+  padding: 8px; margin-bottom: 6px; font-family: var(--font-mono);
+}
+.hg-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+.hg-title { font-size: 9px; letter-spacing: .1em; color: var(--soft); text-transform: uppercase; }
+.hg-live { font-size: 9px; color: var(--green); }
+.hg-live[data-status="reference"] { color: var(--soft); }
+.hg-row {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center;
+  padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 10px;
+  min-height: 28px; cursor: pointer;
+}
+.hg-row:last-child { border-bottom: 0; }
+.hg-name { color: var(--ink); }
+.hg-name small { display: block; color: var(--soft); font-size: 8px; letter-spacing: .04em; }
+.hg-level { font-weight: 700; color: var(--ink); text-align: right; min-width: 48px; }
+.hg-band { font-size: 8px; font-weight: 700; letter-spacing: .06em; text-align: right; min-width: 44px; }
+.hg-band[data-band="normal"] { color: var(--green); }
+.hg-band[data-band="alert"] { color: var(--amber); }
+.hg-band[data-band="warning"] { color: var(--amber); }
+.hg-band[data-band="danger"] { color: var(--red); }
+.hg-band[data-band="reference"] { color: var(--soft); }
+.hg-empty { font-size: 9px; color: var(--soft); padding: 4px 0; }
+@media (max-width: 480px) {
+  .fa-verb { font-size: 20px; }
+  .hg-row { grid-template-columns: 1fr auto; }
+  .hg-band { grid-column: 2; }
+}
+
 /* ── Flood Risk Matrix (IOC 2.1) ───────────────────────────────────────────
    Per-station rows: AMC badge + band cells at 6h / 24h / 72h.
    Geometric hard-edge, zero border-radius, amber/red/green severity palette. */

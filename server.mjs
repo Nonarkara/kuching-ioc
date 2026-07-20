@@ -1558,95 +1558,246 @@ async function loadGovStats() {
 
 // ---------------------------------------------------------------------------
 // Ground-truth hydrology + air quality + deeper CKAN harvest
-// (Reference stations are curated so the panel never goes blank when the
-//  upstream JPS / DOE / aqicn endpoints are degraded. When live data lands,
-//  we hydrate the matching reference rows and flip status to "live".)
+// Primary live feed: DID Sarawak iHYDRO (ihydro.sarawak.gov.my) — real gauges
+// with official Normal/Alert/Warning/Danger thresholds. JPS Infobanjir is kept
+// as a secondary scrape (often empty for Sarawak). Curated briefs attach to
+// Padawan-priority stations so the wall never goes mute when telemetry drops.
 // ---------------------------------------------------------------------------
 
+const IHYDRO_MAP_URL = "https://ihydro.sarawak.gov.my/iHydro/en/map/maps.jsp";
+const IHYDRO_WL_URL = "https://ihydro.sarawak.gov.my/iHydro/en/datatable/waterlevel/latest-waterlevel.jsp";
+const IHYDRO_RAIN_URL = "https://ihydro.sarawak.gov.my/iHydro/en/datatable/rainfall/latest-rainfall.jsp";
+
+// Greater Kuching bounding box — water ignores council lines; we still keep
+// the metro envelope so Mukah/Bintulu gauges never swamp Padawan's picture.
+const GK_HYDRO_BOUNDS = { minLat: 1.15, maxLat: 1.85, minLon: 109.9, maxLon: 110.7 };
+
+// Padawan-first focus set. Match keys hydrate curated briefs onto live iHYDRO rows.
 const SARAWAK_HYDRO_STATIONS = [
   {
     id: "batu-kitang",
-    name: "Batu Kitang",
-    basin: "Sg. Sarawak Kiri",
+    name: "Batu Kitang Telemetry",
+    basin: "Sg. Sarawak",
     council: "MPP",
-    lat: 1.485,
-    lon: 110.295,
+    focus: "padawan",
+    lat: 1.4524,
+    lon: 110.2823,
     matchKeys: ["batu kitang"],
-    thresholds: { normal: 8.5, alert: 9.5, warning: 10.5, danger: 11.0 },
+    thresholds: { normal: 1.85, alert: 3.0, warning: 4.5, danger: 5.0 },
     note: "Primary upstream gauge for Kuching urban flood pre-warning.",
-    humanBrief: "Upstream canary for all of urban Kuching. Kampung houses along this stretch sit ~1.2m above the historic flood line. When this gauge reads Alert, water is at doorstep level for ~340 riverside homes. The TPPA Batu Kitang landfill sits 800m downstream — a Danger reading risks contaminated runoff into the water treatment intake. 3 primary schools and 1 community health clinic within the 2km flood buffer.",
+    humanBrief: "Upstream canary for urban Kuching and the Padawan growth ring. When this gauge reads Alert, riverside kampungs along Batu Kitang are at doorstep risk and the TPPA landfill sits 800m downstream of contaminated-runoff concern.",
     affectedEstimate: "~2,400 residents, 340 properties, 3 schools, 1 clinic",
-    lastEvent: "Sg. Sarawak exceeded Warning (10.5m) on 2024-01-15; Jalan Batu Kitang flooded for ~4 hours.",
+    lastEvent: "Sg. Sarawak exceeded Warning historically; Jalan Batu Kitang flooded for ~4 hours in prior monsoon events.",
   },
   {
-    id: "buntal",
-    name: "Sg. Sarawak @ Buntal",
-    basin: "Sg. Sarawak (tidal)",
-    council: "DBKU",
-    lat: 1.717,
-    lon: 110.385,
-    matchKeys: ["buntal"],
-    thresholds: { normal: 2.4, alert: 3.0, warning: 3.4, danger: 3.8 },
-    note: "Tidal indicator for Petra Jaya / north-bank flood risk.",
-    humanBrief: "Tidal gauge at the Sarawak River mouth. When high tide coincides with upstream rain, Petra Jaya's north-bank government district floods — the DUN (State Assembly) complex, federal offices, and the Civic Centre are all in the inundation zone. Worst case: king tide + upstream Warning creates a pincer effect that traps water in the urban reach for 8–12 hours.",
-    affectedEstimate: "Petra Jaya government district, ~15 federal/state offices",
-    lastEvent: "Tidal surge combined with upstream rain on 2023-11-28; water entered the Civic Centre car park.",
+    id: "batu-kawa",
+    name: "Batu Kawa Bridge",
+    basin: "Sg. Sarawak",
+    council: "MPP",
+    focus: "padawan",
+    lat: 1.5087,
+    lon: 110.2703,
+    matchKeys: ["batu kawa"],
+    thresholds: { normal: 0.68, alert: 2.5, warning: 3.0, danger: 4.2 },
+    note: "Bridge gauge for the Batu Kawa / Desa Wira flood corridor.",
+    humanBrief: "The operational gauge for the RM 58.5M Batu Kawa retention programme. Rising here means Taman Desa Wira and Kampung Sinar Budi Baru are next — ~3,500 households in the inundation zone.",
+    affectedEstimate: "~3,500 households along Batu Kawa corridor",
+    lastEvent: "Recurrent inundation; DID Sarawak retention ponds targeted for 2027 completion.",
+  },
+  {
+    id: "desa-wira",
+    name: "Desa Wira",
+    basin: "Sg. Sarawak",
+    council: "MPP",
+    focus: "padawan",
+    lat: 1.5104,
+    lon: 110.3044,
+    matchKeys: ["desa wira"],
+    thresholds: { normal: 0.35, alert: 2.5, warning: 3.0, danger: 3.5 },
+    note: "Neighbourhood gauge inside the Padawan flood hotspot.",
+    humanBrief: "Sits inside the worst-hit residential pocket of Padawan. A Warning reading here is a street-level event — not a forecast.",
+    affectedEstimate: "Taman Desa Wira + adjacent kampungs",
+    lastEvent: "Repeated flash floods 2024–2025; PPS activations documented in local press.",
   },
   {
     id: "siniawan",
     name: "Siniawan",
-    basin: "Sg. Sarawak Kanan",
+    basin: "Sg. Sarawak",
     council: "MPP",
-    lat: 1.395,
-    lon: 110.215,
+    focus: "padawan",
+    lat: 1.4466,
+    lon: 110.2186,
     matchKeys: ["siniawan"],
-    thresholds: { normal: 6.5, alert: 7.5, warning: 8.5, danger: 9.5 },
+    thresholds: { normal: 0.0, alert: 5.5, warning: 6.2, danger: 7.2 },
     note: "Western Padawan riverine pressure point.",
-    humanBrief: "Heritage town at the confluence of Sg. Sarawak Kanan tributaries. The weekend night market draws 2,000+ visitors on Fri/Sat evenings — a sudden rise during market hours creates a crowd-safety incident, not just a flood event. The old shophouses have no raised foundations. Padawan Fire & Rescue Station 2 is 4km upstream; response time is 12–18 minutes in dry conditions, longer when the access road floods.",
-    affectedEstimate: "~800 residents, heritage shophouses, weekend market (~2,000 visitors)",
-    lastEvent: "Moderate flooding in 2024-03; market evacuated, 12 shophouses affected.",
+    humanBrief: "Heritage town + weekend night market (~2,000 visitors). A sudden rise during market hours is a crowd-safety incident, not just a flood event.",
+    affectedEstimate: "~800 residents, heritage shophouses, weekend market",
+    lastEvent: "Moderate flooding 2024-03; market evacuated, 12 shophouses affected.",
   },
   {
     id: "kpg-git",
-    name: "Kpg. Git",
-    basin: "Sg. Sarawak Kanan",
+    name: "Kampung Git",
+    basin: "Sg. Sarawak",
     council: "MPP",
-    lat: 1.336,
-    lon: 110.196,
-    matchKeys: ["git", "kpg git", "kampung git"],
-    thresholds: { normal: 12.0, alert: 13.0, warning: 14.0, danger: 15.0 },
+    focus: "padawan",
+    lat: 1.3555,
+    lon: 110.2667,
+    matchKeys: ["kampung git", "kpg git", "git"],
+    thresholds: { normal: 5.0, alert: 12.29, warning: 12.79, danger: 13.29 },
     note: "Padawan upper-catchment indicator.",
-    humanBrief: "Remote upper-catchment gauge deep in Padawan's hinterland. Predominantly Bidayuh kampungs connected by single-lane roads that become impassable at Alert level. This gauge is the earliest signal of a basin-wide event — a rise here arrives at Batu Kitang 4–6 hours later. Mobile coverage is intermittent; JPS manual readings may lag by 2+ hours.",
-    affectedEstimate: "~600 residents in scattered kampungs, limited road access",
-    lastEvent: "Gauge exceeded Alert during monsoon surge 2024-01-14; road to Kpg. Git cut for 2 days.",
+    humanBrief: "Earliest basin signal — a rise here arrives at Batu Kitang 4–6 hours later. Single-lane access roads cut first.",
+    affectedEstimate: "~600 residents in scattered kampungs",
+    lastEvent: "Road to Kpg. Git cut for 2 days during 2024-01 monsoon surge.",
   },
   {
-    id: "maong",
-    name: "Sg. Maong",
-    basin: "Sg. Maong (urban drain)",
-    council: "MBKS",
-    lat: 1.539,
-    lon: 110.336,
-    matchKeys: ["maong"],
-    thresholds: { normal: 1.5, alert: 2.0, warning: 2.4, danger: 2.8 },
-    note: "MBKS urban drainage canary — backs up first.",
-    humanBrief: "This is the urban drain that backs up first. Sg. Maong runs through MBKS's densest commercial corridor — MJC Batu Kawa, Stutong commercial area, and the BDC industrial zone. At Alert level, the Jalan Song/Stutong junction floods and traffic gridlocks across southern Kuching. At Warning, floodwater enters ground-floor retail. The drain's capacity has not been upgraded since 2012 despite 23% residential growth in the catchment.",
-    affectedEstimate: "~12,000 residents, 200+ commercial properties, Jalan Song corridor",
-    lastEvent: "Flash flood on 2024-09-03; Stutong junction submerged for 3 hours, 40+ vehicles stranded.",
-  },
-  {
-    id: "bedup",
-    name: "Sg. Bedup",
-    basin: "Sg. Sadong tributary",
+    id: "eighth-mile",
+    name: "8th Mile",
+    basin: "Sg. Sarawak",
     council: "MPP",
-    lat: 1.211,
-    lon: 110.553,
-    matchKeys: ["bedup"],
-    thresholds: { normal: 8.0, alert: 9.0, warning: 10.0, danger: 11.0 },
-    note: "South-east Padawan / Serian boundary watch.",
-    humanBrief: "Boundary gauge between Padawan and Serian. The Sg. Sadong basin drains into agricultural lowlands — oil palm estates and pepper gardens. Flooding here disrupts the Kuching–Serian road (the only trunk route) and isolates kampungs for days. The Tebedu border crossing with Kalimantan is 30km upstream; cross-border water management is a diplomatic, not just engineering, issue.",
-    affectedEstimate: "~1,200 residents, agricultural estates, Kuching–Serian road",
-    lastEvent: "Sg. Sadong exceeded Normal after sustained rain in 2024-02; road passable but waterlogged for 18 hours.",
+    focus: "padawan",
+    lat: 1.4452,
+    lon: 110.3281,
+    matchKeys: ["8th mile", "eighth mile", "batu 8"],
+    thresholds: { normal: 5.2, alert: 7.04, warning: 8.64, danger: 9.45 },
+    note: "Kota Padawan / Penrissen corridor gauge.",
+    humanBrief: "Sits on the urban-rural transition where new housing is outrunning drain capacity. Watch this with Penrissen Road ponding reports.",
+    affectedEstimate: "Kota Padawan growth corridor",
+    lastEvent: "Seasonal trunk-road flooding along Kuching–Serian / Penrissen.",
+  },
+  {
+    id: "kuala-maong",
+    name: "Kuala Maong",
+    basin: "Sg. Maong",
+    council: "MBKS",
+    focus: "metro",
+    lat: 1.5422,
+    lon: 110.3114,
+    matchKeys: ["kuala maong", "maong"],
+    thresholds: { normal: 0.25, alert: 2.0, warning: 2.4, danger: 2.8 },
+    note: "Urban drain mouth — backs up first when Sg. Sarawak is high.",
+    humanBrief: "The urban canary. At Alert, Jalan Song / Stutong junctions flood and southern Kuching gridlocks — water does not stop at the MBKS/MPP line.",
+    affectedEstimate: "~12,000 residents, 200+ commercial properties",
+    lastEvent: "Flash flood 2024-09-03; Stutong junction submerged ~3 hours.",
+  },
+  {
+    id: "maong-tengah",
+    name: "Maong Tengah Kiri",
+    basin: "Sg. Maong",
+    council: "MBKS",
+    focus: "metro",
+    lat: 1.5329,
+    lon: 110.3245,
+    matchKeys: ["maong tengah"],
+    thresholds: { normal: 0.2, alert: 3.0, warning: 4.0, danger: 4.4 },
+    note: "Mid-Maong urban drain gauge.",
+    humanBrief: "Tracks the Maong backflow into Stutong / BDC before it reaches the Satok commercial strip.",
+    affectedEstimate: "Stutong–BDC commercial corridor",
+    lastEvent: "Paired with Kuala Maong during 2024–2025 flash events.",
+  },
+  {
+    id: "central-park",
+    name: "Central Park",
+    basin: "Sg. Maong / urban",
+    council: "MBKS",
+    focus: "metro",
+    lat: 1.5239,
+    lon: 110.3396,
+    matchKeys: ["central park"],
+    thresholds: { normal: 0.2, alert: 2.5, warning: 3.0, danger: 3.5 },
+    note: "Dense residential / commercial midtown gauge.",
+    humanBrief: "When Central Park rises with Maong, the flood is already inside the city grid — not an upstream story.",
+    affectedEstimate: "Central Park / Tabuan residential pocket",
+    lastEvent: "Surface flooding common when Maong backs up at high tide.",
+  },
+  {
+    id: "satok",
+    name: "Satok B",
+    basin: "Sg. Sarawak",
+    council: "MBKS",
+    focus: "metro",
+    lat: 1.5591,
+    lon: 110.3281,
+    matchKeys: ["satok"],
+    thresholds: { normal: -0.3, alert: 2.4, warning: 2.52, danger: 2.8 },
+    note: "Satok commercial corridor tidal/river gauge.",
+    humanBrief: "Heritage + market corridor. High tide + upstream rain is the classic pincer for Satok road closures.",
+    affectedEstimate: "Satok market and Jalan Satok commercial strip",
+    lastEvent: "Repeated tidal-amplified inundation events.",
+  },
+  {
+    id: "padungan",
+    name: "Padungan",
+    basin: "Sg. Sarawak",
+    council: "MBKS",
+    focus: "metro",
+    lat: 1.5545,
+    lon: 110.3695,
+    matchKeys: ["padungan"],
+    thresholds: { normal: 0.5, alert: 2.6, warning: 2.81, danger: 3.3 },
+    note: "Padungan / city-centre river gauge.",
+    humanBrief: "City-centre indicator for Main Bazaar / Padungan shop houses — tourism and commerce impact, not just housing.",
+    affectedEstimate: "Padungan heritage commercial strip",
+    lastEvent: "High-water events along the urban waterfront.",
+  },
+  {
+    id: "barrage",
+    name: "Barrage",
+    basin: "Sg. Sarawak",
+    council: "DBKU",
+    focus: "metro",
+    lat: 1.576,
+    lon: 110.4093,
+    matchKeys: ["barrage"],
+    thresholds: { normal: 0.06, alert: 2.8, warning: 2.92, danger: 3.2 },
+    note: "Sarawak River Barrage — estuary control structure.",
+    humanBrief: "Controls the tidal gate for the urban reach. A high reading here with upstream rain means the river cannot drain — Petra Jaya and the north bank feel it next.",
+    affectedEstimate: "Estuarine Kuching / Petra Jaya approaches",
+    lastEvent: "Tidal + upstream pincer events documented at Civic Centre car park (2023).",
+  },
+  {
+    id: "bau-bridge",
+    name: "Bau Bridge",
+    basin: "Sg. Sarawak",
+    council: "MPP",
+    focus: "padawan",
+    lat: 1.4239,
+    lon: 110.15,
+    matchKeys: ["bau bridge"],
+    thresholds: { normal: 5.1, alert: 12.46, warning: 12.58, danger: 12.86 },
+    note: "Western Padawan / Bau district bridge gauge.",
+    humanBrief: "Western flank of Padawan. Bau PPS activations in Jan 2025 multi-district floods started from this catchment.",
+    affectedEstimate: "Bau town + western Padawan kampungs",
+    lastEvent: "Jan 2025 — Kuching PPS opened for Bau evacuees.",
+  },
+  {
+    id: "buso",
+    name: "Buso",
+    basin: "Sg. Sarawak",
+    council: "MPP",
+    focus: "padawan",
+    lat: 1.452,
+    lon: 110.1835,
+    matchKeys: ["buso"],
+    thresholds: { normal: 1.0, alert: 8.0, warning: 10.2, danger: 10.7 },
+    note: "Mid-western Padawan tributary gauge.",
+    humanBrief: "Fills the gap between Bau Bridge and Siniawan — useful for timing crew deployment along the western roads.",
+    affectedEstimate: "Buso / western tributary kampungs",
+    lastEvent: "Paired with Siniawan during western-catchment rises.",
+  },
+  {
+    id: "malihah",
+    name: "Malihah",
+    basin: "Sg. Sarawak tributary",
+    council: "DBKU",
+    focus: "metro",
+    lat: 1.5514,
+    lon: 110.2426,
+    matchKeys: ["malihah"],
+    thresholds: { normal: 2.8, alert: 6.8, warning: 7.1, danger: 7.4 },
+    note: "North-west metro gauge.",
+    humanBrief: "Watches the Matang / north-west approach — peatland drainage stress zone.",
+    affectedEstimate: "Matang Jaya / north-west residential belt",
+    lastEvent: "1–2 m flood depths historically recorded in Matang Jaya lowlands.",
   },
 ];
 
@@ -1658,11 +1809,34 @@ const HYDRO_BANDS = [
   { id: "reference", label: "Reference", tone: "muted", color: "#8aa2c8" },
 ];
 
+const FLOOD_ACTION_BANDS = {
+  normal:  { verb: "ALL CLEAR",        verbBm: "SEMUA SELAMAT",   verbZh: "一切安全", scoreMin: 0,  tone: "good" },
+  watch:   { verb: "STAY INFORMED",    verbBm: "SENTIASA IKUTI",  verbZh: "保持关注", scoreMin: 20, tone: "muted" },
+  prepare: { verb: "PREPARE",          verbBm: "BERSEDIA",        verbZh: "做好准备", scoreMin: 45, tone: "warn" },
+  act:     { verb: "ACT NOW",          verbBm: "BERTINDAK SEKARANG", verbZh: "立即行动", scoreMin: 70, tone: "alert" },
+};
+
+// Documented / recently activated PPS and permanent centres for Greater Kuching.
+// Coords approximate from public reporting; capacity notes from press + state statements.
+const FLOOD_SHELTERS = [
+  { id: "sk-beradek", name: "SK Beradek Permanent Disaster Relocation Centre (PPKB)", area: "Padawan", council: "MPP", lat: 1.42, lon: 110.30, status: "under-construction", note: "RM8.5M permanent centre; targeted completion Mar 2026 (Borneo Post 2025-12).", maps: "https://www.google.com/maps/search/?api=1&query=SK+Beradek+Padawan" },
+  { id: "pps-kuching-1", name: "Kuching temporary PPS (school / community hall — activate on order)", area: "Kuching", council: "MBKS/DBKU", lat: 1.55, lon: 110.35, status: "standby", note: "Jan 2025: 2 PPS opened in Kuching for 162 evacuees incl. Bau households (Borneo Post).", maps: "https://www.google.com/maps/search/?api=1&query=Kuching+flood+relief+centre" },
+  { id: "pps-bau", name: "Bau district PPS (activate on JPAM / district order)", area: "Bau / West Padawan", council: "MPP", lat: 1.42, lon: 110.15, status: "standby", note: "Used in Jan 2025 multi-district event; confirm open status via JPAM before directing public.", maps: "https://www.google.com/maps/search/?api=1&query=Bau+Sarawak+flood+relief" },
+];
+
+const FLOOD_HOTLINES = [
+  { id: "999", label: "Emergency (Police / Fire / Ambulance)", number: "999" },
+  { id: "jpam", label: "Civil Defence (JPAM Sarawak)", number: "082-441144", note: "Confirm via directory if engaged" },
+  { id: "did", label: "DID Sarawak (iHYDRO operations)", number: "082-440666", url: "https://ihydro.sarawak.gov.my/" },
+  { id: "mpp", label: "Majlis Perbandaran Padawan", number: "082-615991", url: "https://mpp.sarawak.gov.my/" },
+  { id: "infobanjir", label: "JPS Public Infobanjir", number: null, url: "https://publicinfobanjir.water.gov.my/?lang=en" },
+];
+
 function classifyHydroBand(level, thresholds) {
-  if (level == null || Number.isNaN(level)) return "reference";
-  if (level >= thresholds.danger) return "danger";
-  if (level >= thresholds.warning) return "warning";
-  if (level >= thresholds.alert) return "alert";
+  if (level == null || Number.isNaN(level) || !thresholds) return "reference";
+  if (thresholds.danger != null && level >= thresholds.danger) return "danger";
+  if (thresholds.warning != null && level >= thresholds.warning) return "warning";
+  if (thresholds.alert != null && level >= thresholds.alert) return "alert";
   return "normal";
 }
 
@@ -1670,10 +1844,188 @@ function bandColor(bandId) {
   return HYDRO_BANDS.find((b) => b.id === bandId)?.color || "#8aa2c8";
 }
 
+function slugHydroName(name) {
+  return String(name || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function findCuratedHydro(name) {
+  const lower = String(name || "").toLowerCase();
+  return SARAWAK_HYDRO_STATIONS.find((s) =>
+    s.matchKeys.some((k) => lower.includes(k)) || lower.includes(s.name.toLowerCase()),
+  ) || null;
+}
+
+function parseIhydroMapMarkers(html) {
+  if (!html || typeof html !== "string") return [];
+  const pat = /\[\s*(\d+)\s*,\s*'((?:\\'|[^'])*)'\s*,\s*'((?:\\'|[^'])*)'\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*'((?:\\'|[^'])*)'\s*,\s*'((?:\\'|[^'])*)'\s*,\s*'((?:\\'|[^'])*)'\s*\]/g;
+  const out = [];
+  let m;
+  while ((m = pat.exec(html)) !== null) {
+    const rawName = m[2].replace(/\\'/g, "'");
+    const typ = m[3];
+    const lat = Number.parseFloat(m[4]);
+    const lon = Number.parseFloat(m[5]);
+    const rfStatus = m[6];
+    const wlStatus = m[7];
+    const info = m[8].replace(/\\'/g, "'");
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    if (lat < GK_HYDRO_BOUNDS.minLat || lat > GK_HYDRO_BOUNDS.maxLat) continue;
+    if (lon < GK_HYDRO_BOUNDS.minLon || lon > GK_HYDRO_BOUNDS.maxLon) continue;
+    // Prefer water / combine stations; skip pure rainfall pins for the WL list.
+    if (/rainfall/i.test(typ) && !/combine|water/i.test(typ)) continue;
+    const grab = (label) => {
+      const mm = info.match(new RegExp(`${label}\\s*:\\s*([-\\d.]+)\\s*m`, "i"));
+      return mm ? Number.parseFloat(mm[1]) : null;
+    };
+    const dailyRf = (() => {
+      const mm = info.match(/Daily RF\s*:\s*([-\\d.]+)\s*mm/i);
+      return mm ? Number.parseFloat(mm[1]) : null;
+    })();
+    const name = rawName.replace(/-(Combine|Rainfall|Water)$/i, "").trim();
+    const thresholds = {
+      normal: grab("Normal Level"),
+      alert: grab("Alert Level"),
+      warning: grab("Warning Level"),
+      danger: grab("Danger Level"),
+    };
+    // Need at least an alert threshold to classify flood posture.
+    if (thresholds.alert == null && thresholds.danger == null) continue;
+    const level = grab("Latest WL");
+    out.push({
+      name,
+      type: typ,
+      lat,
+      lon,
+      waterLevelM: Number.isFinite(level) ? level : null,
+      thresholds,
+      rainfallTodayMm: Number.isFinite(dailyRf) ? dailyRf : null,
+      wlStatusRaw: wlStatus,
+      rfStatusRaw: rfStatus,
+      observedAt: (() => {
+        const tm = info.match(/Time Taken\s*:\s*([0-9]{2}-[0-9]{2}-[0-9]{4}\s+[0-9]{2}:[0-9]{2})/i);
+        return tm ? tm[1] : null;
+      })(),
+    });
+  }
+  return out;
+}
+
+function parseIhydroWlTable(html) {
+  if (!html || typeof html !== "string") return [];
+  const rows = html.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
+  const out = [];
+  for (const row of rows) {
+    const cells = [...row.matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)].map((c) =>
+      c[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").replace(/•/g, "").trim(),
+    );
+    if (cells.length < 10) continue;
+    if (/station name/i.test(cells[1] || "")) continue;
+    const name = cells[1];
+    const level = Number.parseFloat(cells[5]);
+    const normal = Number.parseFloat(cells[6]);
+    const alert = Number.parseFloat(cells[7]);
+    const warning = Number.parseFloat(cells[8]);
+    const danger = Number.parseFloat(cells[9]);
+    if (!name || !Number.isFinite(alert)) continue;
+    out.push({
+      name,
+      waterLevelM: Number.isFinite(level) ? level : null,
+      thresholds: {
+        normal: Number.isFinite(normal) ? normal : null,
+        alert,
+        warning: Number.isFinite(warning) ? warning : null,
+        danger: Number.isFinite(danger) ? danger : null,
+      },
+      observedAt: cells[4] || null,
+      division: cells[2] || null,
+      basin: cells[3] || null,
+    });
+  }
+  return out;
+}
+
+function hydrateHydroStation(live, curated) {
+  const thresholds = {
+    normal: live.thresholds?.normal ?? curated?.thresholds?.normal ?? null,
+    alert: live.thresholds?.alert ?? curated?.thresholds?.alert ?? null,
+    warning: live.thresholds?.warning ?? curated?.thresholds?.warning ?? null,
+    danger: live.thresholds?.danger ?? curated?.thresholds?.danger ?? null,
+  };
+  const band = classifyHydroBand(live.waterLevelM, thresholds);
+  const id = curated?.id || slugHydroName(live.name);
+  return {
+    id,
+    name: curated?.name || live.name,
+    basin: curated?.basin || live.basin || "Sg. Sarawak basin",
+    council: curated?.council || "Greater Kuching",
+    focus: curated?.focus || "metro",
+    lat: live.lat ?? curated?.lat ?? null,
+    lon: live.lon ?? curated?.lon ?? null,
+    matchKeys: curated?.matchKeys || [live.name.toLowerCase()],
+    thresholds,
+    note: curated?.note || "DID Sarawak iHYDRO gauge",
+    humanBrief: curated?.humanBrief || null,
+    affectedEstimate: curated?.affectedEstimate || null,
+    lastEvent: curated?.lastEvent || null,
+    waterLevelM: live.waterLevelM != null ? round(live.waterLevelM, 2) : null,
+    band,
+    bandLabel: HYDRO_BANDS.find((b) => b.id === band)?.label || band,
+    rainfallTodayMm: live.rainfallTodayMm != null ? round(live.rainfallTodayMm, 1) : null,
+    observedAt: live.observedAt || null,
+    source: "DID Sarawak iHYDRO",
+  };
+}
+
+async function loadStationRainfall() {
+  return cached("station-rainfall", 15 * 60 * 1000, async () => {
+    const results = await Promise.all(
+      SARAWAK_HYDRO_STATIONS.map(async (s) => {
+        try {
+          const url = `https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&daily=precipitation_sum&past_days=1&forecast_days=2&timezone=Asia%2FKuching`;
+          const j = await fetchJson(url, 9000);
+          const vals = (j?.daily?.precipitation_sum) || [];
+          return [s.id, {
+            pastMm: round(vals[0] ?? 0, 1),
+            todayMm: round(vals[1] ?? 0, 1),
+            tomorrowMm: round(vals[2] ?? 0, 1),
+          }];
+        } catch {
+          return [s.id, null];
+        }
+      }),
+    );
+    return new Map(results.filter(([, v]) => v));
+  }).catch(() => new Map());
+}
+
+async function loadIhydroLive() {
+  return cached("ihydro-sarawak", 10 * 60 * 1000, async () => {
+    const mapHtml = await fetchText(IHYDRO_MAP_URL, 20000);
+    let markers = parseIhydroMapMarkers(mapHtml);
+    if (!markers.length) {
+      const tableHtml = await fetchText(IHYDRO_WL_URL, 15000);
+      markers = parseIhydroWlTable(tableHtml).map((row) => {
+        const curated = findCuratedHydro(row.name);
+        return {
+          ...row,
+          lat: curated?.lat ?? null,
+          lon: curated?.lon ?? null,
+        };
+      });
+    }
+    return {
+      markers,
+      sourceUrl: IHYDRO_MAP_URL,
+      fetchedAt: nowIso(),
+    };
+  });
+}
+
 function parseInfobanjirHtml(html) {
-  // Public Infobanjir renders an HTML table per state. We extract any
-  // numeric water level adjacent to a station name we recognise. The
-  // markup churns, so the parse is intentionally permissive.
+  // Legacy permissive scrape — Infobanjir SWK table is often empty ("No Data").
   if (!html || typeof html !== "string") return new Map();
   const found = new Map();
   const condensed = html.replace(/\s+/g, " ");
@@ -1696,84 +2048,108 @@ function parseInfobanjirHtml(html) {
   return found;
 }
 
-// IOC 2.0 — Per-station rainfall ground truth via Open-Meteo. JPS Infobanjir
-// publishes rainfall pages but as JS-rendered HTML (brittle scrape); Open-Meteo's
-// keyless daily precipitation API gives the same effective signal at every
-// hydro-station coordinate. One call per station, ~6 in parallel, 15-min cache.
-async function loadStationRainfall() {
-  return cached("station-rainfall", 15 * 60 * 1000, async () => {
-    const results = await Promise.all(
-      SARAWAK_HYDRO_STATIONS.map(async (s) => {
-        try {
-          const url = `https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&daily=precipitation_sum&past_days=1&forecast_days=2&timezone=Asia%2FKuching`;
-          const j = await fetchJson(url, 9000);
-          const vals = (j?.daily?.precipitation_sum) || [];
-          // past_days=1, forecast_days=2 → 3 values: [yesterday, today, tomorrow]
-          return [s.id, {
-            pastMm: round(vals[0] ?? 0, 1),
-            todayMm: round(vals[1] ?? 0, 1),
-            tomorrowMm: round(vals[2] ?? 0, 1),
-          }];
-        } catch {
-          return [s.id, null];
-        }
-      })
-    );
-    return new Map(results.filter(([, v]) => v));
-  }).catch(() => new Map());
-}
-
 async function loadInfobanjir() {
-  return cached("jps-infobanjir", 15 * 60 * 1000, async () => {
-    const reference = SARAWAK_HYDRO_STATIONS.map((s) => ({
-      ...s,
-      waterLevelM: null,
-      band: "reference",
-      bandLabel: "Reference",
-    }));
+  return cached("jps-infobanjir", 10 * 60 * 1000, async () => {
     const rainByStation = await loadStationRainfall();
+    let liveStations = [];
+    let source = "DID Sarawak iHYDRO";
+    let sourceUrl = IHYDRO_MAP_URL;
+    let feedStatus = "reference";
 
-    const candidates = [
-      "https://publicinfobanjir.water.gov.my/aras-air/data-paras-air/?state=SWK&lang=en&menu=20",
-      "https://publicinfobanjir.water.gov.my/main-page/main-page-v2/?state=SWK&lang=en",
-    ];
-
-    let live = null;
-    let sourceUrl = candidates[0];
-    for (const url of candidates) {
-      try {
-        const html = await fetchText(url, 12000);
-        const parsed = parseInfobanjirHtml(html);
-        if (parsed.size > 0) {
-          live = parsed;
-          sourceUrl = url;
-          break;
+    try {
+      const ihydro = await loadIhydroLive();
+      const byId = new Map();
+      for (const marker of ihydro.markers) {
+        const curated = findCuratedHydro(marker.name);
+        const station = hydrateHydroStation(marker, curated);
+        // Prefer curated Padawan-focus rows; keep other live GK gauges too.
+        if (!byId.has(station.id) || curated) byId.set(station.id, station);
+      }
+      // Ensure every curated Padawan station appears even if iHYDRO name drifted.
+      for (const curated of SARAWAK_HYDRO_STATIONS) {
+        if (!byId.has(curated.id)) {
+          byId.set(curated.id, {
+            ...curated,
+            waterLevelM: null,
+            band: "reference",
+            bandLabel: "Reference",
+            rainfallTodayMm: null,
+            observedAt: null,
+            source: "reference",
+          });
         }
-      } catch {
-        // try next
+      }
+      liveStations = [...byId.values()];
+      sourceUrl = ihydro.sourceUrl;
+      const liveCount = liveStations.filter((s) => s.waterLevelM != null).length;
+      feedStatus = liveCount > 0 ? "live" : "reference";
+    } catch {
+      liveStations = SARAWAK_HYDRO_STATIONS.map((s) => ({
+        ...s,
+        waterLevelM: null,
+        band: "reference",
+        bandLabel: "Reference",
+      }));
+    }
+
+    // Secondary: try Infobanjir aras-air-data (usually empty for Sarawak).
+    if (feedStatus !== "live") {
+      const candidates = [
+        "https://publicinfobanjir.water.gov.my/aras-air/data-paras-air/aras-air-data/?state=SRK&lang=en",
+        "https://publicinfobanjir.water.gov.my/aras-air/data-paras-air/?state=SWK&lang=en&menu=20",
+      ];
+      for (const url of candidates) {
+        try {
+          const html = await fetchText(url, 12000);
+          const parsed = parseInfobanjirHtml(html);
+          if (parsed.size > 0) {
+            liveStations = liveStations.map((station) => {
+              if (!parsed.has(station.id)) return station;
+              const level = parsed.get(station.id);
+              const band = classifyHydroBand(level, station.thresholds);
+              return {
+                ...station,
+                waterLevelM: round(level, 2),
+                band,
+                bandLabel: HYDRO_BANDS.find((b) => b.id === band)?.label || band,
+                source: "JPS Public Infobanjir",
+              };
+            });
+            source = "JPS Public Infobanjir";
+            sourceUrl = url;
+            feedStatus = "live";
+            break;
+          }
+        } catch {
+          // try next
+        }
       }
     }
 
-    const stations = reference.map((station) => {
-      const rain = rainByStation.get(station.id) || null;
-      const enriched = rain
-        ? { rainfallPastMm: rain.pastMm, rainfallTodayMm: rain.todayMm, rainfallTomorrowMm: rain.tomorrowMm }
-        : {};
-      if (live && live.has(station.id)) {
-        const level = live.get(station.id);
-        const band = classifyHydroBand(level, station.thresholds);
-        return {
-          ...station,
-          ...enriched,
-          waterLevelM: round(level, 2),
-          band,
-          bandLabel: HYDRO_BANDS.find((b) => b.id === band)?.label || band,
-        };
-      }
-      return { ...station, ...enriched };
+    const stations = liveStations.map((station) => {
+      const rain = rainByStation.get(station.id);
+      if (!rain) return station;
+      return {
+        ...station,
+        rainfallPastMm: rain.pastMm,
+        rainfallTodayMm: station.rainfallTodayMm ?? rain.todayMm,
+        rainfallTomorrowMm: rain.tomorrowMm,
+      };
+    });
+
+    // Sort: Padawan focus first, then by severity, then name.
+    const bandOrder = { danger: 0, warning: 1, alert: 2, normal: 3, reference: 4 };
+    stations.sort((a, b) => {
+      const focusRank = (s) => (s.focus === "padawan" ? 0 : 1);
+      const dFocus = focusRank(a) - focusRank(b);
+      if (dFocus) return dFocus;
+      const dBand = (bandOrder[a.band] ?? 9) - (bandOrder[b.band] ?? 9);
+      if (dBand) return dBand;
+      return String(a.name).localeCompare(String(b.name));
     });
 
     const liveCount = stations.filter((s) => s.waterLevelM != null).length;
+    const padawanLive = stations.filter((s) => s.focus === "padawan" && s.waterLevelM != null).length;
     const highest = stations.reduce((acc, s) => {
       const order = ["normal", "alert", "warning", "danger"];
       const cur = order.indexOf(s.band);
@@ -1782,22 +2158,150 @@ async function loadInfobanjir() {
     }, "normal");
 
     return {
-      status: liveCount > 0 ? "live" : "reference",
+      status: feedStatus,
       updatedAt: nowIso(),
-      source: "JPS Public Infobanjir",
+      source,
       sourceUrl,
       liveCount,
       stationCount: stations.length,
+      padawanLiveCount: padawanLive,
       highestBand: highest,
       highestBandLabel: HYDRO_BANDS.find((b) => b.id === highest)?.label || highest,
       stations,
       bands: HYDRO_BANDS,
+      shelters: FLOOD_SHELTERS,
+      hotlines: FLOOD_HOTLINES,
       summary:
         liveCount > 0
-          ? `${liveCount}/${stations.length} Sarawak hydro stations reporting. Highest posture: ${highest.toUpperCase()}.`
-          : `Live JPS feed degraded. Holding ${stations.length} reference stations on the wall.`,
+          ? `${liveCount}/${stations.length} Greater Kuching gauges live via ${source} (${padawanLive} Padawan-focus). Highest posture: ${highest.toUpperCase()}.`
+          : `Live hydro feed degraded. Holding ${stations.length} reference stations on the wall.`,
     };
   });
+}
+
+function floodActionBand(score) {
+  if (score >= FLOOD_ACTION_BANDS.act.scoreMin) return "act";
+  if (score >= FLOOD_ACTION_BANDS.prepare.scoreMin) return "prepare";
+  if (score >= FLOOD_ACTION_BANDS.watch.scoreMin) return "watch";
+  return "normal";
+}
+
+function buildFloodAction({ infobanjir, weather, floodForecast, metWarnings, news }) {
+  const stations = infobanjir?.stations || [];
+  const padawan = stations.filter((s) => s.focus === "padawan");
+  const scoredStations = (padawan.length ? padawan : stations).filter((s) => s.waterLevelM != null);
+  const bandScore = { normal: 0, alert: 40, warning: 70, danger: 95, reference: 0 };
+  let score = 0;
+  const drivers = [];
+
+  const worst = scoredStations.reduce((acc, s) => {
+    const order = ["normal", "alert", "warning", "danger"];
+    if (!acc) return s;
+    return order.indexOf(s.band) > order.indexOf(acc.band) ? s : acc;
+  }, null);
+
+  if (worst) {
+    score = Math.max(score, bandScore[worst.band] || 0);
+    if (worst.band !== "normal") {
+      drivers.push(`${worst.name} at ${worst.bandLabel} (${worst.waterLevelM} m)`);
+    }
+  }
+
+  const rain6h = Array.isArray(weather?.nextHours)
+    ? round(weather.nextHours.reduce((sum, hour) => sum + (hour.precipitationMm || 0), 0), 1)
+    : null;
+  const rainToday = weather?.daily?.rainTotalMm
+    ?? scoredStations.reduce((m, s) => Math.max(m, s.rainfallTodayMm || 0), 0);
+  if (rainToday >= 50) { score = Math.max(score, 55); drivers.push(`Basin rain ${round(rainToday, 0)} mm today`); }
+  else if (rainToday >= 25) { score = Math.max(score, 30); drivers.push(`Basin rain ${round(rainToday, 0)} mm today`); }
+  else if (rain6h != null && rain6h >= 15) { score = Math.max(score, 35); drivers.push(`${rain6h} mm rain / 6h`); }
+
+  const peak = floodForecast?.peakCms;
+  const todayQ = floodForecast?.todayCms;
+  if (peak != null && peak >= 250) { score = Math.max(score, 50); drivers.push(`GloFAS peak ${peak} m³/s`); }
+  else if (todayQ != null && todayQ >= 200) { score = Math.max(score, 35); drivers.push(`GloFAS discharge ${todayQ} m³/s`); }
+
+  const metActive = metWarnings?.activeCount || 0;
+  if (metActive > 0) {
+    score = Math.max(score, 40);
+    drivers.push(`${metActive} MET Malaysia warning(s) active`);
+  }
+
+  // Northeast monsoon floor (Nov–Feb) — never imply the season is "over".
+  const month = new Date().getUTCMonth() + 1;
+  const monsoon = month >= 11 || month <= 2;
+  if (monsoon && score < 20) {
+    score = 20;
+    drivers.push("Northeast monsoon window — stay informed");
+  }
+
+  const band = floodActionBand(score);
+  const meta = FLOOD_ACTION_BANDS[band];
+  const floodNews = (news?.items || []).filter((n) =>
+    /flood|banjir|inundat|PPS|evacuee|relief centre|water level|paras air/i.test(`${n.title || ""} ${n.summary || ""}`),
+  ).slice(0, 4);
+
+  let reality = "CALM";
+  const measuredBad = ["alert", "warning", "danger"].includes(infobanjir?.highestBand);
+  if (floodNews.length >= 2 && measuredBad) reality = "CONFIRMED";
+  else if (floodNews.length >= 2 && !measuredBad) reality = "OVERSTATED";
+  else if (floodNews.length < 2 && measuredBad) reality = "UNDERSTATED";
+
+  const checklists = {
+    normal: [
+      "No flood action required — keep one eye on Batu Kitang and Desa Wira gauges.",
+      "Drainage crews stay on routine sweeps along Penrissen / Batu Kawa.",
+    ],
+    watch: [
+      "Check iHYDRO Padawan gauges twice today (Batu Kitang, Batu Kawa, Desa Wira, Siniawan).",
+      "Pre-position one mobile crew for Penrissen / Kota Padawan ponding.",
+      "Share status with MBKS — Maong backflow crosses the council line.",
+    ],
+    prepare: [
+      "Raise valuables / electrics in Desa Wira, Sinar Budi Baru, and riverside kampungs.",
+      "Confirm JPAM PPS open/closed status before directing residents.",
+      "Clear critical drains: Penrissen, Batu Kawa, Sg. Maong junctions.",
+      "Brief ward councillors in flood-prone localities (Wards H / I / NPQ).",
+    ],
+    act: [
+      "Follow JPAM / district official instructions — this board does not issue evacuation orders.",
+      "Open nearest standby PPS only when JPAM activates it; use hotlines below.",
+      "Close flooded road segments (Penrissen, Batu Kawa, Satok) and publish diversions.",
+      "Coordinate MPP + MBKS + DBKU — treat the basin as one system.",
+    ],
+  };
+
+  return {
+    status: infobanjir?.status || "reference",
+    updatedAt: nowIso(),
+    score: Math.min(100, Math.round(score)),
+    band,
+    verb: meta.verb,
+    verbBm: meta.verbBm,
+    verbZh: meta.verbZh,
+    tone: meta.tone,
+    reason: drivers[0] || (monsoon ? "Monsoon window — no gauge above Alert." : "All monitored gauges below Alert."),
+    drivers: drivers.slice(0, 5),
+    checklist: checklists[band],
+    worstStation: worst ? {
+      id: worst.id, name: worst.name, band: worst.band, level: worst.waterLevelM, council: worst.council,
+    } : null,
+    padawanLive: infobanjir?.padawanLiveCount ?? scoredStations.length,
+    metroLive: infobanjir?.liveCount ?? 0,
+    realityCheck: {
+      verdict: reality,
+      newsCount: floodNews.length,
+      measuredBand: infobanjir?.highestBand || "reference",
+      headlines: floodNews.map((n) => ({ title: n.title, source: n.source, url: n.url || n.link || null })),
+    },
+    shelters: FLOOD_SHELTERS,
+    hotlines: FLOOD_HOTLINES,
+    source: infobanjir?.source || "DID Sarawak iHYDRO",
+    sourceUrl: infobanjir?.sourceUrl || IHYDRO_MAP_URL,
+    confidence: infobanjir?.status === "live"
+      ? `Live DID gauges · ${infobanjir.liveCount}/${infobanjir.stationCount} reporting`
+      : "Reference hold — live DID feed degraded",
+  };
 }
 
 const APIMS_STATIONS = [
@@ -2846,22 +3350,39 @@ async function loadMetWarnings() {
 
 async function loadFloodForecast() {
   return cached("flood-forecast", 6 * 60 * 60 * 1000, async () => {
+    // Multi-point GloFAS: city centre + Padawan focus (water ignores council lines).
+    const points = [
+      { id: "kuching", label: "Sarawak River at Kuching", lat: 1.5533, lon: 110.3592 },
+      { id: "batu-kitang", label: "Batu Kitang (Padawan)", lat: 1.4524, lon: 110.2823 },
+      { id: "batu-kawa", label: "Batu Kawa Bridge", lat: 1.5087, lon: 110.2703 },
+    ];
     try {
-      const url =
-        "https://flood-api.open-meteo.com/v1/flood?latitude=1.5533&longitude=110.3592&daily=river_discharge&forecast_days=10&models=seamless_v4";
-      const data = await fetchJson(url, 12000);
-      const dates = data.daily?.time ?? [];
-      const discharge = data.daily?.river_discharge ?? [];
-      const valid = discharge.filter(Boolean);
+      const results = await Promise.all(points.map(async (p) => {
+        const url = `https://flood-api.open-meteo.com/v1/flood?latitude=${p.lat}&longitude=${p.lon}&daily=river_discharge&forecast_days=10&models=seamless_v4`;
+        const data = await fetchJson(url, 12000);
+        const dates = data.daily?.time ?? [];
+        const discharge = data.daily?.river_discharge ?? [];
+        const valid = discharge.filter((v) => v != null);
+        return {
+          ...p,
+          forecast: dates.map((d, i) => ({ date: d, dischargeCms: round(discharge[i] ?? null, 1) })),
+          peakCms: valid.length ? round(Math.max(...valid), 1) : null,
+          todayCms: round(discharge[0] ?? null, 1),
+        };
+      }));
+      const primary = results.find((r) => r.id === "kuching") || results[0];
       return {
         status: "live",
         updatedAt: nowIso(),
-        station: "Sarawak River at Kuching",
+        station: primary.label,
         units: "m³/s",
         model: "GloFAS seamless v4 via Open-Meteo",
-        forecast: dates.map((d, i) => ({ date: d, dischargeCms: round(discharge[i] ?? null, 1) })),
-        peakCms: valid.length ? round(Math.max(...valid), 1) : null,
-        todayCms: round(discharge[0] ?? null, 1),
+        forecast: primary.forecast,
+        peakCms: primary.peakCms,
+        todayCms: primary.todayCms,
+        reaches: results.map((r) => ({
+          id: r.id, label: r.label, todayCms: r.todayCms, peakCms: r.peakCms,
+        })),
       };
     } catch {
       return {
@@ -2877,6 +3398,7 @@ async function loadFloodForecast() {
         ],
         peakCms: 178,
         todayCms: 145,
+        reaches: [],
       };
     }
   });
@@ -3330,6 +3852,7 @@ async function buildDashboard() {
   // Catchment enrichment compounds Infobanjir + OSM drainage. Pure post-process,
   // no extra fetches — only runs if drainage cache is hot.
   const infobanjir = enrichInfobanjirWithCatchment(infobanjirRaw);
+  const floodAction = buildFloodAction({ infobanjir, weather, floodForecast, metWarnings, news });
 
   const generatedAt = nowIso();
   const mapLayers = buildMapLayers();
@@ -3358,6 +3881,7 @@ async function buildDashboard() {
     openDosmStats: govStats.dosm,
     metWarnings,
     infobanjir,
+    floodAction,
     apims,
     ckanHarvest,
     floodForecast,
@@ -3506,12 +4030,20 @@ async function buildDashboard() {
         metWarnings.updatedAt || generatedAt,
       ),
       sourceRecord(
-        "jps-infobanjir",
-        "JPS Public Infobanjir",
+        "did-ihydro",
+        "DID Sarawak iHYDRO",
         infobanjir.status,
         infobanjir.summary,
-        infobanjir.sourceUrl || "https://publicinfobanjir.water.gov.my",
+        infobanjir.sourceUrl || "https://ihydro.sarawak.gov.my/",
         infobanjir.updatedAt || generatedAt,
+      ),
+      sourceRecord(
+        "flood-action",
+        "Flood action card (FloodDash pattern)",
+        floodAction.status,
+        `${floodAction.verb} · score ${floodAction.score}/100 · ${floodAction.confidence}`,
+        floodAction.sourceUrl || "https://ihydro.sarawak.gov.my/",
+        floodAction.updatedAt || generatedAt,
       ),
       sourceRecord(
         "doe-apims",

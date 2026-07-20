@@ -123,3 +123,12 @@ scripts/alphaearth/.venv/bin/python scripts/alphaearth/compute_impervious.py
 node build.mjs
 git add public/data/alphaearth/ public/api/ && git commit -m "data: AlphaEarth 2025 refresh" && git push
 ```
+
+## ✅ COMPLETED — FloodDash-grade hydro (2026-07-21)
+
+- [x] Replace dead JPS Infobanjir SWK scrape with DID Sarawak iHYDRO (live map markers)
+- [x] Official DID thresholds (fixes false tropical alerts from old hand-coded levels)
+- [x] FloodDash action card: ALL CLEAR / STAY INFORMED / PREPARE / ACT NOW
+- [x] Reality check (news vs gauges), shelters/PPS, hotlines
+- [x] Multi-point GloFAS (Kuching + Batu Kitang + Batu Kawa)
+- [x] Padawan-focus gauge panel + map fly-to

@@ -1,8 +1,8 @@
 {
-  "builtAt": "2026-07-04T21:09:21.948Z",
-  "buildDurationMs": 60687,
-  "dashboardSizeKb": 270,
-  "assetVersion": "4490ced85e8c",
+  "builtAt": "2026-07-20T18:34:21.424048Z",
+  "buildDurationMs": 68766,
+  "dashboardSizeKb": 303.9,
+  "assetVersion": "af680831ae7c-154001",
   "deploymentMode": "pages-static",
   "boardLabel": "SNAPSHOT BOARD",
   "pagesUrl": "https://nonarkara.github.io/kuching-ioc/",
@@ -16,12 +16,12 @@
     {
       "id": "transit",
       "status": "fulfilled",
-      "features": 2346
+      "features": 2269
     },
     {
       "id": "land_use",
       "status": "fulfilled",
-      "features": 840
+      "features": 844
     },
     {
       "id": "flood_risk",
@@ -38,5 +38,6 @@
       "status": "fulfilled",
       "features": 10
     }
-  ]
+  ],
+  "notes": "FloodDash-grade Padawan flood watch: DID iHYDRO live gauges + action verbs"
 }

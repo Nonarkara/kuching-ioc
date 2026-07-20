@@ -249,6 +249,13 @@ export const MPP_WARD_PROJECTS = {
   ],
 };
 
+// ILLUSTRATIVE / hand-curated. These are plausible municipal-ward pressure points
+// used to seed the ward-brief "Tension Index" row, not real public-sentiment
+// telemetry. Rendered with an explicit ILLUSTRATIVE badge in renderWardBrief()
+// so the operator never mistakes the value for a measured signal. Replace with
+// a real feed (e.g. 311 calls + Google Trends locality) when one is wired in.
+export const WARD_TENSION_ILLUSTRATIVE = true;
+
 export const WARD_TENSION = {
   A: { score: 42, topIssue: "Streetlight outages", trend: "stable", tone: "neutral" },
   B: { score: 65, topIssue: "Drainage blockage", trend: "rising", tone: "watch" },

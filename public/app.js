@@ -17,7 +17,7 @@ const {
   WEATHER_FALLBACK, AIR_FALLBACK, CITY_DEMOGRAPHICS, TRANSLATIONS,
   round, aqiBand, weatherCodeLabel, kmBetween, classifyAircraft,
   sourceRecord, buildMapLayers, URBAN_LAYERS, ECONOMY_FALLBACK, RIVER_BYPASS_PROJECT, MPP_WARD_PROJECTS,
-  WARD_TENSION, CCTV_FEEDS
+  WARD_TENSION, WARD_TENSION_ILLUSTRATIVE, CCTV_FEEDS
 } = await import(__dataUrl__);
 
 const BOOT = window.__IOC_BOOT__ || {};
@@ -3342,10 +3342,13 @@ function renderWardBrief(wardCode, payload) {
     return pointInRing(c, feat.geometry);
   });
 
-  // Tension Index
+  // Tension Index — illustrative until a real sentiment / 311 feed is wired in.
   const tension = WARD_TENSION[wardCode] || { score: 0, topIssue: "No data", trend: "stable", tone: "muted" };
   const tensionGlyph = tension.trend === "rising" ? "▲" : tension.trend === "falling" ? "▼" : "—";
-  const tensionLine = `<span class="glyph" data-tone="${tension.tone}">${tensionGlyph}</span> <strong style="color: var(--${tension.tone === 'alert' ? 'red' : tension.tone === 'watch' ? 'amber' : 'cyan'})">${tension.score}/100</strong> · ${escapeHtml(tension.topIssue)}`;
+  const tensionSourceBadge = WARD_TENSION_ILLUSTRATIVE
+    ? `<span class="ward-brief-badge ward-brief-badge-illust" title="Hand-curated demo value, not a measured signal — see data.js WARD_TENSION_ILLUSTRATIVE">ILLUSTRATIVE</span>`
+    : "";
+  const tensionLine = `<span class="glyph" data-tone="${tension.tone}">${tensionGlyph}</span> <strong style="color: var(--${tension.tone === 'alert' ? 'red' : tension.tone === 'watch' ? 'amber' : 'cyan'})">${tension.score}/100</strong> · ${escapeHtml(tension.topIssue)}${tensionSourceBadge}`;
 
   el.hidden = false;
   el.dataset.active = "true";

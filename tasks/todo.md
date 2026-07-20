@@ -137,3 +137,12 @@ git add public/data/alphaearth/ public/api/ && git commit -m "data: AlphaEarth 2
 - [x] Cloudflare Pages sole production host (kuching.nonarkara.org)
 - [x] Remove fly.toml / Dockerfile / .dockerignore
 - [x] Point site-build defaults at kuching.nonarkara.org
+
+## ✅ COMPLETED — Ward-tension honesty (2026-07-21)
+- [x] WARD_TENSION marked ILLUSTRATIVE in data.js with explicit badge
+  in renderWardBrief so operator never mistakes hand-curated value for
+  measured signal
+- [x] Removed hard-coded "Public Tension Critical: Ward I (Batu Kawa)
+  · 92/100" item from buildOperations — the "92/100" came from the
+  fake WARD_TENSION map; the operation claimed "public sentiment
+  telemetry" that does not exist. Deletion > soft-label.

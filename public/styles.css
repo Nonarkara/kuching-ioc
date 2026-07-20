@@ -2410,6 +2410,22 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
   text-decoration: none;
 }
 .ward-brief-row .ward-brief-phone:hover { text-decoration: underline; }
+.ward-brief-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 4px;
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1px solid var(--line);
+  color: var(--soft);
+  background: rgba(255, 170, 0, 0.06);
+}
+.ward-brief-badge-illust {
+  border-color: rgba(255, 170, 0, 0.55);
+  color: var(--amber);
+}
 .ward-brief-section {
   margin-top: 4px;
   padding-top: 4px;

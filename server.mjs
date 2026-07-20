@@ -3111,15 +3111,6 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
 
   const items = [];
 
-  // Ward Command Directive - Correlated from Ground Truth / Tension Matrix
-  items.push({
-    severity: "high",
-    owner: "Ward Command",
-    title: "Public Tension Critical: Ward I (Batu Kawa)",
-    detail: "Public sentiment telemetry shows a critical spike (92/100) regarding 'Peatland fire risk / Water ponding' in Batu Kawa.",
-    humanContext: "Secretary Directive: Dispatch vacuum trucks and engineering team to verify drainage blockage at Taman Desa Wira immediately. Contact Councillor to pre-empt public complaints.",
-  });
-
   // Hydrology directive — escalates from ground-truth river levels.
   if (infobanjir?.highestBand && !["normal", "reference"].includes(infobanjir.highestBand)) {
     const triggered = infobanjir.stations.filter((s) => ["alert", "warning", "danger"].includes(s.band));

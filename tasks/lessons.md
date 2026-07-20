@@ -104,6 +104,12 @@ Per §13: the same mistake never happens twice.
 - **Correct behaviour:** A work order is claims to VERIFY (§13.4), not findings to relay. Run the proving command (`gh run list`, `fly status`, `gh secret list`) first. Act on what's real, drop what isn't, never present a chore-menu. A genuinely-blocked item (CI needs a CF API token OAuth can't mint) is stated once as a standing fact, not re-asked every turn.
 - **How to recognise:** You're about to write "needs you:" with >1 item, or repeating a subagent/work-order assertion without having run the command that proves it.
 
+## 2026-07-21 · Never render hand-curated demo constants as if they were measured signals
+
+- **What went wrong:** The `WARD_TENSION` map in `public/data.js` is hand-curated demo data (plausible municipal-ward pressure points), but the per-ward brief in `public/app.js` rendered it as a measured "Tension Index" with score+trend+glyph, no source attribution. Worse, `server.mjs → buildOperations()` had a hard-coded high-severity item `Public Tension Critical: Ward I (Batu Kawa)` with detail `"Public sentiment telemetry shows a critical spike (92/100)"` — the entire sentence fabricated a "telemetry" source that does not exist. Both violate the dashboard's own rule (CLAUDE.md): *"Every number must be sourced — no made-up statistics."*
+- **Correct behaviour:** Any constant that is *not* backed by a live source must carry a provenance flag (e.g. `WARD_TENSION_ILLUSTRATIVE = true`) and the renderer must show an explicit "ILLUSTRATIVE" badge inline next to the value with a tooltip pointing back to the data file. Operations built from a non-existent feed (hard-coded `items.push` blocks that say "telemetry shows..." when no telemetry exists) must be deleted, not soft-labelled — a fake "act now" directive is worse than no directive.
+- **How to recognise:** A `WARD_TENSION`, `CCTV_FEEDS`, or any constant in `data.js` that uses real-looking labels ("score", "band", "alert", "watch") without an `__source` / `*_ILLUSTRATIVE` flag. Any `items.push` in `buildOperations()` whose `detail` field claims a source the server does not actually call. `grep -n "telemetry shows\|public sentiment" server.mjs` is the canary — if it returns hits, the content rule is being violated.
+
 ## 2026-06-14 · uv venvs have no pip binary — use `uv pip install --python path/to/python`
 
 - **What went wrong:** `uv venv` creates venvs without a `pip` script. Running `<venv>/bin/pip install pyproj` fails with "no such file".

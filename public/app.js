@@ -22,10 +22,50 @@ const {
 
 const BOOT = window.__IOC_BOOT__ || {};
 
-// View mode — "secretary" (trimmed for non-tech municipal user) or "full" (everything).
-// Set via data-view attribute on <html>. Toggle in HTML; nothing deleted from JS or DOM.
-const VIEW_MODE = document.documentElement.dataset.view || "secretary";
-const isSecretary = VIEW_MODE === "secretary";
+// Geographic scope — "padawan" (default, MPP-only hydro + news) or
+// "greater_kuching" (all 3 councils, all iHYDRO stations, full news).
+// Mutable at runtime; persisted in localStorage. The masthead scope-toggle
+// calls setScope() and the html data-view attribute is set in lockstep for
+// the existing CSS rules (padawan → "secretary" trimmed layout,
+// greater_kuching → "full" everything).
+const SCOPE_STORAGE_KEY = "kch_ioc_scope_v1";
+const VALID_SCOPES = ["padawan", "greater_kuching"];
+const SCOPES = {
+  padawan: {
+    id: "padawan",
+    mapCenter: [1.46, 110.31],
+    mapZoom: 12,
+    label: { en: "PADAWAN FOCUS", ms: "FOKUS PADAWAN", zh: "百大万焦点" },
+    pill: { en: "PADAWAN FOCUS", ms: "FOKUS PADAWAN", zh: "百大万焦点" },
+  },
+  greater_kuching: {
+    id: "greater_kuching",
+    mapCenter: [1.53, 110.35],
+    mapZoom: 11,
+    label: { en: "GREATER KUCHING", ms: "GREATER KUCHING", zh: "古晋大都会" },
+    pill: { en: "GREATER KUCHING", ms: "GREATER KUCHING", zh: "古晋大都会" },
+  },
+};
+function readStoredScope() {
+  try {
+    const raw = localStorage.getItem(SCOPE_STORAGE_KEY);
+    if (raw && VALID_SCOPES.includes(raw)) return raw;
+  } catch (_) { /* localStorage disabled */ }
+  // Backwards compat: an explicit data-view="full" on <html> implies the
+  // user previously opted into the broader view, otherwise default to padawan.
+  const fromHtml = document.documentElement.dataset.view;
+  if (fromHtml === "full") return "greater_kuching";
+  if (fromHtml === "secretary") return "padawan";
+  return "padawan";
+}
+function writeStoredScope(scope) {
+  try { localStorage.setItem(SCOPE_STORAGE_KEY, scope); } catch (_) { /* quota / disabled */ }
+}
+// Runtime check — replaces the old module-load `isSecretary` const. All
+// renderers that previously read `isSecretary` now read this so that the
+// `g` keyboard shortcut and the masthead toggle can switch scope without
+// a full page reload.
+function isPadawanScope() { return state.scope === "padawan"; }
 
 const SOURCE_STATUS_LABEL = {
   live: "live",
@@ -43,9 +83,16 @@ const state = {
   tileLayers: new Map(), activeLayerId: "dark", payload: null, hasInitialMapFit: false,
   theme: "dark", lang: "en", mapResizeObserver: null,
   activeWard: null,
+  scope: readStoredScope(),
   localityFilter: { ward: null, stateCode: null, parliamentCode: null, propertyType: null, search: "" },
   wardFeatures: null, wardLayerGroup: null, wardHighlightLayer: null,
 };
+
+// Lock the html data-view attribute to whatever scope was hydrated, so the
+// existing `[data-view="secretary"]` CSS rules gate the trimmed panel set
+// the same way as before. Setting this once at module load is enough —
+// setScope() will update it again when the user toggles.
+document.documentElement.dataset.view = state.scope === "padawan" ? "secretary" : "full";
 
 // --- DOM ---
 const $ = id => document.getElementById(id);
@@ -1114,8 +1161,9 @@ function renderMap(payload) {
   state.labelLayerGroup.clearLayers();
   state.markerLayerGroup.clearLayers();
 
-  // In secretary mode show only Padawan (MPP) boundary; full mode shows all 3 councils.
-  const visibleJurisdictions = isSecretary
+  // Scope filter: Padawan shows only MPP boundary + its hydro stations;
+  // Greater Kuching shows all 3 councils + all iHYDRO stations.
+  const visibleJurisdictions = isPadawanScope()
     ? payload.jurisdictions.items.filter(j => j.id === "mpp")
     : payload.jurisdictions.items;
 
@@ -1159,7 +1207,13 @@ function renderMap(payload) {
   }
   state.catchmentHighlightLayers = [];
 
-  const hydroStations = payload.mapScene?.hydroStations || payload.infobanjir?.stations || [];
+  // Scope filter: Padawan = MPP-side stations only; Greater Kuching = all
+  // (the same station objects carry a `focus` flag — `padawan` or `metro` —
+  // set in buildMapScene() / loadInfobanjir().)
+  const allHydroStations = payload.mapScene?.hydroStations || payload.infobanjir?.stations || [];
+  const hydroStations = isPadawanScope()
+    ? allHydroStations.filter(s => s.focus === "padawan" || s.council === "MPP")
+    : allHydroStations;
   state.pulseMarkerEls = new Map();
   hydroStations.forEach(s => {
     if (s.lat == null || s.lon == null) return;
@@ -1308,7 +1362,10 @@ function renderMap(payload) {
   }
 
   if (!state.hasInitialMapFit) {
-    state.map.setView(SITE.mapCenter, SITE.mapZoom);
+    // First fit honours the active scope's default extent (Padawan = tighter
+    // zoom on MPP; Greater Kuching = wider 3-council bbox).
+    const cfg = SCOPES[state.scope] || SCOPES.padawan;
+    state.map.setView(cfg.mapCenter, cfg.mapZoom);
     state.hasInitialMapFit = true;
   }
 
@@ -1373,18 +1430,10 @@ function renderGisLegend(activeLayerIds) {
   el.innerHTML = html;
 }
 
-function renderFocusToggle() {
-  const el = $("focusToggle");
-  const modes = [{id:"all",label:t("allSectors")},{id:"pdw",label:t("padawan")}];
-  el.innerHTML = modes.map(m=>`<button data-id="${m.id}" class="${m.id==='all'?'active':''}">${m.label}</button>`).join("");
-  el.querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>{
-    if(btn.dataset.id==="pdw") state.map.setView([1.45,110.3],13);
-    else state.map.setView(SITE.mapCenter,SITE.mapZoom);
-    el.querySelectorAll("button").forEach(b=>b.classList.remove("active"));
-    btn.classList.add("active");
-    queueMapResize();
-  }));
-}
+// renderFocusToggle was retired in the scope-toggle refactor — the masthead
+// .scope-btn segmented control now drives geographic scope and the map
+// re-fits reactively via setScope() (see above).
+function renderFocusToggle() { /* no-op: replaced by renderScopeToggle() */ }
 
 function renderUrbanLayerToggle() {
   const el = $("watchpointList");
@@ -3195,7 +3244,7 @@ function renderLocalityList(items) {
       </article>`;
   };
 
-  if (isSecretary) {
+  if (isPadawanScope()) {
     // Group by ward — Secretary Goh's ask: "put the MPP Ward info together".
     const grouped = new Map();
     for (const it of visible) {
@@ -3249,7 +3298,7 @@ function renderMppLocalities(payload) {
     // Keep explicit filter even without activeWard (e.g. user picked dropdown).
   }
   renderLocalityKpis(data.totals || {});
-  if (isSecretary) renderLocalitySummary(payload);
+  if (isPadawanScope()) renderLocalitySummary(payload);
   renderLocalityFilters(payload);
   const filtered = filterLocalities(data.items || [], state.localityFilter);
   renderLocalityList(filtered);
@@ -3544,9 +3593,9 @@ function renderDashboard(payload) {
   // Directives — with human context, click-cyclable status, age-decayed borders.
   renderDirectives(payload.operations || []);
 
-  // Ticker — secretary mode prefers official-tier headlines (UKAS / TVS / MPP / MBKS / DBKU) first
+  // Ticker — Padawan scope prefers official-tier headlines (UKAS / TVS / MPP / MBKS / DBKU) first
   const allNews = payload.news.items || [];
-  const news = isSecretary
+  const news = isPadawanScope()
     ? [...allNews.filter(i => i.isOfficial), ...allNews.filter(i => !i.isOfficial)].slice(0, 8)
     : allNews.slice(0, 8);
   $("newsRail").innerHTML = [...news,...news].map(n=>`<span class="ticker-item"><span class="ticker-source">${n.languageBadge || (n.isOfficial ? "OFF" : n.source)}</span> ${n.title}</span>`).join("");
@@ -3630,8 +3679,8 @@ function renderDashboard(payload) {
       <div class="meta">> ${t.trafficLabel} // ${t.locality?.label || "Context"}</div></div>`).join("")
     : `<div class="trend-empty"><strong>Local trend watch is quiet</strong><div class="meta">${payload.trends.summary}</div></div>`;
 
-  // Jurisdictions — secretary mode shows only Padawan
-  const visibleJurs = isSecretary
+  // Jurisdictions — Padawan scope shows only MPP; Greater Kuching shows all 3
+  const visibleJurs = isPadawanScope()
     ? payload.jurisdictions.items.filter(j => j.id === "mpp")
     : payload.jurisdictions.items;
   $("jurisdictionCards").innerHTML = visibleJurs.map(j=>`
@@ -3645,15 +3694,15 @@ function renderDashboard(payload) {
   // Intel panel: economy + news digest + trends + bypass tracker
   renderIntelPanel(payload);
   renderFloodForecast(payload.floodForecast);
-  if (!isSecretary) renderBypassTracker();
-  if (!isSecretary) renderQualitativeLens(payload);
+  if (!isPadawanScope()) renderBypassTracker();
+  if (!isPadawanScope()) renderQualitativeLens(payload);
 
   // Pass 3 additions
   renderEventsStack(payload);
   renderTelemetryStrip(payload);
 
-  // Sources — hidden in secretary mode (panel CSS-gated; renderer skipped to save work)
-  if (!isSecretary) {
+  // Sources — hidden in Padawan scope (panel CSS-gated; renderer skipped to save work)
+  if (!isPadawanScope()) {
     renderSourceMatrix(payload);
     $("sourceList").innerHTML = payload.sources.map(s=>`
       <div class="source-item">
@@ -3695,6 +3744,11 @@ function setLang(lang) {
   document.querySelectorAll("[data-i18n]").forEach(el => {
     el.textContent = t(el.dataset.i18n);
   });
+  // Scope pill text follows the active language.
+  const pill = $("scopePill");
+  if (pill && state.scope) {
+    pill.textContent = SCOPES[state.scope].pill[state.lang] || SCOPES[state.scope].pill.en;
+  }
   // Re-render focus toggle labels
   if (state.map) renderFocusToggle();
   if (state.payload) {
@@ -3754,19 +3808,67 @@ function cycleWard(direction) {
   setActiveWard(order[next]);
 }
 
-function toggleViewMode() {
-  const html = document.documentElement;
-  const next = html.dataset.view === "secretary" ? "full" : "secretary";
-  html.dataset.view = next;
-  showToast(`▰ VIEW: ${next.toUpperCase()}`, "ok");
-  // Re-render so renderers that branch on isSecretary update their output.
-  if (state.payload) {
-    // Hot-swap the constant so subsequent renders see the change.
-    // (isSecretary is computed once at module load — this re-renders DOM
-    // for the panels it controls but the JS flag stays. A full reload
-    // gives the cleanest result.)
-    setTimeout(() => location.reload(), 600);
+// --- Scope toggle (Geographic scope: Padawan vs Greater Kuching) ---
+// Drives the masthead scope-toggle button + the `s` keyboard shortcut. Reactive:
+// no full reload — just rewires the scope state, re-fits the map, and re-runs
+// renderDashboard() so the filtered data flows through the same renderers.
+function setScope(scope, { silent = false } = {}) {
+  if (!VALID_SCOPES.includes(scope)) return;
+  if (state.scope === scope) return;
+  state.scope = scope;
+  writeStoredScope(scope);
+  // Keep the html data-view attribute in lockstep so the existing
+  // `[data-view="secretary"]` CSS rules gate the trimmed panel set.
+  document.documentElement.dataset.view = scope === "padawan" ? "secretary" : "full";
+
+  // Masthead scope pill text + active button state.
+  const pill = $("scopePill");
+  if (pill) {
+    pill.dataset.scope = scope;
+    pill.textContent = SCOPES[scope].pill[state.lang] || SCOPES[scope].pill.en;
   }
+  document.querySelectorAll(".scope-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.scope === scope);
+  });
+
+  // Re-fit the map to the new scope's default extent.
+  if (state.map) {
+    const cfg = SCOPES[scope];
+    state.map.setView(cfg.mapCenter, cfg.mapZoom, { animate: true });
+    state.hasInitialMapFit = true;
+  }
+
+  // Re-render the dashboard panels that branch on scope. No reload needed.
+  if (state.payload) {
+    renderDashboard(state.payload);
+  }
+
+  if (!silent) {
+    const label = SCOPES[scope].label[state.lang] || SCOPES[scope].label.en;
+    showToast(`▰ SCOPE: ${label}`, "ok");
+  }
+}
+
+function toggleViewMode() {
+  // Backwards-compat alias for the old `g` keyboard shortcut. Cycles scope
+  // (no full reload — reuses the same reactive pipeline as the button).
+  setScope(state.scope === "padawan" ? "greater_kuching" : "padawan");
+}
+
+// Wire the masthead scope toggle + the inline pill to setScope().
+function renderScopeToggle() {
+  document.querySelectorAll(".scope-btn").forEach(btn => {
+    btn.addEventListener("click", () => setScope(btn.dataset.scope));
+  });
+  // Initialise the pill text + active button to match the hydrated scope.
+  const pill = $("scopePill");
+  if (pill) {
+    pill.dataset.scope = state.scope;
+    pill.textContent = SCOPES[state.scope].pill[state.lang] || SCOPES[state.scope].pill.en;
+  }
+  document.querySelectorAll(".scope-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.scope === state.scope);
+  });
 }
 
 function setupKeyboardShortcuts() {
@@ -3873,6 +3975,7 @@ setupConnectors();
 setupKeyboardShortcuts();
 $("themeToggle")?.addEventListener("click", toggleTheme);
 document.querySelectorAll(".lang-btn").forEach(btn => btn.addEventListener("click", () => setLang(btn.dataset.lang)));
+renderScopeToggle();
 
 boot();
 setInterval(boot, 60000);

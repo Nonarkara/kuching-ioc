@@ -82,17 +82,76 @@ body::before {
   color: var(--cyan); text-shadow: var(--glow);
   line-height: 1.1;
 }
-.eyebrow { font-size: 9px; letter-spacing: 0.2em; color: var(--cyan); opacity: 0.8; margin-bottom: 2px; }
+.eyebrow { font-size: 9px; letter-spacing: 0.2em; color: var(--cyan); opacity: 0.8; margin-bottom: 2px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.eyebrow > span:first-child { flex: 0 1 auto; }
 .summary-lead { font-size: 9px; color: var(--soft); margin-top: 2px; line-height: 1.4; }
 
 .status-block { display: flex; align-items: center; gap: 4px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
-.controls-row { display: flex; gap: 4px; }
+.controls-row { display: flex; gap: 4px; align-items: center; }
 .ctrl-btn, .lang-btn {
   background: transparent; border: 1px solid var(--line); color: var(--soft);
   font-family: var(--font-mono); font-size: 8px; padding: 2px 8px;
   cursor: pointer; letter-spacing: 0.1em; transition: all 0.2s;
 }
 .ctrl-btn:hover, .lang-btn:hover, .lang-btn.active { border-color: var(--cyan); color: var(--cyan); background: var(--card-bg); }
+
+/* Scope pill in the masthead eyebrow — visible at all times so the user
+   always knows whether the data they see is MPP-only or 3-council. */
+.scope-pill {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  background: transparent;
+  transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+  white-space: nowrap;
+}
+.scope-pill[data-scope="padawan"] {
+  color: #b48a00;
+  background: rgba(180, 138, 0, 0.10);
+}
+.scope-pill[data-scope="greater_kuching"] {
+  color: #00f3ff;
+  background: rgba(0, 243, 255, 0.10);
+}
+
+/* Scope toggle — segmented control alongside theme + language buttons.
+   Two buttons that visually lock together. Active button picks up the
+   accent colour that matches the scope pill above. */
+.scope-toggle {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  height: 18px;
+}
+.scope-btn {
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--line);
+  color: var(--soft);
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  padding: 0 8px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+  white-space: nowrap;
+}
+.scope-btn:last-child { border-right: 0; }
+.scope-btn:hover { color: var(--cyan); }
+.scope-btn.active[data-scope="padawan"] {
+  color: #b48a00;
+  background: rgba(180, 138, 0, 0.18);
+  text-shadow: 0 0 4px rgba(180, 138, 0, 0.55);
+}
+.scope-btn.active[data-scope="greater_kuching"] {
+  color: #00f3ff;
+  background: rgba(0, 243, 255, 0.18);
+  text-shadow: 0 0 4px rgba(0, 243, 255, 0.55);
+}
 .micro-badge { font-size: 9px; color: var(--cyan); padding: 2px 8px; border: 1px solid var(--line); }
 .runtime-meta {
   min-width: 260px;
@@ -373,6 +432,62 @@ body::before {
 .map-controls { display: flex; gap: 6px; }
 .map-frame { position: relative; flex: 1; min-height: 0; background: #000; overflow: hidden; }
 .map-canvas { width: 100%; height: 100%; }
+
+/* === 3D digital-twin (CesiumJS) container ===
+   Overlay positioned on top of the Leaflet canvas; only visible when
+   <.map-frame data-dim="3d">. Cesium's own widget chrome is hidden
+   (baseLayerPicker, geocoder, home, etc.) so the HUD aesthetic carries
+   through. The scan-grid + vignette + reticle atmospherics remain
+   visible on top of the 3D scene. */
+.map-3d {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+.map-frame[data-dim="2d"] .map-3d { display: none !important; }
+.map-frame[data-dim="3d"] .map-canvas { display: none !important; }
+.map-frame[data-dim="3d"] .radar-scan { display: none; }
+.map-frame[data-dim="3d"] .map-scan-grid { opacity: 0.18; }
+.map-frame[data-dim="3d"] .map-vignette { opacity: 0.6; }
+.map-frame[data-dim="3d"] .map-compass { display: none; }
+/* Cesium's own credit container is hidden via JS, but be defensive in case
+   Cesium mounts it after our CSS load. */
+.map-3d .cesium-viewer-bottom { display: none !important; }
+.map-3d .cesium-widget-credits { display: none !important; }
+
+/* === Dimension toggle (2D / 3D) === mirrors the scope toggle. Active
+   state picks the cyan accent so it reads as a system switch, not a
+   primary action. */
+.dim-toggle {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  height: 18px;
+}
+.dim-btn {
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--line);
+  color: var(--soft);
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  padding: 0 8px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+  white-space: nowrap;
+}
+.dim-btn:last-child { border-right: 0; }
+.dim-btn:hover { color: var(--cyan); }
+.dim-btn.active {
+  color: #00f3ff;
+  background: rgba(0, 243, 255, 0.18);
+  text-shadow: 0 0 4px rgba(0, 243, 255, 0.55);
+}
 
 /* === Cinematic map atmospherics ===
    Layered on top of the Leaflet pane via pointer-events: none so they never

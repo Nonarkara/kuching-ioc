@@ -20,12 +20,23 @@
     <div class="dashboard-shell">
       <header class="masthead">
         <div class="title-block">
-          <div class="eyebrow">OFFICE OF SECRETARY DANIEL GOH // MPP</div>
+          <div class="eyebrow">
+            <span>OFFICE OF SECRETARY DANIEL GOH // MPP</span>
+            <span id="scopePill" class="scope-pill" data-scope="padawan">PADAWAN FOCUS</span>
+          </div>
           <h1 id="titleText" title="Padawan · 984 km² · 800,000 lives · 11 wards · 525 localities · the growth ring of Greater Kuching. This board is how the council stays ahead of the weather, the river, and the rooftops.">Greater Kuching Intelligent Operation Center</h1>
           <p id="subtitleText" class="summary-lead">In collaboration with depa, PMUA, Axiom, ReTL, Thailand Smart City Office & ASCN</p>
         </div>
         <div class="status-block">
           <div class="controls-row">
+            <div class="scope-toggle segmented-control" role="group" aria-label="Geographic scope">
+              <button class="scope-btn active" data-scope="padawan" title="Focus on MPP jurisdiction (984 km²) — Padawan-only hydro, news, and wards.">PADAWAN</button>
+              <button class="scope-btn" data-scope="greater_kuching" title="Expand to all 3 councils (MPP, MBKS, DBKU) — Greater Kuching hydro, news, and stations.">GREATER KUCHING</button>
+            </div>
+            <div class="dim-toggle segmented-control" role="group" aria-label="Map dimension">
+              <button class="dim-btn active" data-dim="2d" title="2D Leaflet view.">2D</button>
+              <button class="dim-btn" data-dim="3d" title="3D digital-twin view — CesiumJS, real jurisdiction extrusions, hydro cylinders, Sarawak River, land-use extrusions.">3D</button>
+            </div>
             <button id="themeToggle" class="ctrl-btn">LIGHT</button>
             <button class="lang-btn active" data-lang="en">EN</button>
             <button class="lang-btn" data-lang="ms">BM</button>
@@ -90,11 +101,11 @@
             </div>
             <div class="map-controls">
               <div id="layerToggle" class="segmented-control"></div>
-              <div id="focusToggle" class="segmented-control"></div>
             </div>
           </div>
-          <div class="map-frame">
+          <div class="map-frame" data-dim="2d">
             <div id="mapCanvas" class="map-canvas"></div>
+            <div id="map3d" class="map-3d"></div>
             <div class="map-vignette" aria-hidden="true"></div>
             <div class="map-scan-grid" aria-hidden="true"></div>
             <div class="map-reticle" aria-hidden="true">

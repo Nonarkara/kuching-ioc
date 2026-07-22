@@ -1,8 +1,8 @@
 {
-  "builtAt": "2026-07-20T18:34:21.424048Z",
-  "buildDurationMs": 68766,
-  "dashboardSizeKb": 303.9,
-  "assetVersion": "af680831ae7c-154001",
+  "builtAt": "2026-07-22T05:35:15.348Z",
+  "buildDurationMs": 72282,
+  "dashboardSizeKb": 302,
+  "assetVersion": "eaf623bfd74e-053403",
   "deploymentMode": "pages-static",
   "boardLabel": "SNAPSHOT BOARD",
   "pagesUrl": "https://kuching.nonarkara.org/",
@@ -16,7 +16,7 @@
     {
       "id": "transit",
       "status": "fulfilled",
-      "features": 2269
+      "features": 2284
     },
     {
       "id": "land_use",
@@ -26,7 +26,7 @@
     {
       "id": "flood_risk",
       "status": "fulfilled",
-      "features": 6
+      "features": 35
     },
     {
       "id": "flood_zones",
@@ -38,6 +38,5 @@
       "status": "fulfilled",
       "features": 10
     }
-  ],
-  "notes": "Cloudflare Pages only \u2014 Fly.io retired"
+  ]
 }

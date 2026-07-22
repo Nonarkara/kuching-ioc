@@ -67,6 +67,22 @@ function writeStoredScope(scope) {
 // a full page reload.
 function isPadawanScope() { return state.scope === "padawan"; }
 
+// Map dimension — "2d" (Leaflet, default) or "3d" (CesiumJS digital twin).
+// Persisted in localStorage. CesiumJS is lazy-loaded only on the first 3D
+// toggle to keep the 2D default payload lean.
+const DIM_STORAGE_KEY = "kch_ioc_dimension_v1";
+const VALID_DIMS = ["2d", "3d"];
+function readStoredDim() {
+  try {
+    const raw = localStorage.getItem(DIM_STORAGE_KEY);
+    if (raw && VALID_DIMS.includes(raw)) return raw;
+  } catch (_) { /* localStorage disabled */ }
+  return "2d";
+}
+function writeStoredDim(dim) {
+  try { localStorage.setItem(DIM_STORAGE_KEY, dim); } catch (_) { /* quota */ }
+}
+
 const SOURCE_STATUS_LABEL = {
   live: "live",
   official: "official",
@@ -84,6 +100,9 @@ const state = {
   theme: "dark", lang: "en", mapResizeObserver: null,
   activeWard: null,
   scope: readStoredScope(),
+  dimension: readStoredDim(),
+  cesiumViewer: null,
+  cesiumInitialised: false,
   localityFilter: { ward: null, stateCode: null, parliamentCode: null, propertyType: null, search: "" },
   wardFeatures: null, wardLayerGroup: null, wardHighlightLayer: null,
 };
@@ -3838,6 +3857,17 @@ function setScope(scope, { silent = false } = {}) {
     state.hasInitialMapFit = true;
   }
 
+  // In 3D mode, also fly the Cesium camera + re-render 3D entities
+  // (since the scope filter changes which hydro + jurisdictions show).
+  if (state.dimension === "3d" && state.cesiumInitialised) {
+    if (state.cesiumViewer) {
+      flyCesiumToScope(scope);
+    }
+    if (state.payload) {
+      renderCesiumEntities(state.payload);
+    }
+  }
+
   // Re-render the dashboard panels that branch on scope. No reload needed.
   if (state.payload) {
     renderDashboard(state.payload);
@@ -3868,6 +3898,329 @@ function renderScopeToggle() {
   }
   document.querySelectorAll(".scope-btn").forEach(b => {
     b.classList.toggle("active", b.dataset.scope === state.scope);
+  });
+}
+
+// --- 2D / 3D dimension toggle ---
+// 2D = the existing Leaflet map (default). 3D = CesiumJS digital twin with
+// real jurisdiction extrusions, hydro cylinders, Sarawak River polyline,
+// and land-use extrusions. Cesium is lazy-loaded from a CDN only when the
+// user actually flips to 3D, so the 2D default payload stays lean. No
+// Ion token needed — ArcGIS imagery is the base layer.
+let cesiumLoaderPromise = null;
+// Cesium reads window.CESIUM_BASE_URL at load time to find its Workers,
+// Assets, and Widgets/textures. Must be set BEFORE the script tag is
+// inserted — by the time Cesium.js executes it has already tried to
+// fetch its worker scripts. Setting it inside initCesium() is too late.
+const CESIUM_VERSION = "1.121.0";
+const CESIUM_BASE_URL_CDN = `https://cdn.jsdelivr.net/npm/cesium@${CESIUM_VERSION}/Build/Cesium/`;
+window.CESIUM_BASE_URL = CESIUM_BASE_URL_CDN;
+function loadCesium() {
+  if (window.Cesium) return Promise.resolve();
+  if (cesiumLoaderPromise) return cesiumLoaderPromise;
+  cesiumLoaderPromise = new Promise((resolve, reject) => {
+    const css = document.createElement("link");
+    css.rel = "stylesheet";
+    css.href = `${CESIUM_BASE_URL_CDN}Widgets/widgets.css`;
+    document.head.appendChild(css);
+    const script = document.createElement("script");
+    script.src = `${CESIUM_BASE_URL_CDN}Cesium.js`;
+    script.onload = () => resolve(window.Cesium);
+    script.onerror = (e) => reject(new Error("Cesium CDN failed: " + (e?.message || e)));
+    document.head.appendChild(script);
+  });
+  return cesiumLoaderPromise;
+}
+
+async function setDimension(dim, { silent = false } = {}) {
+  if (!VALID_DIMS.includes(dim)) return;
+  if (state.dimension === dim) return;
+  state.dimension = dim;
+  writeStoredDim(dim);
+
+  // Active button + map-frame dim attribute (CSS gates the swap).
+  const mapFrame = document.querySelector(".map-frame");
+  if (mapFrame) mapFrame.dataset.dim = dim;
+  document.querySelectorAll(".dim-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.dim === dim);
+  });
+
+  if (dim === "3d") {
+    // Lazy-load Cesium on the first 3D toggle; subsequent toggles reuse
+    // the in-memory viewer.
+    if (!state.cesiumInitialised) {
+      try {
+        await loadCesium();
+        initCesium();
+        state.cesiumInitialised = true;
+      } catch (err) {
+        console.error("Cesium load failed:", err);
+        // Best-effort fallback: stay in 2D, surface the error.
+        state.dimension = "2d";
+        if (mapFrame) mapFrame.dataset.dim = "2d";
+        document.querySelectorAll(".dim-btn").forEach(b => {
+          b.classList.toggle("active", b.dataset.dim === "2d");
+        });
+        showToast("✕ 3D UNAVAILABLE", "alert");
+        return;
+      }
+    } else if (state.cesiumViewer) {
+      state.cesiumViewer.scene.requestRender();
+    }
+    // Repopulate 3D entities from the current payload (may have refreshed
+    // since the last 3D view) and fly the camera to the active scope.
+    if (state.payload) {
+      renderCesiumEntities(state.payload);
+      flyCesiumToScope(state.scope);
+    }
+    // The map3d div was display:none while Cesium constructed the viewer,
+    // so the underlying canvas is 0×0. Force a resize + render so the
+    // WebGL framebuffer matches the now-visible container.
+    if (state.cesiumViewer) {
+      state.cesiumViewer.resize();
+      state.cesiumViewer.scene.requestRender();
+    }
+  } else {
+    // Back to 2D — Leaflet needs an invalidateSize after the container
+    // is unhidden, otherwise tiles paint at the old (0×0) size.
+    if (state.map) {
+      setTimeout(() => state.map.invalidateSize(), 50);
+    }
+  }
+
+  if (!silent) {
+    showToast(`▰ DIMENSION: ${dim.toUpperCase()}`, "ok");
+  }
+}
+
+function renderDimensionToggle() {
+  document.querySelectorAll(".dim-btn").forEach(btn => {
+    btn.addEventListener("click", () => setDimension(btn.dataset.dim));
+  });
+  document.querySelectorAll(".dim-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.dim === state.dimension);
+  });
+}
+
+function initCesium() {
+  if (state.cesiumViewer) return;
+  const Cesium = window.Cesium;
+  // Defensive — CESIUM_BASE_URL is also set at module load (see above) but
+  // some bundler-rewriting patterns can drop window properties; set it
+  // again here before constructing the Viewer.
+  window.CESIUM_BASE_URL = CESIUM_BASE_URL_CDN;
+
+  // Use the default Cesium Ion access token (Cesium provides a public
+  // one with limited free usage; if a non-empty string is needed the user
+  // can replace this constant with their own). For an Ion-free setup the
+  // imagery is overridden by the ArcGIS provider below.
+  Cesium.Ion.defaultAccessToken = "";
+
+  const viewer = new Cesium.Viewer("map3d", {
+    // No terrain — keeps the 2D->3D diff to "data on a 3D ellipsoid".
+    // Adding a real terrain model is a follow-up (requires a token for
+    // the Cesium World Terrain Mesh or self-hosting terrarium).
+    terrainProvider: new Cesium.EllipsoidTerrainProvider(),
+    // Strip Cesium's own chrome — the dashboard already has its own HUD.
+    baseLayerPicker: false,
+    geocoder: false,
+    homeButton: false,
+    sceneModePicker: false,
+    navigationHelpButton: false,
+    animation: false,
+    timeline: false,
+    fullscreenButton: false,
+    infoBox: false,
+    selectionIndicator: false,
+    requestRenderMode: true,   // Only render on demand (perf for static data)
+    maximumRenderTimeChange: Infinity,
+  });
+  // Hide the credit container — the dashboard has its own source matrix.
+  viewer._cesiumWidget && viewer._cesiumWidget.creditContainer && (viewer._cesiumWidget.creditContainer.style.display = "none");
+
+  // Tune the scene: enable depth + lighting so 3D extrusions read as solid
+  // volumes. Atmosphere + sun are kept on for a true outdoor scene.
+  viewer.scene.globe.enableLighting = false;
+  viewer.scene.skyAtmosphere.show = true;
+  viewer.scene.fog.enabled = true;
+  viewer.scene.fog.density = 0.0001;
+
+  // Wire ArcGIS World Imagery as the base layer. Cesium 1.121+ requires
+  // the async .fromUrl() factory; the constructor is deprecated. If this
+  // fails (network/CORS), the scene falls back to the dark-blue ocean
+  // and our 3D entities still render on top — the digital twin isn't
+  // image-dependent.
+  Cesium.ArcGisMapServerImageryProvider.fromUrl(
+    "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer",
+    { enablePickFeatures: false }
+  ).then((provider) => {
+    viewer.imageryLayers.removeAll();
+    viewer.imageryLayers.addImageryProvider(provider);
+    viewer.scene.requestRender();
+  }).catch((err) => {
+    console.warn("ArcGIS imagery failed; 3D scene will show entities on the default ellipsoid.", err);
+  });
+
+  // Default camera: a low oblique over Kuching. flyCesiumToScope() will
+  // refine this based on the active scope.
+  viewer.camera.setView({
+    destination: Cesium.Cartesian3.fromDegrees(110.35, 1.53, 18000),
+    orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-35), roll: 0 },
+  });
+
+  state.cesiumViewer = viewer;
+  // Expose the viewer (and the state object) for headless tests +
+  // browser dev-tools inspection. Harmless in production.
+  if (typeof window !== "undefined") {
+    window.__CESIUM_TEST_VIEWER = viewer;
+    window.__IOC_TEST_STATE = state;
+  }
+}
+
+function renderCesiumEntities(payload) {
+  const viewer = state.cesiumViewer;
+  if (!viewer || !window.Cesium) return;
+  const Cesium = window.Cesium;
+  // Wipe + rebuild — small dataset, cheap, and keeps the 3D scene honest
+  // with the current payload (scope filter, refresh, etc.).
+  viewer.entities.removeAll();
+
+  const isPadawan = isPadawanScope();
+  // 1) Jurisdiction polygons as low extruded volumes.
+  // Height proportional to area (km²) so the largest council reads as
+  // the tallest block on the map.
+  const juris = (payload.jurisdictions?.items || [])
+    .filter(j => isPadawan ? j.id === "mpp" : true);
+  juris.forEach(item => {
+    const flat = item.polygons.flat().map(([lon, lat]) => [lon, lat]);
+    if (flat.length < 3) return;
+    // Approx area in km² from the centroid polygon: shoelace over equirect.
+    const ring = item.polygons[0];
+    let area = 0;
+    for (let i = 0; i < ring.length; i++) {
+      const [x1, y1] = ring[i];
+      const [x2, y2] = ring[(i + 1) % ring.length];
+      area += (x1 * y2 - x2 * y1);
+    }
+    area = Math.abs(area) / 2 * 111.32 * 111.32; // very rough; good enough for a visual
+    const heightM = Math.max(400, Math.min(2000, area * 4));
+    viewer.entities.add({
+      name: `jurisdiction-${item.id}`,
+      polygon: {
+        hierarchy: Cesium.Cartesian3.fromDegreesArray(flat.flat()),
+        material: Cesium.Color.fromCssColorString(item.accent).withAlpha(0.45),
+        outline: true,
+        outlineColor: Cesium.Color.fromCssColorString(item.accent),
+        extrudedHeight: heightM,
+        height: 0,
+      },
+      description: `${item.code} — ${item.areaKm2} km²`,
+    });
+  });
+
+  // 2) Sarawak River as a fat 3D polyline.
+  if (payload.jurisdictions?.river) {
+    const flat = payload.jurisdictions.river.flat();
+    if (flat.length >= 2) {
+      viewer.entities.add({
+        name: "sarawak-river",
+        polyline: {
+          positions: Cesium.Cartesian3.fromDegreesArray(flat),
+          width: 4,
+          material: new Cesium.PolylineGlowMaterialProperty({
+            color: Cesium.Color.fromCssColorString("#1e90ff"),
+            glowPower: 0.25,
+          }),
+          clampToGround: true,
+        },
+      });
+    }
+  }
+
+  // 3) Hydro stations as cylinders. Height = band intensity (danger=2km,
+  // warning=1.5km, alert=1km, normal=0.5km, reference=0.2km). Colour from
+  // the same band palette used in 2D so the visual language carries.
+  const hydroBandColors = { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" };
+  const hydroBandHeight = { danger: 2000, warning: 1500, alert: 1000, normal: 500, reference: 200 };
+  const allHydro = payload.mapScene?.hydroStations || payload.infobanjir?.stations || [];
+  const hydroStations = isPadawan
+    ? allHydro.filter(s => s.focus === "padawan" || s.council === "MPP")
+    : allHydro;
+  hydroStations.forEach(s => {
+    if (s.lat == null || s.lon == null) return;
+    const color = hydroBandColors[s.band] || "#8aa2c8";
+    const height = hydroBandHeight[s.band] || 200;
+    viewer.entities.add({
+      name: `hydro-${s.id}`,
+      position: Cesium.Cartesian3.fromDegrees(s.lon, s.lat),
+      cylinder: {
+        length: height,
+        topRadius: 80,
+        bottomRadius: 80,
+        material: Cesium.Color.fromCssColorString(color).withAlpha(0.85),
+        outline: true,
+        outlineColor: Cesium.Color.fromCssColorString(color),
+      },
+      label: s.waterLevelM != null ? {
+        text: `${s.name}\n${s.waterLevelM} m · ${s.bandLabel}`,
+        font: "11px monospace",
+        fillColor: Cesium.Color.WHITE,
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        pixelOffset: new Cesium.Cartesian2(0, -16),
+        showBackground: true,
+        backgroundColor: Cesium.Color.fromCssColorString("#000").withAlpha(0.55),
+        scaleByDistance: new Cesium.NearFarScalar(1500, 1.0, 80000, 0.5),
+      } : undefined,
+      description: `${s.name} — ${s.basin || ""} · ${s.council || ""}\nLevel: ${s.waterLevelM != null ? s.waterLevelM + " m" : "reference"}\nPosture: ${s.bandLabel || "Reference"}`,
+    });
+  });
+
+  // 4) Land-use polygons as low-poly extrusions (3 m) — gives the city
+  // some visual mass without overwhelming the hydro cylinders. Only on
+  // the Greater Kuching view (844 features would be too dense on a
+  // Padawan close-up).
+  if (!isPadawan && payload.urbanLayers?.land_use) {
+    payload.urbanLayers.land_use.forEach(feature => {
+      const g = feature.geometry;
+      if (!g || g.type !== "Polygon") return;
+      const flat = g.coordinates[0].flat();
+      if (flat.length < 6) return;
+      const color = feature.properties?.color || "#8aa2c8";
+      viewer.entities.add({
+        name: `landuse-${feature.properties?.id || Math.random()}`,
+        polygon: {
+          hierarchy: Cesium.Cartesian3.fromDegreesArray(flat),
+          material: Cesium.Color.fromCssColorString(color).withAlpha(0.35),
+          extrudedHeight: 80,
+          height: 0,
+        },
+      });
+    });
+  }
+
+  // Force a render — requestRenderMode is on so the scene only repaints
+  // when something changes.
+  viewer.scene.requestRender();
+}
+
+function flyCesiumToScope(scopeId) {
+  const viewer = state.cesiumViewer;
+  if (!viewer || !window.Cesium) return;
+  const Cesium = window.Cesium;
+  const cfg = SCOPES[scopeId || state.scope] || SCOPES.padawan;
+  // Camera altitude scaled inversely with zoom: closer on Padawan, higher
+  // for the wider Greater Kuching view.
+  const altitudeM = cfg.mapZoom <= 11 ? 28000 : 16000;
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(cfg.mapCenter[1], cfg.mapCenter[0], altitudeM),
+    orientation: {
+      heading: Cesium.Math.toRadians(0),
+      pitch: Cesium.Math.toRadians(-35),
+      roll: 0,
+    },
+    duration: 1.5,
   });
 }
 
@@ -3958,6 +4311,12 @@ async function boot() {
   try {
     const payload = await loadDashboardPayload();
     renderDashboard(payload);
+    // In 3D mode, re-render the Cesium entities with the freshest
+    // payload so hydro cylinder levels / band colours track the
+    // 60-second refresh.
+    if (state.dimension === "3d" && state.cesiumInitialised) {
+      renderCesiumEntities(payload);
+    }
     // Pass 2: bring up ward + flood-zone polygon caches in parallel; if a #ward=X
     // hash is present, auto-open that ward's brief once data is available.
     await Promise.all([loadWardFeatures(), loadFloodZoneFeatures()]);
@@ -3976,6 +4335,39 @@ setupKeyboardShortcuts();
 $("themeToggle")?.addEventListener("click", toggleTheme);
 document.querySelectorAll(".lang-btn").forEach(btn => btn.addEventListener("click", () => setLang(btn.dataset.lang)));
 renderScopeToggle();
+renderDimensionToggle();
+
+// If the user previously opted into 3D on a prior visit, flip the
+// map-frame data-dim now so the CSS already hides the Leaflet canvas
+// (and we don't pay a flash on first paint). Cesium is still lazy —
+// the actual viewer is built on the first user-initiated 3D toggle OR
+// here if the user reloads in 3D mode.
+if (state.dimension === "3d") {
+  const mapFrame = document.querySelector(".map-frame");
+  if (mapFrame) mapFrame.dataset.dim = "3d";
+  loadCesium()
+    .then(() => {
+      initCesium();
+      state.cesiumInitialised = true;
+      if (state.payload) {
+        renderCesiumEntities(state.payload);
+        flyCesiumToScope(state.scope);
+      }
+      if (state.cesiumViewer) {
+        state.cesiumViewer.resize();
+        state.cesiumViewer.scene.requestRender();
+      }
+    })
+    .catch((err) => {
+      console.error("Cesium pre-load failed:", err);
+      // Fall back to 2D cleanly.
+      state.dimension = "2d";
+      if (mapFrame) mapFrame.dataset.dim = "2d";
+      document.querySelectorAll(".dim-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.dim === "2d");
+      });
+    });
+}
 
 boot();
 setInterval(boot, 60000);

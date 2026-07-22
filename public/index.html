@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=b83b254257a0-045812" />
-    <link rel="mask-icon" href="./favicon.svg?v=b83b254257a0-045812" color="#00f3ff" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=eaf623bfd74e-053403" />
+    <link rel="mask-icon" href="./favicon.svg?v=eaf623bfd74e-053403" color="#00f3ff" />
     <meta name="theme-color" content="#010203" />
     <title>Greater Kuching IOC</title>
     <meta name="description" content="Greater Kuching Intelligent Operation Center — a municipal command surface for Secretary Daniel Goh, MPP." />
@@ -12,9 +12,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-    <link rel="stylesheet" href="./styles.css?v=b83b254257a0-045812" />
+    <link rel="stylesheet" href="./styles.css?v=eaf623bfd74e-053403" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-    <script>window.__IOC_BOOT__ = {"assetVersion":"b83b254257a0-045812","builtAt":"2026-07-22T04:59:25.105Z","deploymentMode":"pages-static","boardLabel":"SNAPSHOT BOARD","pagesUrl":"https://kuching.nonarkara.org/","liveUrl":"https://kuching.nonarkara.org/"};</script>
+    <script>window.__IOC_BOOT__ = {"assetVersion":"eaf623bfd74e-053403","builtAt":"2026-07-22T05:35:15.348Z","deploymentMode":"pages-static","boardLabel":"SNAPSHOT BOARD","pagesUrl":"https://kuching.nonarkara.org/","liveUrl":"https://kuching.nonarkara.org/"};</script>
   </head>
   <body>
     <div class="dashboard-shell">
@@ -32,6 +32,10 @@
             <div class="scope-toggle segmented-control" role="group" aria-label="Geographic scope">
               <button class="scope-btn active" data-scope="padawan" title="Focus on MPP jurisdiction (984 km²) — Padawan-only hydro, news, and wards.">PADAWAN</button>
               <button class="scope-btn" data-scope="greater_kuching" title="Expand to all 3 councils (MPP, MBKS, DBKU) — Greater Kuching hydro, news, and stations.">GREATER KUCHING</button>
+            </div>
+            <div class="dim-toggle segmented-control" role="group" aria-label="Map dimension">
+              <button class="dim-btn active" data-dim="2d" title="2D Leaflet view.">2D</button>
+              <button class="dim-btn" data-dim="3d" title="3D digital-twin view — CesiumJS, real jurisdiction extrusions, hydro cylinders, Sarawak River, land-use extrusions.">3D</button>
             </div>
             <button id="themeToggle" class="ctrl-btn">LIGHT</button>
             <button class="lang-btn active" data-lang="en">EN</button>
@@ -99,8 +103,9 @@
               <div id="layerToggle" class="segmented-control"></div>
             </div>
           </div>
-          <div class="map-frame">
+          <div class="map-frame" data-dim="2d">
             <div id="mapCanvas" class="map-canvas"></div>
+            <div id="map3d" class="map-3d"></div>
             <div class="map-vignette" aria-hidden="true"></div>
             <div class="map-scan-grid" aria-hidden="true"></div>
             <div class="map-reticle" aria-hidden="true">
@@ -306,7 +311,7 @@
         </footer>
       </div>
     </div>
-    <script src="./app.js?v=b83b254257a0-045812" type="module"></script>
+    <script src="./app.js?v=eaf623bfd74e-053403" type="module"></script>
 
   <!-- NON visitor tracker — fire-and-forget, no cookies -->
   <script>

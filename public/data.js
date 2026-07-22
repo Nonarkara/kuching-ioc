@@ -332,6 +332,9 @@ export const TRANSLATIONS = {
     scopePadawan: "PADAWAN FOCUS",
     scopeGreater: "GREATER KUCHING",
     scopeToggleHint: "Geographic scope: click to toggle between MPP focus and 3-council Greater Kuching.",
+    dim2d: "2D",
+    dim3d: "3D",
+    dimToggleHint: "Map dimension: switch between Leaflet (2D) and CesiumJS digital twin (3D).",
   },
   ms: {
     title: "Pusat Operasi Pintar Greater Kuching",
@@ -373,6 +376,9 @@ export const TRANSLATIONS = {
     scopePadawan: "FOKUS PADAWAN",
     scopeGreater: "GREATER KUCHING",
     scopeToggleHint: "Skop geografi: klik untuk tukar antara fokus MPP dan Greater Kuching 3 majlis.",
+    dim2d: "2D",
+    dim3d: "3D",
+    dimToggleHint: "Dimensi peta: tukar antara Leaflet (2D) dan kembar digital CesiumJS (3D).",
   },
   zh: {
     title: "大古晋智能运营中心",
@@ -414,6 +420,9 @@ export const TRANSLATIONS = {
     scopePadawan: "百大万焦点",
     scopeGreater: "古晋大都会",
     scopeToggleHint: "地理范围：点击切换 MPP 焦点与 3 议会古晋大都会。",
+    dim2d: "2D",
+    dim3d: "3D",
+    dimToggleHint: "地图维度：切换 Leaflet 2D 与 CesiumJS 数字孪生 3D 视图。",
   },
 };
 

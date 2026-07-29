@@ -3121,7 +3121,7 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
       owner: "Hydrology Watch",
       title: `River posture ${infobanjir.highestBandLabel.toUpperCase()}`,
       detail: `JPS Infobanjir: ${triggerLine || "watch the upper Sarawak basin"}. Cross-reference rain forecast (${rain6h}mm/6h).`,
-      humanContext: worst?.humanBrief ? `${worst.affectedEstimate || ""}. ${worst.lastEvent || ""}` : null,
+      humanContext: worst?.humanBrief || [worst?.affectedEstimate, worst?.lastEvent].filter(Boolean).join(". ") || null,
     });
   }
 

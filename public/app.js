@@ -463,25 +463,25 @@ function buildBoardBrief(payload) {
   const airportMetric = payload.metrics.find((metric) => metric.id === "airport");
   const degradedSources = (payload.sources || []).filter((source) => ["fallback", "offline", "reference", "curated"].includes(source.status));
 
-  const now = operations.slice(0, 3).map((item) => `${item.owner}: ${item.title}`);
-  if (now.length === 0) now.push("No immediate tasking generated");
+  const now = operations.slice(0, 3).map((item) => item.title || item.detail || item.owner);
+  if (now.length === 0) now.push("Nothing urgent right now — keep scanning the map.");
 
   const next = [];
-  if (rainMetric) next.push(`Rain watch · ${rainMetric.value}${rainMetric.unit} today · ${rainMetric.context}`);
-  if (aqiMetric) next.push(`Air quality · AQI ${aqiMetric.value} · ${aqiMetric.context}`);
+  if (rainMetric) next.push(`Rain: ${rainMetric.value}${rainMetric.unit} in the next hours — ${rainMetric.context}`);
+  if (aqiMetric) next.push(`Air: AQI ${aqiMetric.value} — ${aqiMetric.context}`);
   if (payload.airport?.status === "live") {
-    next.push(`Airspace · ${airportMetric?.value ?? payload.airport.movements?.totalTracked ?? 0} aircraft tracked live`);
+    next.push(`Flights: ${airportMetric?.value ?? payload.airport.movements?.totalTracked ?? 0} aircraft near KCH right now`);
   } else {
-    next.push(`Airspace · flight feed reduced · numbers indicative only`);
+    next.push("Flights: live tracker is thin — treat counts as indicative only");
   }
 
   const blind = [];
   if (payload.delivery?.mode !== "live-api") {
-    blind.push(`Static snapshot · refreshes every 6 hours · live board streams real-time`);
+    blind.push("This page refreshes about every 6 hours — not a live stream");
   }
   const actionableBlind = degradedSources.filter((source) => ["fallback", "offline"].includes(source.status));
-  actionableBlind.slice(0, 3).forEach((source) => blind.push(`${source.name} · ${SOURCE_STATUS_LABEL[source.status] || source.status}`));
-  if (blind.length === 0) blind.push("All feeds responding normally");
+  actionableBlind.slice(0, 3).forEach((source) => blind.push(`${source.name} is ${SOURCE_STATUS_LABEL[source.status] || source.status}`));
+  if (blind.length === 0) blind.push("Main feeds look healthy");
 
   return { now: now.slice(0, 3), next: next.slice(0, 3), blind: blind.slice(0, 3) };
 }
@@ -957,12 +957,12 @@ async function buildFallbackDashboard() {
       highestBand: "normal",
       highestBandLabel: "Normal",
       stations: [
-        { id: "batu-kitang", name: "Batu Kitang Telemetry", focus: "padawan", council: "MPP", lat: 1.4524, lon: 110.2823, waterLevelM: null, band: "reference", bandLabel: "Reference", thresholds: { normal: 1.85, alert: 3.0, warning: 4.5, danger: 5.0 } },
-        { id: "batu-kawa", name: "Batu Kawa Bridge", focus: "padawan", council: "MPP", lat: 1.5087, lon: 110.2703, waterLevelM: null, band: "reference", bandLabel: "Reference", thresholds: { normal: 0.68, alert: 2.5, warning: 3.0, danger: 4.2 } },
-        { id: "desa-wira", name: "Desa Wira", focus: "padawan", council: "MPP", lat: 1.5104, lon: 110.3044, waterLevelM: null, band: "reference", bandLabel: "Reference", thresholds: { normal: 0.35, alert: 2.5, warning: 3.0, danger: 3.5 } },
-        { id: "siniawan", name: "Siniawan", focus: "padawan", council: "MPP", lat: 1.4466, lon: 110.2186, waterLevelM: null, band: "reference", bandLabel: "Reference", thresholds: { normal: 0.0, alert: 5.5, warning: 6.2, danger: 7.2 } },
-        { id: "kuala-maong", name: "Kuala Maong", focus: "metro", council: "MBKS", lat: 1.5422, lon: 110.3114, waterLevelM: null, band: "reference", bandLabel: "Reference", thresholds: { normal: 0.25, alert: 2.0, warning: 2.4, danger: 2.8 } },
-        { id: "barrage", name: "Barrage", focus: "metro", council: "DBKU", lat: 1.576, lon: 110.4093, waterLevelM: null, band: "reference", bandLabel: "Reference", thresholds: { normal: 0.06, alert: 2.8, warning: 2.92, danger: 3.2 } },
+        { id: "batu-kitang", name: "Batu Kitang Telemetry", focus: "padawan", council: "MPP", lat: 1.4524, lon: 110.2823, waterLevelM: null, band: "reference", bandLabel: "Reference", thresholds: { normal: 1.85, alert: 3.0, warning: 4.5, danger: 5.0 } , humanBrief: "Upstream canary for urban Kuching and the Padawan growth ring. When this gauge reads Alert, riverside kampungs along Batu Kitang are at doorstep risk." },
+        { id: "batu-kawa", name: "Batu Kawa Bridge", focus: "padawan", council: "MPP", lat: 1.5087, lon: 110.2703, waterLevelM: null, band: "reference", bandLabel: "Reference", thresholds: { normal: 0.68, alert: 2.5, warning: 3.0, danger: 4.2 } , humanBrief: "Operational gauge for the Batu Kawa retention programme. Rising here means Taman Desa Wira and nearby kampungs are next." },
+        { id: "desa-wira", name: "Desa Wira", focus: "padawan", council: "MPP", lat: 1.5104, lon: 110.3044, waterLevelM: null, band: "reference", bandLabel: "Reference", thresholds: { normal: 0.35, alert: 2.5, warning: 3.0, danger: 3.5 } , humanBrief: "Inside a hard-hit residential pocket of Padawan. A Warning here is already a street-level event." },
+        { id: "siniawan", name: "Siniawan", focus: "padawan", council: "MPP", lat: 1.4466, lon: 110.2186, waterLevelM: null, band: "reference", bandLabel: "Reference", thresholds: { normal: 0.0, alert: 5.5, warning: 6.2, danger: 7.2 } , humanBrief: "Heritage town + weekend night market. A sudden rise during market hours is a crowd-safety incident." },
+        { id: "kuala-maong", name: "Kuala Maong", focus: "metro", council: "MBKS", lat: 1.5422, lon: 110.3114, waterLevelM: null, band: "reference", bandLabel: "Reference", thresholds: { normal: 0.25, alert: 2.0, warning: 2.4, danger: 2.8 } , humanBrief: "Urban canary. At Alert, Jalan Song / Stutong junctions flood and southern Kuching gridlocks." },
+        { id: "barrage", name: "Barrage", focus: "metro", council: "DBKU", lat: 1.576, lon: 110.4093, waterLevelM: null, band: "reference", bandLabel: "Reference", thresholds: { normal: 0.06, alert: 2.8, warning: 2.92, danger: 3.2 } , humanBrief: "Tidal gate for the urban reach. High reading here with upstream rain means the river cannot drain." },
       ],
       summary: "Client fallback — open live server or baked snapshot for DID iHYDRO gauges.",
     },
@@ -1268,7 +1268,14 @@ function renderMap(payload) {
       className: hasCatchment ? "hydro-marker hydro-has-catchment" : "hydro-marker",
     })
       .bindTooltip(
-        `<strong>${s.name}</strong><br>${s.basin} · ${s.council}<br>Level: ${s.waterLevelM != null ? s.waterLevelM + " m" : "reference"}<br>Posture: <strong>${s.bandLabel}</strong><br>Thresholds A/W/D: ${s.thresholds.alert}/${s.thresholds.warning}/${s.thresholds.danger} m${catchmentLine}`,
+        `<strong>${s.name}</strong><br>${s.basin || "Sarawak basin"} · ${s.council || ""}<br>` +
+        `Level: <strong>${s.waterLevelM != null ? s.waterLevelM + " m" : "no live reading"}</strong>` +
+        ` · ${s.bandLabel || s.band || "—"}` +
+        (s.thresholds?.alert != null
+          ? `<br>Alert starts at ${s.thresholds.alert} m`
+          : "") +
+        (s.humanBrief ? `<br><em style="opacity:.9">${s.humanBrief}</em>` : "") +
+        catchmentLine,
         { className: "marker-tooltip", direction: "top" },
       )
       .on("click", () => highlightCatchment(s, color))
@@ -1930,50 +1937,52 @@ function renderDeltaDigest(payload) {
 // updates on every render (and in delta differential after midnight resets).
 function composeTodayBrief(payload) {
   const segments = [];
-  // Asia/Kuching local clock; precise to the minute keeps the line "live".
   const stamp = new Date().toLocaleString("en-MY", {
     day: "2-digit", month: "short",
     hour: "2-digit", minute: "2-digit", hour12: false,
     timeZone: "Asia/Kuching",
-  }).replace(",", "").toUpperCase();
+  }).replace(",", "");
   segments.push(stamp);
 
-  // Posture, in caps, glow-on-tone via inline data-posture.
-  const posture = String(payload?.summary?.posture || "STABLE").toUpperCase();
-  segments.push(`<span class="brief-posture" data-posture="${posture.toLowerCase()}">${posture}</span>`);
+  const postureRaw = String(payload?.summary?.posture || "stable").toLowerCase();
+  const postureHuman = {
+    stable: "Calm",
+    "steady-watch": "Keep an eye on it",
+    watch: "Stay alert",
+    stretched: "Pressure building",
+  };
+  const postureLabel = postureHuman[postureRaw] || postureRaw;
+  segments.push(`<span class="brief-posture" data-posture="${postureRaw}">${postureLabel}</span>`);
 
-  // Active MET warnings (red if any, else "MET CLEAR").
   const metCount = payload?.metWarnings?.activeCount || 0;
   if (metCount > 0) {
-    segments.push(`<span class="brief-flag" data-tone="alert">${metCount} MET WARNING${metCount > 1 ? "S" : ""}</span>`);
+    segments.push(`<span class="brief-flag" data-tone="alert">${metCount} weather warning${metCount > 1 ? "s" : ""}</span>`);
   } else {
-    segments.push(`<span class="brief-flag" data-tone="ok">MET CLEAR</span>`);
+    segments.push(`<span class="brief-flag" data-tone="ok">Weather clear</span>`);
   }
 
-  // Hydro posture (only if non-normal).
   const hydroBand = payload?.infobanjir?.highestBand;
   if (hydroBand && !["normal", "reference"].includes(hydroBand)) {
-    const worstName = payload?.infobanjir?.stations?.[0]?.name;
-    segments.push(`<span class="brief-flag" data-tone="warn">HYDRO ${hydroBand.toUpperCase()}${worstName ? " · " + worstName.toUpperCase() : ""}</span>`);
+    const worst = payload?.infobanjir?.stations?.[0];
+    const bandWord = { alert: "rising", warning: "high", danger: "critical" }[hydroBand] || hydroBand;
+    segments.push(`<span class="brief-flag" data-tone="warn">River ${bandWord}${worst?.name ? " at " + worst.name : ""}</span>`);
   }
 
-  // Worst APIMS reading.
   const apims = payload?.apims?.worst;
   if (apims?.aqi != null) {
     const tone = apims.aqi >= 100 ? "warn" : apims.aqi >= 75 ? "warn" : "muted";
-    segments.push(`<span class="brief-flag" data-tone="${tone}">APIMS ${apims.aqi}</span>`);
+    const airWord = apims.aqi >= 100 ? "Unhealthy air" : apims.aqi >= 75 ? "Hazy air" : "Air OK";
+    segments.push(`<span class="brief-flag" data-tone="${tone}">${airWord} · ${apims.aqi}</span>`);
   }
 
-  // High-severity directive count.
   const highOps = (payload?.operations || []).filter(o => o.severity === "high").length;
   if (highOps > 0) {
-    segments.push(`<span class="brief-flag" data-tone="warn">${highOps} HIGH DIRECTIVE${highOps > 1 ? "S" : ""}</span>`);
+    segments.push(`<span class="brief-flag" data-tone="warn">${highOps} urgent action${highOps > 1 ? "s" : ""}</span>`);
   }
 
-  // Rain forecast hook only when meaningful.
   const rain6h = payload?.metrics?.find(m => m.id === "rain6h")?.value;
   if (rain6h != null && rain6h >= 5) {
-    segments.push(`<span class="brief-flag" data-tone="warn">${rain6h}MM/6H RAIN</span>`);
+    segments.push(`<span class="brief-flag" data-tone="warn">${rain6h} mm rain in 6h</span>`);
   }
 
   return segments.join(' <span class="brief-sep">·</span> ');
@@ -2733,19 +2742,19 @@ function renderFloodAction(payload) {
     <div class="fa-verb">${escapeHtml(verb)}</div>
     <div class="fa-reason">${escapeHtml(fa.reason || "")}</div>
     <div class="fa-meta">
-      <span>SCORE <strong>${fa.score ?? "—"}</strong>/100</span>
-      <span>PADAWAN <strong>${fa.padawanLive ?? 0}</strong> · METRO <strong>${fa.metroLive ?? 0}</strong></span>
-      <span>${escapeHtml(fa.confidence || "")}</span>
+      <span>Confidence <strong>${escapeHtml(fa.confidence || "—")}</strong></span>
+      <span>Padawan gauges <strong>${fa.padawanLive ?? 0}</strong> · Metro <strong>${fa.metroLive ?? 0}</strong></span>
+      <span>Urgency score <strong>${fa.score ?? "—"}</strong>/100</span>
     </div>
     <ul class="fa-checklist">${checklist}</ul>
     <div class="fa-reality" data-verdict="${escapeHtml(reality.verdict || "CALM")}">
-      REALITY CHECK · <strong>${escapeHtml(reality.verdict || "CALM")}</strong>
-      · news ${reality.newsCount ?? 0} · measured ${escapeHtml(String(reality.measuredBand || "—").toUpperCase())}
+      What people are saying · <strong>${escapeHtml(reality.verdict || "CALM")}</strong>
+      · ${reality.newsCount ?? 0} news hits · rivers measured as ${escapeHtml(String(reality.measuredBand || "—"))}
       ${headlines ? `<div style="margin-top:3px">${headlines}</div>` : ""}
     </div>
-    <div class="fa-kicker">HOTLINES</div>
+    <div class="fa-kicker">Call these numbers</div>
     <div class="fa-hotlines">${hotlines}</div>
-    <div class="fa-kicker" style="margin-top:6px">SHELTERS / PPS</div>
+    <div class="fa-kicker" style="margin-top:6px">Shelters / PPS</div>
     <div class="fa-shelters">${shelters}</div>
     <div class="fa-source">Source: <a href="${escapeHtml(fa.sourceUrl || "https://ihydro.sarawak.gov.my/")}" target="_blank" rel="noopener">${escapeHtml(fa.source || "DID Sarawak iHYDRO")}</a></div>`;
 }
@@ -2758,22 +2767,35 @@ function renderHydroGauges(payload) {
     .filter((s) => s.focus === "padawan" || ["alert", "warning", "danger"].includes(s.band))
     .slice(0, 10);
   if (!stations.length) {
-    el.innerHTML = `<div class="hg-head"><span class="hg-title">${t("hydroGauges")}</span></div><div class="hg-empty">No live DID gauges in this cycle.</div>`;
+    el.innerHTML = `<div class="hg-head"><span class="hg-title">${t("hydroGauges")}</span></div><div class="hg-empty">No live river gauges in this cycle.</div>`;
     return;
   }
+  const bandHuman = {
+    normal: "OK",
+    alert: "Watch",
+    warning: "High",
+    danger: "Critical",
+    reference: "No live",
+  };
   const rows = stations.map((s) => {
-    const thr = s.thresholds?.alert != null ? `Alert ${s.thresholds.alert} m` : (s.council || "");
+    const thr = s.thresholds?.alert != null ? `Alert from ${s.thresholds.alert} m` : (s.council || "");
     const level = s.waterLevelM != null ? `${s.waterLevelM} m` : "—";
-    return `<div class="hg-row" data-station="${escapeHtml(s.id)}" role="button" tabindex="0">
-      <div class="hg-name">${escapeHtml(s.name)}<small>${escapeHtml(thr)}</small></div>
+    const brief = s.humanBrief
+      ? `<div class="hg-brief">${escapeHtml(s.humanBrief)}</div>`
+      : "";
+    return `<div class="hg-row" data-station="${escapeHtml(s.id)}" data-band="${escapeHtml(s.band || "reference")}" role="button" tabindex="0">
+      <div class="hg-main">
+        <div class="hg-name">${escapeHtml(s.name)}<small>${escapeHtml(thr)}</small></div>
+        ${brief}
+      </div>
       <div class="hg-level">${level}</div>
-      <div class="hg-band" data-band="${escapeHtml(s.band || "reference")}">${escapeHtml((s.bandLabel || s.band || "—").toUpperCase())}</div>
+      <div class="hg-band" data-band="${escapeHtml(s.band || "reference")}">${escapeHtml(bandHuman[s.band] || s.bandLabel || s.band || "—")}</div>
     </div>`;
   }).join("");
   el.innerHTML = `
     <div class="hg-head">
       <span class="hg-title">${t("hydroGauges")}</span>
-      <span class="hg-live" data-status="${escapeHtml(ib?.status || "reference")}">${ib?.liveCount ?? 0}/${ib?.stationCount ?? 0} LIVE</span>
+      <span class="hg-live" data-status="${escapeHtml(ib?.status || "reference")}">${ib?.liveCount ?? 0}/${ib?.stationCount ?? 0} live</span>
     </div>
     ${rows}`;
 
@@ -2784,6 +2806,7 @@ function renderHydroGauges(payload) {
       if (station?.lat != null && station?.lon != null && state.map) {
         state.map.setView([station.lat, station.lon], 14);
       }
+      row.classList.toggle("hg-open");
     });
   });
 }
@@ -2801,10 +2824,10 @@ function renderFloodMatrix(payload) {
   const status   = fm?.status || "absent";
 
   const BAND_LABELS = {
-    normal:  "NRM",
-    watch:   "WTCH",
-    alert:   "ALRT",
-    warning: "WARN",
+    normal:  "OK",
+    watch:   "Damp",
+    alert:   "Watch",
+    warning: "Wet",
   };
   const BAND_TONES = {
     normal:  "good",
@@ -2813,28 +2836,32 @@ function renderFloodMatrix(payload) {
     warning: "alert",
   };
   const AMC_TONE = { I: "good", II: "muted", III: "alert" };
+  const AMC_HUMAN = {
+    I: "Dry ground — rain soaks in",
+    II: "Moist ground — runoff rising",
+    III: "Saturated — same rain floods worse",
+  };
 
-  // AMC badge (basin-level)
   const amcHtml = basinAmc
-    ? `<div class="fm-amc"><span class="fm-amc-label">BASIN AMC</span><span class="fm-amc-val" data-tone="${AMC_TONE[basinAmc.class] || "muted"}">CLASS ${escapeHtml(basinAmc.class)} · ${escapeHtml(basinAmc.label).toUpperCase()}</span><span class="fm-amc-mm">${basinAmc.total_mm14d}mm/14d</span></div>`
+    ? `<div class="fm-amc"><span class="fm-amc-label">Ground wetness</span><span class="fm-amc-val" data-tone="${AMC_TONE[basinAmc.class] || "muted"}">${escapeHtml(AMC_HUMAN[basinAmc.class] || basinAmc.label || ("Class " + basinAmc.class))}</span><span class="fm-amc-mm">${basinAmc.total_mm14d} mm rain / 14d</span></div>`
     : "";
 
   if (status === "absent" || !rows.length) {
-    el.innerHTML = `${amcHtml}<div class="fm-empty">Run <code>scripts/forecast/forecast_runner.py</code> to activate station flood forecasts.</div>`;
+    el.innerHTML = `${amcHtml}<div class="fm-empty">Station flood outlook not loaded yet — numbers return after the next data refresh.</div>`;
     return;
   }
 
   const bandCell = (r) => `<span class="fm-band" data-tone="${BAND_TONES[r?.band] || "muted"}">${BAND_LABELS[r?.band] || "—"}</span>`;
 
   const rowsHtml = rows.map((row) => {
-    const stressIcon = row.drainage_stress === "high"    ? '<span class="fm-stress" title="High impervious fraction — drainage may be under-capacity">⚠</span>'
+    const stressIcon = row.drainage_stress === "high"    ? '<span class="fm-stress" title="Hard surfaces dominate — drains may overflow">⚠</span>'
                       : row.drainage_stress === "moderate" ? '<span class="fm-stress fm-stress-mod" title="Moderate drainage stress">△</span>'
                       : "";
     const impFrac = row.impervious_fraction != null
-      ? `<span class="fm-imp" title="Impervious surface fraction (AlphaEarth 2024)">${Math.round(row.impervious_fraction * 100)}%</span>`
+      ? `<span class="fm-imp" title="Share of hard surface (satellite 2024)">${Math.round(row.impervious_fraction * 100)}% hard</span>`
       : "";
     const amcBadge = row.amc
-      ? `<span class="fm-row-amc" data-tone="${AMC_TONE[row.amc.class] || "muted"}" title="${escapeHtml(row.amc.note)}">AMC ${escapeHtml(row.amc.class)}</span>`
+      ? `<span class="fm-row-amc" data-tone="${AMC_TONE[row.amc.class] || "muted"}" title="${escapeHtml(row.amc.note || AMC_HUMAN[row.amc.class] || "")}">Wet ${escapeHtml(row.amc.class)}</span>`
       : "";
     return `<div class="fm-row" data-worst="${fm?.worst_band || "normal"}">
       <div class="fm-station">${stressIcon}${escapeHtml(row.name)}${amcBadge}${impFrac}</div>
@@ -2843,13 +2870,13 @@ function renderFloodMatrix(payload) {
   }).join("");
 
   const staleNote = status === "stale"
-    ? `<div class="fm-stale">↻ STALE — run forecast_runner.py to refresh</div>` : "";
+    ? `<div class="fm-stale">↻ Outlook is stale — refresh after the next bake</div>` : "";
 
   el.innerHTML = `
     ${amcHtml}
     <div class="fm-header">
-      <span class="fm-col-label">STATION</span>
-      <span class="fm-horizons"><span>6H</span><span>24H</span><span>72H</span></span>
+      <span class="fm-col-label">Station</span>
+      <span class="fm-horizons"><span>6h</span><span>24h</span><span>72h</span></span>
     </div>
     ${rowsHtml}
     ${staleNote}`;
@@ -2920,7 +2947,7 @@ function renderFloodForecast(floodForecast) {
     <div class="flood-station">${floodForecast?.station ?? "Sarawak River"}</div>
     <div class="flood-today">
       <span class="flood-value ${warnPeak ? "flood-peak-warn" : ""}">${today != null ? today : "—"}</span>
-      <span class="flood-unit">m³/s${isFallback ? " est" : " now"} · peak ${peak ?? "—"} m³/s</span>
+      <span class="flood-unit">m³/s now · peak ${peak ?? "—"} m³/s over the outlook</span>
     </div>
     <div class="flood-days">
       ${next4.map(d => {
@@ -2933,7 +2960,7 @@ function renderFloodForecast(floodForecast) {
       }).join("")}
     </div>
     ${reaches ? `<div class="flood-days" style="margin-top:4px">${reaches}</div>` : ""}
-    <div class="flood-model">${isFallback ? "GloFAS · seasonal estimate" : (floodForecast.model ?? "GloFAS via Open-Meteo")}</div>`;
+    <div class="flood-model">${isFallback ? "Seasonal estimate · river model" : "River model via Open-Meteo / GloFAS"}</div>`;
 }
 
 function renderBypassTracker() {
@@ -2960,16 +2987,16 @@ function renderPosture(payload) {
   const el = $("postureBlock");
   if (!el) return;
   const posture = payload.summary?.posture || "stable";
-  const headline = payload.summary?.headline || "Awaiting posture assessment.";
+  const headline = payload.summary?.headline || "Waiting for the next situation read.";
   const labels = {
-    stable: "STABLE",
-    "steady-watch": "STEADY WATCH",
-    watch: "WATCH",
-    stretched: "STRETCHED",
+    stable: "Calm",
+    "steady-watch": "Keep watching",
+    watch: "Stay alert",
+    stretched: "Under pressure",
   };
   el.dataset.posture = posture;
   el.innerHTML = `
-    <div class="posture-title">${labels[posture] || posture.toUpperCase()}</div>
+    <div class="posture-title">${labels[posture] || posture}</div>
     <div class="posture-detail">${headline}</div>`;
 }
 
@@ -2977,9 +3004,6 @@ function renderOfficialPulse(payload) {
   const el = $("officialPulse");
   if (!el || !payload.govStats?.updatedAt) return;
   const gov = payload.govStats;
-  // IOC 2.0 — district granularity. DOSM gives us Kuching / Samarahan / Serian
-  // (Padawan's growth ring spans Kuching + Serian admin districts). Show each
-  // as a chip; degrades to silence if the upstream dataset is unreachable.
   const districts = Array.isArray(gov.districts) ? gov.districts.filter((d) => d.status === "live" && d.population != null) : [];
   const districtChips = districts.length
     ? `<div class="pulse-districts">${districts.map((d) =>
@@ -2989,17 +3013,17 @@ function renderOfficialPulse(payload) {
   el.innerHTML = `
     <div class="official-pulse-block">
       <div class="pulse-header">
-        <span class="pulse-label">Official Census Sync // ${gov.year}</span>
+        <span class="pulse-label">${t("officialPulse")} · ${gov.year}</span>
         <div class="pulse-indicator"></div>
       </div>
       <div class="pulse-metagrid">
         <div class="pulse-stat">
           <strong>${num(gov.latestSarawakPop, 0)}</strong>
-          <span>Sarawak Pop</span>
+          <span>People in Sarawak</span>
         </div>
         <div class="pulse-stat">
           <strong>${gov.datasetCount || 0}</strong>
-          <span>CKAN Datasets</span>
+          <span>Open datasets</span>
         </div>
       </div>
       ${districtChips}

@@ -1,8 +1,8 @@
 {
-  "builtAt": "2026-07-22T05:35:15.348Z",
-  "buildDurationMs": 72282,
-  "dashboardSizeKb": 302,
-  "assetVersion": "eaf623bfd74e-053403",
+  "builtAt": "2026-08-03T16:06:50.232Z",
+  "buildDurationMs": 65688,
+  "dashboardSizeKb": 304,
+  "assetVersion": "cf9219d7fa47-160544",
   "deploymentMode": "pages-static",
   "boardLabel": "SNAPSHOT BOARD",
   "pagesUrl": "https://kuching.nonarkara.org/",
@@ -16,7 +16,7 @@
     {
       "id": "transit",
       "status": "fulfilled",
-      "features": 2284
+      "features": 2282
     },
     {
       "id": "land_use",

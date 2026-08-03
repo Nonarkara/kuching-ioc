@@ -4062,6 +4062,21 @@ function initCesium() {
   // Hide the credit container — the dashboard has its own source matrix.
   viewer._cesiumWidget && viewer._cesiumWidget.creditContainer && (viewer._cesiumWidget.creditContainer.style.display = "none");
 
+  // requestRenderMode only paints on an explicit requestRender() call. The
+  // globe's tile quadtree needs many consecutive frames to walk from coarse
+  // to fine tiles as they stream in — a handful of manual requestRender()
+  // calls isn't enough to drive that traversal to completion, so the scene
+  // freezes on the flat default globe colour with no basemap ever painted.
+  // Force continuous rendering until the initial basemap has actually
+  // finished loading, then drop back to on-demand rendering for perf.
+  viewer.scene.requestRenderMode = false;
+  const stopWatchingTiles = viewer.scene.globe.tileLoadProgressEvent.addEventListener(() => {
+    if (viewer.scene.globe.tilesLoaded) {
+      viewer.scene.requestRenderMode = true;
+      stopWatchingTiles();
+    }
+  });
+
   // Tune the scene: enable depth + lighting so 3D extrusions read as solid
   // volumes. Atmosphere + sun are kept on for a true outdoor scene.
   viewer.scene.globe.enableLighting = false;
@@ -4069,21 +4084,28 @@ function initCesium() {
   viewer.scene.fog.enabled = true;
   viewer.scene.fog.density = 0.0001;
 
-  // Wire ArcGIS World Imagery as the base layer. Cesium 1.121+ requires
-  // the async .fromUrl() factory; the constructor is deprecated. If this
-  // fails (network/CORS), the scene falls back to the dark-blue ocean
-  // and our 3D entities still render on top — the digital twin isn't
-  // image-dependent.
-  Cesium.ArcGisMapServerImageryProvider.fromUrl(
-    "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer",
-    { enablePickFeatures: false }
-  ).then((provider) => {
+  // Wire ArcGIS World Imagery as the base layer via a direct tile-URL
+  // template rather than ArcGisMapServerImageryProvider.fromUrl(). The
+  // latter does an async MapServer capability-detection round-trip first
+  // (metadata request, then mode selection) — an extra layer that was
+  // silently starving the actual tile requests in some environments even
+  // though the same tile URLs load fine directly. UrlTemplateImageryProvider
+  // skips capability detection and requests tiles the same way a plain
+  // <img> would, which is what actually works. If this fails (network/
+  // CORS), the scene falls back to the dark-blue ocean and our 3D entities
+  // still render on top — the digital twin isn't image-dependent.
+  try {
+    const provider = new Cesium.UrlTemplateImageryProvider({
+      url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      maximumLevel: 19,
+      credit: "Esri World Imagery",
+    });
     viewer.imageryLayers.removeAll();
     viewer.imageryLayers.addImageryProvider(provider);
     viewer.scene.requestRender();
-  }).catch((err) => {
+  } catch (err) {
     console.warn("ArcGIS imagery failed; 3D scene will show entities on the default ellipsoid.", err);
-  });
+  }
 
   // Default camera: a low oblique over Kuching. flyCesiumToScope() will
   // refine this based on the active scope.

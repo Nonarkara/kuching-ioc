@@ -2715,11 +2715,14 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
   color: var(--ink);
   margin-top: 4px;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  white-space: nowrap;
   align-items: baseline;
   gap: 6px;
   line-height: 1.5;
 }
+.today-brief > * { flex-shrink: 0; }
 .today-brief .brief-sep {
   color: var(--soft);
   opacity: 0.45;

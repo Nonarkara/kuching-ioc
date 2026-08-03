@@ -3927,10 +3927,9 @@ function renderScopeToggle() {
 
 // --- 2D / 3D dimension toggle ---
 // 2D = the existing Leaflet map (default). 3D = CesiumJS digital twin with
-// real jurisdiction extrusions, hydro cylinders, Sarawak River polyline,
-// and land-use extrusions. Cesium is lazy-loaded from a CDN only when the
-// user actually flips to 3D, so the 2D default payload stays lean. No
-// Ion token needed — ArcGIS imagery is the base layer.
+// ground-clamped council outlines, short hydro pins, and the Sarawak River
+// polyline — no extruded jurisdiction "blobs". Cesium is lazy-loaded from
+// a CDN only when the user flips to 3D. No Ion token — ArcGIS imagery.
 let cesiumLoaderPromise = null;
 // Cesium reads window.CESIUM_BASE_URL at load time to find its Workers,
 // Assets, and Widgets/textures. Must be set BEFORE the script tag is
@@ -4132,33 +4131,26 @@ function renderCesiumEntities(payload) {
   viewer.entities.removeAll();
 
   const isPadawan = isPadawanScope();
-  // 1) Jurisdiction polygons as low extruded volumes.
-  // Height proportional to area (km²) so the largest council reads as
-  // the tallest block on the map.
+  // 1) Jurisdiction boundaries — flat hairlines on the ground.
+  // Extruded "jelly" volumes were removed: they hid the satellite and
+  // told Secretary Goh nothing he could act on. Outline = who owns what.
   const juris = (payload.jurisdictions?.items || [])
     .filter(j => isPadawan ? j.id === "mpp" : true);
   juris.forEach(item => {
     const flat = item.polygons.flat().map(([lon, lat]) => [lon, lat]);
     if (flat.length < 3) return;
-    // Approx area in km² from the centroid polygon: shoelace over equirect.
-    const ring = item.polygons[0];
-    let area = 0;
-    for (let i = 0; i < ring.length; i++) {
-      const [x1, y1] = ring[i];
-      const [x2, y2] = ring[(i + 1) % ring.length];
-      area += (x1 * y2 - x2 * y1);
-    }
-    area = Math.abs(area) / 2 * 111.32 * 111.32; // very rough; good enough for a visual
-    const heightM = Math.max(400, Math.min(2000, area * 4));
+    const accent = Cesium.Color.fromCssColorString(item.accent);
     viewer.entities.add({
       name: `jurisdiction-${item.id}`,
       polygon: {
         hierarchy: Cesium.Cartesian3.fromDegreesArray(flat.flat()),
-        material: Cesium.Color.fromCssColorString(item.accent).withAlpha(0.45),
+        material: accent.withAlpha(0.08),
         outline: true,
-        outlineColor: Cesium.Color.fromCssColorString(item.accent),
-        extrudedHeight: heightM,
+        outlineColor: accent.withAlpha(0.95),
+        outlineWidth: 2,
         height: 0,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        classificationType: Cesium.ClassificationType.BOTH,
       },
       description: `${item.code} — ${item.areaKm2} km²`,
     });
@@ -4183,11 +4175,11 @@ function renderCesiumEntities(payload) {
     }
   }
 
-  // 3) Hydro stations as cylinders. Height = band intensity (danger=2km,
-  // warning=1.5km, alert=1km, normal=0.5km, reference=0.2km). Colour from
-  // the same band palette used in 2D so the visual language carries.
+  // 3) Hydro stations as short pins — the only vertical marks on the twin.
+  // Tall cylinders used to compete with the jelly molds; short pins keep
+  // the satellite readable while still flagging Alert/Warning/Danger.
   const hydroBandColors = { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" };
-  const hydroBandHeight = { danger: 2000, warning: 1500, alert: 1000, normal: 500, reference: 200 };
+  const hydroBandHeight = { danger: 450, warning: 320, alert: 220, normal: 120, reference: 60 };
   const allHydro = payload.mapScene?.hydroStations || payload.infobanjir?.stations || [];
   const hydroStations = isPadawan
     ? allHydro.filter(s => s.focus === "padawan" || s.council === "MPP")
@@ -4195,56 +4187,40 @@ function renderCesiumEntities(payload) {
   hydroStations.forEach(s => {
     if (s.lat == null || s.lon == null) return;
     const color = hydroBandColors[s.band] || "#8aa2c8";
-    const height = hydroBandHeight[s.band] || 200;
+    const height = hydroBandHeight[s.band] || 60;
+    const elevated = ["alert", "warning", "danger"].includes(s.band);
     viewer.entities.add({
       name: `hydro-${s.id}`,
-      position: Cesium.Cartesian3.fromDegrees(s.lon, s.lat),
+      position: Cesium.Cartesian3.fromDegrees(s.lon, s.lat, height / 2),
       cylinder: {
         length: height,
-        topRadius: 80,
-        bottomRadius: 80,
-        material: Cesium.Color.fromCssColorString(color).withAlpha(0.85),
+        topRadius: elevated ? 45 : 28,
+        bottomRadius: elevated ? 45 : 28,
+        material: Cesium.Color.fromCssColorString(color).withAlpha(elevated ? 0.9 : 0.55),
         outline: true,
         outlineColor: Cesium.Color.fromCssColorString(color),
       },
-      label: s.waterLevelM != null ? {
-        text: `${s.name}\n${s.waterLevelM} m · ${s.bandLabel}`,
+      label: (elevated || s.waterLevelM != null) ? {
+        text: `${s.name}${s.waterLevelM != null ? `\n${s.waterLevelM} m` : ""} · ${s.bandLabel || s.band || ""}`,
         font: "11px monospace",
         fillColor: Cesium.Color.WHITE,
         outlineColor: Cesium.Color.BLACK,
         outlineWidth: 2,
         style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-        pixelOffset: new Cesium.Cartesian2(0, -16),
+        pixelOffset: new Cesium.Cartesian2(0, -18),
         showBackground: true,
         backgroundColor: Cesium.Color.fromCssColorString("#000").withAlpha(0.55),
-        scaleByDistance: new Cesium.NearFarScalar(1500, 1.0, 80000, 0.5),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        scaleByDistance: new Cesium.NearFarScalar(1500, 1.0, 80000, 0.45),
       } : undefined,
-      description: `${s.name} — ${s.basin || ""} · ${s.council || ""}\nLevel: ${s.waterLevelM != null ? s.waterLevelM + " m" : "reference"}\nPosture: ${s.bandLabel || "Reference"}`,
+      description: s.humanBrief
+        ? `${s.name}\n${s.humanBrief}`
+        : `${s.name} — ${s.basin || ""} · ${s.council || ""}\nLevel: ${s.waterLevelM != null ? s.waterLevelM + " m" : "reference"}\n${s.bandLabel || "Reference"}`,
     });
   });
 
-  // 4) Land-use polygons as low-poly extrusions (3 m) — gives the city
-  // some visual mass without overwhelming the hydro cylinders. Only on
-  // the Greater Kuching view (844 features would be too dense on a
-  // Padawan close-up).
-  if (!isPadawan && payload.urbanLayers?.land_use) {
-    payload.urbanLayers.land_use.forEach(feature => {
-      const g = feature.geometry;
-      if (!g || g.type !== "Polygon") return;
-      const flat = g.coordinates[0].flat();
-      if (flat.length < 6) return;
-      const color = feature.properties?.color || "#8aa2c8";
-      viewer.entities.add({
-        name: `landuse-${feature.properties?.id || Math.random()}`,
-        polygon: {
-          hierarchy: Cesium.Cartesian3.fromDegreesArray(flat),
-          material: Cesium.Color.fromCssColorString(color).withAlpha(0.35),
-          extrudedHeight: 80,
-          height: 0,
-        },
-      });
-    });
-  }
+  // Land-use extrusions intentionally omitted in 3D — they painted the
+  // city as opaque candy and hid the ground truth the twin is for.
 
   // Force a render — requestRenderMode is on so the scene only repaints
   // when something changes.

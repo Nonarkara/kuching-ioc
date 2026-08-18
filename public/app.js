@@ -4033,13 +4033,16 @@ function initCesium() {
   // again here before constructing the Viewer.
   window.CESIUM_BASE_URL = CESIUM_BASE_URL_CDN;
 
-  // Use the default Cesium Ion access token (Cesium provides a public
-  // one with limited free usage; if a non-empty string is needed the user
-  // can replace this constant with their own). For an Ion-free setup the
-  // imagery is overridden by the ArcGIS provider below.
+  // Ion-free setup. NOTE: blanking the token alone is NOT enough — the
+  // Viewer still constructs its default Ion (Bing Aerial, asset 2) base
+  // layer and fires https://api.cesium.com/v1/assets/2/endpoint, which
+  // 401s after a ~4 s stall and surfaces as opaque "[object Object]"
+  // console errors. baseLayer:false stops that request from ever being
+  // made; the ArcGIS provider below is the only imagery.
   Cesium.Ion.defaultAccessToken = "";
 
   const viewer = new Cesium.Viewer("map3d", {
+    baseLayer: false,
     // No terrain — keeps the 2D->3D diff to "data on a 3D ellipsoid".
     // Adding a real terrain model is a follow-up (requires a token for
     // the Cesium World Terrain Mesh or self-hosting terrarium).

@@ -3347,19 +3347,19 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
-  background: rgba(10, 14, 20, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(10, 14, 20, 0.92);
   border: 1px solid rgba(0, 243, 255, 0.3);
   padding: 12px 24px;
-  border-radius: 6px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(0, 243, 255, 0.1);
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 8px;
   min-width: 280px;
 }
+/* display:flex above would defeat the [hidden] attribute — the slider was
+   floating over the map even with the Growth layer off. Same guard the other
+   overlays in this file already carry. */
+.alphaearth-slider-container[hidden] { display: none !important; }
 .ae-slider-label {
   font-family: var(--font-mono);
   font-size: 10px;

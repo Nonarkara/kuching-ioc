@@ -233,6 +233,26 @@ function boardModeFromBoot() {
   return "live-service";
 }
 
+// Layer fetch order matters: on Pages, /api/layers/mpp_wards has no extension
+// and returns the SPA HTML with 200 OK, which then throws on .json() parse
+// (49 "Ward boundaries unavailable" console warns per page load). On local
+// server.mjs, the extensionless route is what serves the live data. Try the
+// static .json first when we know we're on Pages.
+async function fetchLayer(id) {
+  const isStatic = boardModeFromBoot() === "pages-static";
+  const primary = isStatic ? `${id}.json` : id;
+  const secondary = isStatic ? id : `${id}.json`;
+  const parseIfJson = async (res) => {
+    if (!res || !res.ok) return null;
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.includes("json")) return null;
+    try { return await res.json(); } catch { return null; }
+  };
+  let out = await parseIfJson(await fetch(apiUrl(`/api/layers/${primary}`)).catch(() => null));
+  if (!out) out = await parseIfJson(await fetch(apiUrl(`/api/layers/${secondary}`)).catch(() => null));
+  return out;
+}
+
 function boardLabelFromBoot() {
   return BOOT.boardLabel || (boardModeFromBoot() === "pages-static" ? "SNAPSHOT BOARD" : "LIVE BOARD");
 }
@@ -279,29 +299,29 @@ function decoratePayload(payload, { mode, manifest = null, error = null } = {}) 
 }
 
 function buildRuntimeDetail(delivery, payload) {
+  // Secretary-facing: one short line, timestamps only. Asset hash + switch
+  // links live in the title tooltip for debugging without eating masthead height.
   const parts = [];
   const payloadStamp = formatBadgeStamp(payload.generatedAt || payload.timeSignal?.serverNow);
-  if (payloadStamp) parts.push(`<strong>Payload</strong> ${payloadStamp}`);
-
+  if (payloadStamp) parts.push(`Payload ${payloadStamp}`);
   if (delivery.mode === "static-snapshot" && delivery.snapshotBuiltAt) {
-    parts.push(`<strong>Snapshot</strong> ${formatBadgeStamp(delivery.snapshotBuiltAt)}`);
+    parts.push(`Snapshot ${formatBadgeStamp(delivery.snapshotBuiltAt)}`);
   } else if (delivery.mode === "live-api" && delivery.boardBuiltAt) {
-    parts.push(`<strong>Board</strong> ${formatBadgeStamp(delivery.boardBuiltAt)}`);
+    parts.push(`Board ${formatBadgeStamp(delivery.boardBuiltAt)}`);
   }
-
-  if (delivery.assetVersion) parts.push(`<strong>Asset</strong> ${delivery.assetVersion}`);
-  if (delivery.error && delivery.mode === "client-fallback") parts.push("<strong>Gap</strong> static snapshot unavailable");
-
-  const pagesUrl = delivery.pagesUrl;
-  const liveUrl = delivery.liveUrl;
-  const alternateUrl = delivery.boardMode === "pages-static" ? liveUrl : pagesUrl;
-  const alternateLabel = delivery.boardMode === "pages-static" ? "Live board" : "Snapshot board";
-  const norm = (u) => String(u || "").replace(/\/$/, "");
-  if (alternateUrl && norm(pagesUrl) && norm(liveUrl) && norm(pagesUrl) !== norm(liveUrl)) {
-    parts.push(`<strong>Switch</strong> <a href="${alternateUrl}" target="_blank" rel="noopener">${alternateLabel}</a>`);
-  }
-
+  if (delivery.error && delivery.mode === "client-fallback") parts.push("static snapshot unavailable");
   return parts.join(" · ");
+}
+
+function buildRuntimeTooltip(delivery) {
+  const bits = [];
+  if (delivery.assetVersion) bits.push(`Asset ${delivery.assetVersion}`);
+  const norm = (u) => String(u || "").replace(/\/$/, "");
+  const pagesUrl = delivery.pagesUrl, liveUrl = delivery.liveUrl;
+  if (norm(pagesUrl) && norm(liveUrl) && norm(pagesUrl) !== norm(liveUrl)) {
+    bits.push(delivery.boardMode === "pages-static" ? `Live board: ${liveUrl}` : `Snapshot board: ${pagesUrl}`);
+  }
+  return bits.join(" · ");
 }
 
 function sourceStatusBucket(status) {
@@ -1051,10 +1071,6 @@ function sparkline(vals, tone = "neutral") {
   return `<svg viewBox="0 0 ${w} ${h}" class="sparkline" preserveAspectRatio="none"><polyline fill="none" stroke="${c}" stroke-width="2" points="${pts}"/></svg>`;
 }
 
-function renderClocks(clocks) {
-  $("clockGrid").innerHTML = clocks.map(c=>`<div class="clock-card"><div class="country">${c.city} [${c.offset}]</div><div class="time">${clockTime(c.timezone)}</div></div>`).join("");
-}
-
 // Metric → source provenance map. Each entry: short source name + ttl/cadence
 // hint. Surfaced on hover so a glance reveals "this number came from X, fresh
 // to Y minutes". Reinforces honesty: every reading on the board is traceable.
@@ -1464,9 +1480,6 @@ function renderFocusToggle() { /* no-op: replaced by renderScopeToggle() */ }
 function renderUrbanLayerToggle() {
   const el = $("watchpointList");
   if (!el) return;
-  // We repurpose the watchpoint list area or add a new one in the UI later
-  // For now, let's keep it in the map controls if possible, but the HTML doesn't have a dedicated slot
-  // I'll add a temporary container or append to map-controls
   let container = $("urbanLayerToggle");
   if (!container) {
     container = document.createElement("div");
@@ -1512,14 +1525,8 @@ function renderUrbanLayerToggle() {
     btn.textContent = "…";
     btn.disabled = true;
     try {
-      // Try live API first, then pre-baked static JSON (GitHub Pages).
-      let res = await fetch(apiUrl(`/api/layers/${layer.id}`)).catch(() => null);
-      if (!res || !res.ok) {
-        const staticUrl = apiUrl(`/api/layers/${layer.id}.json`);
-        res = await fetch(staticUrl);
-      }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const fc = await res.json();
+      const fc = await fetchLayer(layer.id);
+      if (!fc) throw new Error("layer fetch failed");
       const features = fc.features || [];
       if (features.length === 0) {
         btn.textContent = originalLabel + " (0)";
@@ -1807,16 +1814,6 @@ function renderForecastRail(payload) {
         </div>`;
       }).join("")}
     </div>`;
-}
-
-function renderExchange(exchange) {
-  const el = $("exchangeList");
-  if (!el) return;
-  el.innerHTML = exchange.pairs.map(p=>`
-    <div class="fx-row">
-      <span class="fx-code">${p.code}</span>
-      <span class="fx-rate">${p.rate < 1 ? p.rate.toFixed(4) : num(p.rate, p.rate > 100 ? 0 : 2)}</span>
-    </div>`).join("");
 }
 
 // --- Pass 1.1: Delta digest --- "what changed since you last looked"
@@ -2366,7 +2363,8 @@ function renderRuntimeMeta(payload) {
   badge.dataset.mode = delivery.tone || "boot";
   board.innerHTML = glyphHTML(delivery.boardMode === "live-service" ? "live" : "cached", delivery.boardLabel || "BOARD");
   board.dataset.mode = delivery.boardMode || "boot";
-  detail.innerHTML = buildRuntimeDetail(delivery, payload) || "Payload metadata unavailable.";
+  detail.textContent = buildRuntimeDetail(delivery, payload) || "Payload metadata unavailable.";
+  detail.title = buildRuntimeTooltip(delivery);
   stamp.textContent = payload.generatedAt ? `PAYLOAD // ${formatBadgeStamp(payload.generatedAt)}` : "PAYLOAD // --";
 }
 
@@ -3570,27 +3568,17 @@ function highlightWard(code) {
 
 async function loadWardFeatures() {
   if (state.wardFeatures?.length) return;
-  try {
-    let res = await fetch(apiUrl("/api/layers/mpp_wards")).catch(() => null);
-    if (!res || !res.ok) res = await fetch(apiUrl("/api/layers/mpp_wards.json"));
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const fc = await res.json();
-    state.wardFeatures = fc.features || [];
-  } catch (error) {
-    console.warn("Ward boundaries unavailable:", error);
-    state.wardFeatures = [];
-  }
+  const fc = await fetchLayer("mpp_wards");
+  state.wardFeatures = fc?.features || [];
+  if (!state.wardFeatures.length) console.warn("Ward boundaries unavailable");
 }
 
 // Pass 2.4: load flood_zones features so the per-ward brief can count overlaps.
 async function loadFloodZoneFeatures() {
   if (state.floodZoneFeatures?.length) return;
   try {
-    let res = await fetch(apiUrl("/api/layers/flood_zones")).catch(() => null);
-    if (!res || !res.ok) res = await fetch(apiUrl("/api/layers/flood_zones.json"));
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const fc = await res.json();
-    state.floodZoneFeatures = fc.features || [];
+    const fc = await fetchLayer("flood_zones");
+    state.floodZoneFeatures = fc?.features || [];
   } catch (_) {
     state.floodZoneFeatures = [];
   }
@@ -3713,14 +3701,6 @@ function renderDashboard(payload) {
   }
 
   $("signalCards").innerHTML = signalHtml + groundHtml + metHtml;
-
-  // Trends
-  const trendItems = payload.trends.localMatches?.length ? payload.trends.localMatches.slice(0, 6) : [];
-  $("trendList").innerHTML = trendItems.length
-    ? trendItems.map(t=>`
-      <div class="trend-item ${t.locality?.score ? "" : "is-external"}"><strong>${t.title}</strong>
-      <div class="meta">> ${t.trafficLabel} // ${t.locality?.label || "Context"}</div></div>`).join("")
-    : `<div class="trend-empty"><strong>Local trend watch is quiet</strong><div class="meta">${payload.trends.summary}</div></div>`;
 
   // Jurisdictions — Padawan scope shows only MPP; Greater Kuching shows all 3
   const visibleJurs = isPadawanScope()
@@ -4396,4 +4376,3 @@ if (state.dimension === "3d") {
 
 boot();
 setInterval(boot, 60000);
-setInterval(() => { if (state.payload) renderClocks(state.payload.timeSignal.asean); }, 1000);

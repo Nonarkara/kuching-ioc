@@ -15,3 +15,8 @@ scripts/alphaearth/raw/
 # Internal handoff docs — never web-served, never committed
 _private/
 server.log
+
+# env files
+.env
+.env.*
+!.env.example

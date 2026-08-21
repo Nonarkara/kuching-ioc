@@ -11,3 +11,8 @@ sa-key.json
 scripts/*/.venv/
 scripts/alphaearth/raw/
 .wrangler/
+
+# env files
+.env
+.env.*
+!.env.example

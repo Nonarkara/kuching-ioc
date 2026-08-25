@@ -167,4 +167,4 @@ Five zones, each headed by the question it answers:
 - [x] app.js — renderVerdict / renderCascade / renderWardRisk / renderGrowthStory,
       curated metric order, re-render ward risk after wardFeatures load
 - [x] i18n keys for zone heads (en/ms/zh)
-- [ ] Local verify → CDPT
+- [x] Local verify → CDPT — live at d8b5c70, all 5 zones + 4 computed views verified in production

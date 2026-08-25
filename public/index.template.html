@@ -70,6 +70,15 @@
         </div>
       </div>
 
+      <!-- ZONE 1 · The verdict — one glance answers "do I need to act?" -->
+      <div class="zone-head" data-zone="1">
+        <span class="zone-num">01</span>
+        <span class="zone-q" data-i18n="zone1">Do I need to act?</span>
+        <span class="zone-sub" data-i18n="zone1Sub">Verdict · today's numbers · directives</span>
+      </div>
+
+      <section id="verdictBar" class="verdict-strip" data-band="boot"></section>
+
       <section id="deltaStrip" class="delta-strip" data-empty="true">
         <div class="delta-stamp">DELTA //</div>
         <div id="deltaSince" class="delta-since"></div>
@@ -91,6 +100,32 @@
           <div id="briefBlind" class="brief-list"></div>
         </article>
       </section>
+
+      <!-- ZONE 2 · The outlook — rain that falls upstream arrives on a clock -->
+      <div class="zone-head" data-zone="2">
+        <span class="zone-num">02</span>
+        <span class="zone-q" data-i18n="zone2">What's coming?</span>
+        <span class="zone-sub" data-i18n="zone2Sub">14-day outlook · rain-to-river cascade</span>
+      </div>
+
+      <section class="outlook-grid">
+        <div class="panel outlook-panel">
+          <div id="cascadePanel" class="cascade-panel"></div>
+        </div>
+        <div class="panel outlook-panel">
+          <div class="section-label" data-i18n="forecast">14 days ahead</div>
+          <div id="forecastRail" class="forecast-rail"></div>
+          <div class="section-label" data-i18n="riverDischarge">River flow forecast</div>
+          <div id="floodForecast" class="flood-forecast"></div>
+        </div>
+      </section>
+
+      <!-- ZONE 3 · The map — where is it, and who is exposed -->
+      <div class="zone-head" data-zone="3">
+        <span class="zone-num">03</span>
+        <span class="zone-q" data-i18n="zone3">Where, and who's exposed?</span>
+        <span class="zone-sub" data-i18n="zone3Sub">Live map · gauges · wards · councillors</span>
+      </div>
 
       <main class="board-grid">
         <section class="panel map-panel">
@@ -134,14 +169,14 @@
             <div id="floodActionCard" class="flood-action-card" data-band="normal"></div>
             <div id="hydroGaugePanel" class="hydro-gauge-panel"></div>
 
+            <div class="section-group">
+              <div class="section-label" data-i18n="wardRisk">Ward exposure // gauge &times; holdings</div>
+              <div id="wardRiskPanel" class="ward-risk-panel"></div>
+            </div>
+
             <div id="postureBlock" class="posture-block"></div>
 
             <section id="wardBrief" class="ward-brief" data-active="false" hidden></section>
-
-            <div class="section-group">
-              <div class="section-label" data-i18n="forecast">14 days ahead</div>
-              <div id="forecastRail" class="forecast-rail"></div>
-            </div>
 
             <div class="section-group">
               <div class="section-label" data-i18n="directives">DIRECTIVES</div>
@@ -171,18 +206,8 @@
             </div>
 
             <div class="section-group">
-              <div class="section-label" data-i18n="riverDischarge">River flow forecast</div>
-              <div id="floodForecast" class="flood-forecast"></div>
-            </div>
-
-            <div class="section-group">
               <div class="section-label" data-i18n="kchAirspace">Flights near KCH</div>
               <div id="airportStats" class="airport-panel"></div>
-            </div>
-
-            <div class="section-group">
-              <div class="section-label" data-i18n="newsDigest">News digest</div>
-              <div id="newsIntakePanel" class="sentiment-panel"></div>
             </div>
 
             <div class="section-group">
@@ -193,26 +218,24 @@
         </aside>
       </main>
 
-      <section class="panel locality-panel">
-        <div class="panel-head">
-          <div class="kicker" data-i18n="governance">MUNICIPAL GOVERNANCE</div>
-          <h2 data-i18n="localityExplorer">Locality Explorer // Padawan</h2>
-        </div>
-        <div id="localityKpis" class="locality-kpis"></div>
-        <div id="localityFilters" class="locality-filters"></div>
-        <div id="localityStatus" class="locality-status"></div>
-        <div id="localityList" class="locality-list"></div>
-      </section>
+      <!-- ZONE 4 · The conversation — what's said vs what's measured -->
+      <div class="zone-head" data-zone="4">
+        <span class="zone-num">04</span>
+        <span class="zone-q" data-i18n="zone4">What are people saying?</span>
+        <span class="zone-sub" data-i18n="zone4Sub">Press in 3 languages · ground pulse · economy</span>
+      </div>
 
       <section class="lower-grid">
         <section class="panel intel-panel">
           <div class="panel-head">
-            <div class="kicker">ECONOMIC INTELLIGENCE</div>
-            <h2>Economy + Ground Pulse</h2>
+            <div class="kicker">GROUND SIGNAL</div>
+            <h2>Press + Pulse + Economy</h2>
           </div>
-          <div id="econBand" class="econ-band"></div>
           <div id="groundPulse" class="ground-pulse"></div>
+          <div class="section-label" data-i18n="newsDigest">News digest</div>
+          <div id="newsIntakePanel" class="sentiment-panel"></div>
           <div id="newsDigest" class="news-digest"></div>
+          <div id="econBand" class="econ-band"></div>
           <div id="trendsBand" class="trends-band"></div>
           <div id="bypassTracker" class="bypass-tracker"></div>
         </section>
@@ -251,6 +274,28 @@
           <div id="sourceMatrix" class="source-matrix"></div>
           <div id="sourceList" class="source-list"></div>
         </section>
+      </section>
+
+      <!-- ZONE 5 · The growth story — hardening surfaces vs drain capacity -->
+      <div class="zone-head" data-zone="5">
+        <span class="zone-num">05</span>
+        <span class="zone-q" data-i18n="zone5">Is the city outrunning its drains?</span>
+        <span class="zone-sub" data-i18n="zone5Sub">Satellite growth 2017&ndash;2024 · impervious surface · 525 localities</span>
+      </div>
+
+      <section class="panel growth-panel">
+        <div id="growthStory" class="growth-story"></div>
+      </section>
+
+      <section class="panel locality-panel">
+        <div class="panel-head">
+          <div class="kicker" data-i18n="governance">MUNICIPAL GOVERNANCE</div>
+          <h2 data-i18n="localityExplorer">Locality Explorer // Padawan</h2>
+        </div>
+        <div id="localityKpis" class="locality-kpis"></div>
+        <div id="localityFilters" class="locality-filters"></div>
+        <div id="localityStatus" class="locality-status"></div>
+        <div id="localityList" class="locality-list"></div>
       </section>
 
       <div id="telemetryStrip" class="telemetry-strip" aria-hidden="true"></div>

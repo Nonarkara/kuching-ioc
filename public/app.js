@@ -3584,6 +3584,226 @@ async function loadFloodZoneFeatures() {
   }
 }
 
+// === IOC 3.0 Command Brief renderers ===================================
+// Four computed views that surface what the payload already knows but the
+// panel grid never told: the verdict, the rain→river cascade, the
+// hazard×exposure ward join, and the growth-vs-drainage story.
+
+const BAND_TONE_ORDER = { danger: 0, warning: 1, alert: 2, normal: 3, reference: 4 };
+
+// Zone 1 — one sentence + chips. The Secretary reads the verb, then decides
+// whether to read anything else.
+function renderVerdict(payload) {
+  const el = $("verdictBar");
+  if (!el) return;
+  const fa = payload.floodAction || {};
+  const met = payload.metWarnings || {};
+  const ib = payload.infobanjir || {};
+  const aqiMetric = (payload.metrics || []).find(m => m.id === "aqi");
+  const aqi = aqiMetric ? Math.round(aqiMetric.value) : null;
+
+  // Strip band: flood alert wins, then MET/air push to watch.
+  const floodBad = fa.band && fa.band !== "normal";
+  const airBad = aqi != null && aqi > 100;
+  const band = floodBad ? "alert" : (met.activeCount > 0 || airBad) ? "watch" : "normal";
+  el.dataset.band = band;
+
+  let verb = state.lang === "ms" ? (fa.verbBm || fa.verb) : state.lang === "zh" ? (fa.verbZh || fa.verb) : fa.verb;
+  // Honesty rule: never headline "all clear" while the strip is amber. When
+  // flood is fine but air/MET drives the watch, the verb names the driver.
+  if (!floodBad && band === "watch") {
+    verb = met.activeCount > 0
+      ? (state.lang === "ms" ? "PERHATI — AMARAN MET" : state.lang === "zh" ? "关注 — 气象警报" : "WATCH — MET WARNING")
+      : (state.lang === "ms" ? `PERHATI — UDARA AQI ${aqi}` : state.lang === "zh" ? `关注 — 空气 AQI ${aqi}` : `WATCH — AIR AQI ${aqi}`);
+  }
+  const chips = [];
+  chips.push(`<span class="verdict-chip" data-tone="${floodBad ? "alert" : "ok"}">FLOOD ${(ib.highestBandLabel || "normal").toUpperCase()} · ${ib.padawanLiveCount ?? ib.liveCount ?? 0} gauges</span>`);
+  chips.push(`<span class="verdict-chip" data-tone="${met.activeCount > 0 ? "alert" : "ok"}">MET ${met.activeCount > 0 ? met.activeCount + " WARNING" + (met.activeCount > 1 ? "S" : "") : "CLEAR"}</span>`);
+  if (aqi != null) chips.push(`<span class="verdict-chip" data-tone="${aqi > 150 ? "alert" : aqi > 100 ? "warn" : "ok"}">AIR AQI ${aqi}</span>`);
+  const ff = payload.floodForecast;
+  if (ff?.todayCms != null && ff?.peakCms != null) {
+    const rising = ff.peakCms > ff.todayCms * 1.15;
+    chips.push(`<span class="verdict-chip" data-tone="${rising ? "warn" : "ok"}">RIVER ${Math.round(ff.todayCms)}→${Math.round(ff.peakCms)} m³/s</span>`);
+  }
+
+  const why = [fa.reason, payload.summary?.headline].filter(Boolean).join(" · ");
+  el.innerHTML = `
+    <span class="verdict-verb">${escapeHtml(verb || payload.summary?.posture || "—")}</span>
+    <div class="verdict-why">${escapeHtml(why)}</div>
+    <div class="verdict-chips">${chips.join("")}</div>`;
+}
+
+// Zone 2 — the causal chain. Rain lands in a catchment, the gauge sees it
+// lag_h hours later; dry soil (AMC I) absorbs, saturated soil (III) sheds.
+// All numbers are already computed server-side (TimesFM + AMC + risk bands).
+function renderCascade(payload) {
+  const el = $("cascadePanel");
+  if (!el) return;
+  const fc = payload.forecast;
+  if (!fc || fc.status === "offline" || !fc.series?.river_discharge) {
+    el.innerHTML = `<div class="cascade-head"><div class="cascade-title">Rain → River Cascade</div><div class="cascade-explain">Forecast pipeline offline — cascade unavailable this cycle.</div></div>`;
+    return;
+  }
+  const rd = fc.series.river_discharge;
+  const median = rd.median || [];
+  const p10 = rd.quantiles?.p10 || [];
+  const p90 = rd.quantiles?.p90 || [];
+  const n = median.length;
+
+  // Fan chart: p10–p90 envelope + median. viewBox 300×110, 5px margins.
+  let fanSvg = "";
+  if (n > 1 && p10.length === n && p90.length === n) {
+    const maxV = Math.max(...p90) * 1.05;
+    const X = (i) => (i / (n - 1)) * 290 + 5;
+    const Y = (v) => 103 - (v / maxV) * 96;
+    const path = (arr) => arr.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+    const envelope = path(p90) + " " + p10.slice().reverse().map((v, i) => `${X(n - 1 - i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+    fanSvg = `
+      <div class="cascade-fan">
+        <svg viewBox="0 0 300 110" preserveAspectRatio="none" role="img" aria-label="River discharge 14-day forecast fan">
+          <polygon points="${envelope}" fill="rgba(0,243,255,0.10)" stroke="none"/>
+          <polyline points="${path(median)}" fill="none" stroke="var(--cyan)" stroke-width="1.5"/>
+          <line x1="5" y1="103" x2="295" y2="103" stroke="var(--line)" stroke-width="1"/>
+        </svg>
+      </div>
+      <div class="cascade-fan-caption">
+        <span>TODAY ${Math.round(median[0])} m³/s</span>
+        <span>worst case (p90) peaks ${Math.round(Math.max(...p90))} m³/s · day ${p90.indexOf(Math.max(...p90)) + 1}</span>
+        <span>+${n} DAYS</span>
+      </div>`;
+  }
+
+  const stations = Object.values(fc.stations || {}).sort((a, b) => (a.lag_h ?? 99) - (b.lag_h ?? 99));
+  const bandShort = { normal: "OK", alert: "ALERT", warning: "WARN", danger: "DANGER" };
+  const bandCell = (r) => `<span class="cascade-band" data-tone="${r?.band || "na"}">${bandShort[r?.band] || "—"}</span>`;
+  const rows = stations.map(s => `
+    <tr>
+      <td>${escapeHtml(s.name)}</td>
+      <td class="c-lag">${s.lag_h === 0 ? "now" : "+" + s.lag_h + "h"}</td>
+      <td class="c-muted">${escapeHtml(s.amc?.label || "—")} ${s.amc?.class ? "(" + s.amc.class + ")" : ""}</td>
+      <td class="c-muted">${s.cumulative_p90_mm?.day4 != null ? s.cumulative_p90_mm.day4 + " mm" : "—"}</td>
+      <td>${bandCell(s.risk_6h)}</td>
+      <td>${bandCell(s.risk_24h)}</td>
+      <td>${bandCell(s.risk_72h)}</td>
+    </tr>`).join("");
+
+  el.innerHTML = `
+    <div class="cascade-head">
+      <div class="cascade-title">Rain → River Cascade · TimesFM 14-day</div>
+      <div class="cascade-explain">Rain that falls in each catchment reaches its gauge after the lag shown. Dry soil (class I) absorbs the first storms; saturated soil (class III) sends them straight to the river. Risk bands are worst-case (p90) rainfall load vs catchment capacity.</div>
+    </div>
+    ${fanSvg}
+    <table class="cascade-table">
+      <thead><tr><th>Catchment</th><th>Lag</th><th>Soil</th><th>Rain p90 4d</th><th>6h</th><th>24h</th><th>72h</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="7" class="c-muted">No per-station forecasts this cycle.</td></tr>`}</tbody>
+    </table>`;
+}
+
+// Zone 3 — hazard × exposure. Worst gauge inside each ward (point-in-polygon
+// against the official MPP ward boundaries) beside the rated holdings that
+// sit behind it, and the councillor who owns the response.
+function renderWardRisk(payload) {
+  const el = $("wardRiskPanel");
+  if (!el) return;
+  const wards = payload.mppCouncillors?.wards || [];
+  const localities = payload.mppLocalities?.items || [];
+  if (!wards.length || !localities.length) {
+    el.innerHTML = `<div class="ward-risk-note">Ward roster or locality register unavailable this cycle.</div>`;
+    return;
+  }
+
+  // Exposure: rated holdings per ward code from the 525-locality register.
+  const holdings = {};
+  for (const loc of localities) {
+    const w = loc.wardCode || "X";
+    holdings[w] = holdings[w] || { props: 0, locs: 0 };
+    holdings[w].props += (loc.residential || 0) + (loc.commercial || 0) + (loc.industrial || 0);
+    holdings[w].locs += 1;
+  }
+
+  // Hazard: worst live gauge band inside each ward polygon (when boundaries
+  // are cached — boot() re-renders this panel after they load).
+  const gaugeByWard = {};
+  const feats = state.wardFeatures || [];
+  if (feats.length) {
+    const stations = (payload.infobanjir?.stations || []).filter(s => s.lat && s.lon && s.band !== "reference");
+    for (const s of stations) {
+      const feat = feats.find(f => pointInRing([s.lon, s.lat], f.geometry));
+      const code = feat?.properties?.wardCode;
+      if (!code) continue;
+      const cur = gaugeByWard[code];
+      if (!cur || (BAND_TONE_ORDER[s.band] ?? 9) < (BAND_TONE_ORDER[cur.band] ?? 9)) {
+        gaugeByWard[code] = { band: s.band || "na", name: s.name };
+      }
+    }
+  }
+
+  const rows = wards.map(w => {
+    const code = w.code;
+    const h = holdings[code] || { props: 0, locs: 0 };
+    const g = gaugeByWard[code];
+    return { code, label: w.label, area: w.area, props: h.props, locs: h.locs,
+             tone: g?.band || "na", gauge: g ? g.name : "" };
+  }).sort((a, b) => (BAND_TONE_ORDER[a.tone] ?? 9) - (BAND_TONE_ORDER[b.tone] ?? 9) || b.props - a.props);
+
+  el.innerHTML = `
+    <div class="ward-risk-note">Worst gauge in the ward × rated holdings behind it. ${feats.length ? "Click a ward for its brief + councillor contacts." : "Ward boundaries loading — gauge column fills in shortly."}</div>
+    ${rows.map(r => `
+      <div class="ward-risk-row" data-ward="${r.code}" role="button" tabindex="0" title="Open ward ${r.code} brief">
+        <span class="wr-dot" data-tone="${r.tone}"></span>
+        <span class="wr-ward">${escapeHtml(r.label || r.code)}</span>
+        <span class="wr-area">${escapeHtml(r.area || "")}</span>
+        <span class="wr-props">${r.props.toLocaleString()}<sup> hldg</sup></span>
+        <span class="wr-gauge">${escapeHtml(r.gauge)}</span>
+      </div>`).join("")}`;
+
+  el.querySelectorAll(".ward-risk-row").forEach(row => {
+    row.addEventListener("click", () => setActiveWard(row.dataset.ward));
+  });
+}
+
+// Zone 5 — the strategic argument. Satellite-measured growth + sealed-surface
+// share, each hardening zone tied to the gauge that inherits its runoff.
+function renderGrowthStory(payload) {
+  const el = $("growthStory");
+  if (!el) return;
+  const ae = payload.alphaEarth;
+  const imp = payload.impervious;
+  const totals = payload.mppLocalities?.totals || {};
+  if (!imp?.stats && !ae) {
+    el.innerHTML = `<div class="growth-lead">Satellite growth pipeline offline this cycle.</div>`;
+    return;
+  }
+
+  const meanPct = imp?.stats?.mean != null ? Math.round(imp.stats.mean * 100) : null;
+  const p90Pct = imp?.stats?.p90 != null ? Math.round(imp.stats.p90 * 100) : null;
+  const years = ae?.years ? `${ae.years.a}–${ae.years.b}` : "2017–2024";
+  const stationName = (id) => (payload.infobanjir?.stations || []).find(s => s.id === id)?.name || id;
+
+  const zones = (imp?.zones || []).slice().sort((a, b) => (b.impervious_fraction || 0) - (a.impervious_fraction || 0));
+  const zoneRows = zones.map(z => {
+    const pct = Math.round((z.impervious_fraction || 0) * 100);
+    return `
+      <div class="growth-zone-row" title="${escapeHtml(z.note || "")}">
+        <span class="gz-name">${escapeHtml(z.name)}</span>
+        <span class="gz-bar"><span class="gz-bar-fill" style="width:${pct}%"></span></span>
+        <span class="gz-pct">${pct}%</span>
+        <span class="gz-gauge">→ ${escapeHtml(stationName(z.station))} gauge</span>
+      </div>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="growth-lead">The satellite record (${years}) shows Padawan's built footprint spreading fastest along the Penrissen and Batu Kawa corridors. ${meanPct != null ? `By ${imp.year}, <strong>${meanPct}% of the monitored basin is sealed surface</strong> — rain that once soaked into the ground now runs straight to the drains below.` : ""}</div>
+    <div class="growth-stats">
+      ${meanPct != null ? `<div class="growth-stat"><div class="g-val">${meanPct}%</div><div class="g-label">basin sealed (mean, ${imp.year})</div></div>` : ""}
+      ${p90Pct != null ? `<div class="growth-stat"><div class="g-val">${p90Pct}%</div><div class="g-label">hardest-hit pixels (p90)</div></div>` : ""}
+      ${totals.residential ? `<div class="growth-stat"><div class="g-val">${totals.residential.toLocaleString()}</div><div class="g-label">residential holdings on register</div></div>` : ""}
+      ${totals.localities ? `<div class="growth-stat"><div class="g-val">${totals.localities}</div><div class="g-label">localities · ${totals.stateConstituencies || "—"} state seats</div></div>` : ""}
+    </div>
+    <div class="growth-zones">${zoneRows}</div>
+    <div class="growth-foot">Each zone drains to the gauge shown — hardening upstream is tomorrow's reading downstream. See it on the map: toggle <strong>Growth 2017→24</strong> and <strong>Impervious Surface</strong> in Zone 03.</div>`;
+}
+
 function renderDashboard(payload) {
   state.payload = payload;
   // Dynamic <title> — encodes current posture + warning count so the browser
@@ -3607,13 +3827,21 @@ function renderDashboard(payload) {
   renderDeltaDigest(payload);
   renderBriefStrip(payload);
 
+  renderVerdict(payload);
+  renderCascade(payload);
+  renderWardRisk(payload);
+  renderGrowthStory(payload);
+
   renderFloodAction(payload);
   renderHydroGauges(payload);
   renderPosture(payload);
   renderForecastRail(payload);
   renderFloodMatrix(payload);
   renderCitizenReports(payload);
-  renderMetrics(payload.metrics.slice(0, 6));
+  // Decision-relevance order, not payload order: water first, then air, heat, context.
+  const metricOrder = ["rain6h", "flood-watch", "aqi", "pm25", "heat", "airport"];
+  const curated = metricOrder.map(id => payload.metrics.find(m => m.id === id)).filter(Boolean);
+  renderMetrics(curated.length >= 4 ? curated : payload.metrics.slice(0, 6));
   renderMap(payload);
   renderAirportStats(payload.airport);
   renderNewsIntake(payload.news);
@@ -3776,6 +4004,7 @@ function setLang(lang) {
   if (state.map) renderFocusToggle();
   if (state.payload) {
     renderRuntimeMeta(state.payload);
+    renderVerdict(state.payload);
     renderFloodAction(state.payload);
     renderHydroGauges(state.payload);
     renderForecastRail(state.payload);
@@ -4325,6 +4554,9 @@ async function boot() {
     // Pass 2: bring up ward + flood-zone polygon caches in parallel; if a #ward=X
     // hash is present, auto-open that ward's brief once data is available.
     await Promise.all([loadWardFeatures(), loadFloodZoneFeatures()]);
+    // Ward boundaries just became available — fill in the gauge column of
+    // the ward-risk join (rendered gaugeless on first paint).
+    if (state.wardFeatures?.length) renderWardRisk(payload);
     const hash = (location.hash || "").match(/#ward=([A-Z]+)/i);
     if (hash && hash[1] && !state.activeWard) {
       setActiveWard(hash[1].toUpperCase());

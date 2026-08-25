@@ -1368,11 +1368,10 @@ body::before {
   text-overflow: ellipsis;
   min-width: 0;
 }
-/* On TV, Ground Pulse replaces the older news-digest panel (same data, per-city view).
-   The headline list inside each lane is hidden on TV (would break the 3-column fit) and
-   news-digest itself is hidden — both reappear at mobile breakpoints. */
-.gp-list { display: none; }
-.intel-panel .news-digest { display: none; }
+/* Zone 4 (the conversation) shows the full press picture: per-lane headline
+   lists and the language-tabbed digest both render on desktop now. */
+.gp-list { display: block; }
+.intel-panel .news-digest { display: block; }
 
 /* === Flood Forecast (River Discharge) === */
 .flood-forecast {
@@ -1796,6 +1795,11 @@ body::before {
     flex: 0 0 auto;
     flex-wrap: wrap;
   }
+  /* Column flex + flex-start un-stretches children: without an explicit
+     width the title block sizes to its longest line (~544px) and drags the
+     whole page into horizontal scroll on phones. */
+  .title-block { width: 100%; max-width: 100%; }
+  .title-block h1 { white-space: normal; }
   .status-block {
     width: 100%;
     justify-content: space-between;
@@ -2207,13 +2211,16 @@ body::before {
 }
 
 /* When 2 panels are removed from lower-grid, intel panel claims the row.
-   Free the row from a fixed 340px so the freed vertical real estate goes to
-   the map (.board-grid has flex: 1). max-height is a safety cap. */
+   Page scrolls naturally now — the zone is content-sized; the intel panel
+   caps itself with an internal scroll so zone 4 never dominates the page. */
 [data-view="secretary"] .lower-grid {
   grid-template-columns: minmax(0, 1fr);
   height: auto;
   min-height: 180px;
-  max-height: 260px;
+}
+[data-view="secretary"] .intel-panel {
+  max-height: 560px;
+  overflow-y: auto;
 }
 
 /* Locality panel in secretary view: KPI column is display:none'd above, so
@@ -3409,4 +3416,272 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
 }
 .alphaearth-overlay {
   transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================
+   IOC 3.0 — Command Brief zones
+   Five question-headed zones. The numbers are load-bearing: they ARE the
+   reading order for a manager, not decorative rhythm.
+   ============================================================ */
+.zone-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 16px 4px;
+  border-top: 1px solid var(--line-strong);
+  background: var(--hud-bg);
+}
+.zone-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--amber);
+  letter-spacing: 0.1em;
+}
+.zone-q {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink);
+}
+.zone-sub {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--soft);
+  letter-spacing: 0.08em;
+  margin-left: auto;
+  text-align: right;
+}
+
+/* --- Zone 1: verdict strip — the single-glance answer --- */
+.verdict-strip {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card-bg);
+  border-left: 4px solid var(--soft);
+}
+.verdict-strip[data-band="normal"] { border-left-color: var(--green); }
+.verdict-strip[data-band="watch"]  { border-left-color: var(--amber); }
+.verdict-strip[data-band="alert"]  { border-left-color: var(--red); }
+.verdict-verb {
+  font-family: var(--font-sans);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.verdict-strip[data-band="normal"] .verdict-verb { color: var(--green); text-shadow: 0 0 6px rgba(0,255,170,0.35); }
+.verdict-strip[data-band="watch"]  .verdict-verb { color: var(--amber); text-shadow: 0 0 6px rgba(255,170,0,0.35); }
+.verdict-strip[data-band="alert"]  .verdict-verb { color: var(--red); text-shadow: 0 0 6px rgba(255,0,60,0.35); }
+.verdict-why {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--soft);
+  line-height: 1.5;
+  flex: 1;
+  min-width: 240px;
+}
+.verdict-why strong { color: var(--ink); font-weight: 700; }
+.verdict-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.verdict-chip {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  color: var(--soft);
+  white-space: nowrap;
+}
+.verdict-chip[data-tone="ok"]    { color: var(--green); border-color: var(--green); }
+.verdict-chip[data-tone="warn"]  { color: var(--amber); border-color: var(--amber); }
+.verdict-chip[data-tone="alert"] { color: var(--red); border-color: var(--red); }
+
+/* --- Zone 2: outlook grid — cascade left, forecast rail right --- */
+.outlook-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr);
+  background: var(--bg);
+}
+.outlook-panel { border: 1px solid var(--line); }
+.outlook-panel .section-label { border-top: 0; }
+
+/* Cascade: rain→river causal table */
+.cascade-head {
+  padding: 8px 12px 4px;
+}
+.cascade-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cyan);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.cascade-explain {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--soft);
+  line-height: 1.5;
+  margin-top: 2px;
+  max-width: 72ch;
+}
+.cascade-fan { padding: 4px 12px 0; }
+.cascade-fan svg { width: 100%; height: 110px; display: block; }
+.cascade-fan-caption {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--soft);
+  padding: 2px 12px 6px;
+  display: flex;
+  justify-content: space-between;
+}
+.cascade-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); }
+.cascade-table th {
+  font-size: 8px;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: left;
+  padding: 4px 6px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-weight: 700;
+}
+.cascade-table td {
+  font-size: 10px;
+  color: var(--ink);
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.cascade-table td.c-muted { color: var(--soft); }
+.cascade-table .c-lag { color: var(--amber); font-weight: 700; white-space: nowrap; }
+.cascade-band {
+  display: inline-block;
+  min-width: 34px;
+  text-align: center;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 1px 4px;
+  border: 1px solid currentColor;
+}
+.cascade-band[data-tone="normal"]  { color: var(--green); }
+.cascade-band[data-tone="alert"]   { color: #ffd000; }
+.cascade-band[data-tone="warning"] { color: #ff7a00; }
+.cascade-band[data-tone="danger"]  { color: var(--red); }
+.cascade-band[data-tone="na"]      { color: var(--soft); border-color: var(--line); }
+
+/* --- Zone 3: ward risk matrix — hazard × exposure per ward --- */
+.ward-risk-panel { padding: 4px 10px 8px; }
+.ward-risk-note {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--soft);
+  line-height: 1.5;
+  padding: 2px 0 4px;
+}
+.ward-risk-row {
+  display: grid;
+  grid-template-columns: 10px 56px minmax(0, 1fr) 62px 58px;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+.ward-risk-row:hover { background: var(--card-hover); }
+.wr-dot { width: 8px; height: 8px; }
+.wr-dot[data-tone="normal"]  { background: var(--green); }
+.wr-dot[data-tone="alert"]   { background: #ffd000; }
+.wr-dot[data-tone="warning"] { background: #ff7a00; }
+.wr-dot[data-tone="danger"]  { background: var(--red); }
+.wr-dot[data-tone="na"]      { background: var(--line); }
+.wr-ward { font-size: 10px; font-weight: 700; color: var(--ink); }
+.wr-area { font-size: 9px; color: var(--soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wr-props { font-size: 9px; color: var(--ink); text-align: right; }
+.wr-props sup { font-size: 7px; color: var(--soft); }
+.wr-gauge { font-size: 8px; text-align: right; color: var(--soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- Zone 5: growth story --- */
+.growth-panel { border: 1px solid var(--line); }
+.growth-story { padding: 10px 14px 12px; }
+.growth-lead {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink);
+  line-height: 1.6;
+  max-width: 90ch;
+}
+.growth-lead strong { color: var(--amber); font-weight: 700; }
+.growth-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+.growth-stat {
+  border: 1px solid var(--line);
+  border-top: 1px solid var(--cyan);
+  padding: 6px 10px;
+  background: var(--card-bg);
+}
+.growth-stat .g-val {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--cyan);
+  text-shadow: var(--glow-soft);
+}
+.growth-stat .g-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--soft);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+.growth-zones { margin-top: 6px; }
+.growth-zone-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 200px) minmax(0, 1fr) 46px minmax(90px, 150px);
+  gap: 8px;
+  align-items: center;
+  padding: 3px 0;
+  font-family: var(--font-mono);
+}
+.gz-name { font-size: 9px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gz-bar { height: 8px; background: var(--card-bg); border: 1px solid var(--line); position: relative; }
+.gz-bar-fill { position: absolute; inset: 0 auto 0 0; background: var(--amber); }
+.gz-pct { font-size: 9px; color: var(--amber); text-align: right; font-weight: 700; }
+.gz-gauge { font-size: 8px; color: var(--soft); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.growth-foot {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--soft);
+  line-height: 1.5;
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+  max-width: 90ch;
+}
+
+/* Responsive: zones collapse to single column on phone */
+@media (max-width: 1040px) {
+  .outlook-grid { grid-template-columns: 1fr; }
+  .zone-sub { display: none; }
+  .verdict-verb { font-size: 18px; }
+  .ward-risk-row { grid-template-columns: 10px 44px minmax(0, 1fr) 56px; }
+  .ward-risk-row .wr-gauge { display: none; }
+  .growth-zone-row { grid-template-columns: minmax(90px, 130px) minmax(0, 1fr) 40px; }
+  .growth-zone-row .gz-gauge { display: none; }
 }

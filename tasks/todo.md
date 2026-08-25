@@ -146,3 +146,25 @@ git add public/data/alphaearth/ public/api/ && git commit -m "data: AlphaEarth 2
   · 92/100" item from buildOperations — the "92/100" came from the
   fake WARD_TENSION map; the operation claimed "public sentiment
   telemetry" that does not exist. Deletion > soft-label.
+
+## IOC 3.0 — Command Brief redesign (2026-08-25)
+
+Direction approved by Dr Non: keep Console register (dark HUD), restructure into a
+strict decision hierarchy for urban-management users, add computed views that
+tell what the data already knows.
+
+Five zones, each headed by the question it answers:
+1. DO I NEED TO ACT? — verdict strip (NEW) + delta + decision metrics + brief strip
+2. WHAT'S COMING? — rain→river cascade (NEW) + 14-day rail + river flow forecast
+3. WHERE, AND WHO'S EXPOSED? — map (unchanged) + rail; ward risk matrix (NEW) joins
+   gauge bands × locality property counts × councillor contacts via pointInRing
+4. WHAT ARE PEOPLE SAYING? — ground pulse / news lanes / citizen reports framing
+5. IS THE CITY OUTRUNNING ITS DRAINS? — growth story (NEW): AlphaEarth Δ +
+   impervious-by-zone (each zone maps to its gauge) + locality totals
+
+- [x] index.template.html + index.html — zone restructure, all ids preserved
+- [x] styles.css — zone heads, verdict, cascade, ward-risk, growth styles
+- [x] app.js — renderVerdict / renderCascade / renderWardRisk / renderGrowthStory,
+      curated metric order, re-render ward risk after wardFeatures load
+- [x] i18n keys for zone heads (en/ms/zh)
+- [ ] Local verify → CDPT

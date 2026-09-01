@@ -168,3 +168,32 @@ Five zones, each headed by the question it answers:
       curated metric order, re-render ward risk after wardFeatures load
 - [x] i18n keys for zone heads (en/ms/zh)
 - [x] Local verify → CDPT — live at d8b5c70, all 5 zones + 4 computed views verified in production
+
+## IOC 3.1 — learned from the Phuket dashboard (2026-09-01)
+
+Studied `phuket/dashboard` (Next.js 16, ~453 TS files) — Dr Non's most mature board —
+via three parallel Explore agents (IA / data honesty / visual system).
+
+**The lesson that mattered**, from `docs/SLOPE-STORY.md`: Phuket had built powerful but
+*disconnected* layers — terrain, hillshade, blackspots, AlphaEarth, TimesFM — each a
+toggle. "A judge clicking around saw materials, not an argument." The fix was one
+card, `CorridorRiskReveal.tsx`, that fires on map click and states the chain plainly:
+slope → toll → tonight → why → act. Kuching had exactly the same disease.
+
+- [x] **The Catchment Story** — Kuching's equivalent keystone. Click any gauge:
+      gauge → ground → exposed → next 72h → why → act → last time.
+      Joins JPS telemetry + AlphaEarth impervious + TimesFM catchment forecast +
+      MPP locality register + ward roster (point-in-polygon → councillor phone).
+      Surfaces `affectedEstimate` and `lastEvent` — 15 stations carried them and the
+      client rendered them NOWHERE (0 references before this change).
+      Degrades honestly: 3/35 gauges carry the full six-source join; the rest say so
+      and the source line shrinks to what actually contributed.
+- [x] **Skeleton shimmer** — Phuket rule: never ship the word "Loading". Replaced
+      "Synchronising…", "Scanning sectors…", "Waiting for payload…".
+- [x] Card is a corner overlay INSIDE the map, never a bar cutting across it
+      (Phuket's explicit anti-regression rule).
+- [x] Esc / ✕ / scope-change close it; the 60s refresh keeps an open card live.
+
+Deliberately NOT copied: Phuket uses Inter (violates workspace §11.11 banned fonts);
+Kuching's JetBrains Mono + Manrope is already more compliant. framer-motion is a dead
+dependency there — no imports anywhere in src.

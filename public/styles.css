@@ -3685,3 +3685,111 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
   .growth-zone-row { grid-template-columns: minmax(90px, 130px) minmax(0, 1fr) 40px; }
   .growth-zone-row .gz-gauge { display: none; }
 }
+
+/* ============================================================
+   The Catchment Story — the signature analytical moment.
+   Learned from the Phuket dashboard's Slope Story
+   (phuket/dashboard/docs/SLOPE-STORY.md): click a gauge and one card
+   states the chain plainly — ground → exposure → forecast → why → act.
+   Turns five separate layers into one sentence the council can act on.
+   Corner overlay INSIDE the map; never a bar cutting across it.
+   ============================================================ */
+.catchment-story {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 1200;
+  width: min(390px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  background: rgba(2, 6, 12, 0.90);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--soft);
+  font-family: var(--font-mono);
+  pointer-events: auto;
+}
+[data-theme="light"] .catchment-story { background: rgba(255, 255, 255, 0.95); }
+.catchment-story[hidden] { display: none !important; }
+.catchment-story[data-band="normal"]  { border-left-color: var(--green); }
+.catchment-story[data-band="alert"]   { border-left-color: #ffd000; }
+.catchment-story[data-band="warning"] { border-left-color: #ff7a00; }
+.catchment-story[data-band="danger"]  { border-left-color: var(--red); }
+
+.cs-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 9px 12px 0; }
+.cs-kicker { display: flex; align-items: center; gap: 6px; font-size: 8px; font-weight: 700; letter-spacing: 0.2em; color: var(--soft); text-transform: uppercase; }
+.cs-kicker .cs-dot { width: 7px; height: 7px; background: var(--soft); }
+.catchment-story[data-band="normal"]  .cs-dot { background: var(--green); }
+.catchment-story[data-band="alert"]   .cs-dot { background: #ffd000; }
+.catchment-story[data-band="warning"] .cs-dot { background: #ff7a00; }
+.catchment-story[data-band="danger"]  .cs-dot { background: var(--red); }
+.cs-name {
+  font-family: var(--font-sans);
+  font-size: 15px; font-weight: 800;
+  color: var(--ink); margin: 3px 0 1px;
+  line-height: 1.15;
+}
+.cs-sub { font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--soft); }
+.cs-close {
+  flex-shrink: 0; background: transparent; border: 1px solid var(--line);
+  color: var(--soft); font-family: var(--font-mono); font-size: 10px;
+  line-height: 1; padding: 3px 5px; cursor: pointer;
+  min-width: 22px; min-height: 22px;
+}
+.cs-close:hover { color: var(--ink); border-color: var(--ink); }
+
+.cs-rows { padding: 6px 12px 9px; }
+.cs-row {
+  display: flex; gap: 10px;
+  border-top: 1px solid var(--line);
+  padding: 5px 0;
+}
+.cs-row:first-child { border-top: 0; }
+.cs-row-label {
+  width: 66px; flex-shrink: 0;
+  font-size: 8px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--cyan); padding-top: 1px;
+}
+.cs-row-body { flex: 1; min-width: 0; font-size: 10px; line-height: 1.55; color: var(--ink); }
+.cs-row-body em { color: var(--soft); font-style: italic; }
+.cs-num { font-weight: 700; color: var(--cyan); }
+.catchment-story[data-band="alert"]   .cs-num { color: #ffd000; }
+.catchment-story[data-band="warning"] .cs-num { color: #ff7a00; }
+.catchment-story[data-band="danger"]  .cs-num { color: var(--red); }
+.cs-src {
+  margin-top: 7px; padding-top: 6px;
+  border-top: 1px solid var(--line);
+  font-size: 7px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--soft);
+}
+
+@media (max-width: 720px) {
+  .catchment-story { left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 62%; }
+  .cs-row-label { width: 58px; }
+  .cs-close { min-width: 44px; min-height: 44px; }
+}
+
+/* ============================================================
+   Skeleton shimmer — Phuket rule: never ship the word "Loading".
+   A pulsing bar reads as "the system is working"; the word reads as
+   "the system is unfinished".
+   ============================================================ */
+.skeleton {
+  display: inline-block;
+  min-width: 90px; height: 0.85em;
+  vertical-align: middle;
+  background: linear-gradient(90deg,
+    rgba(128,160,190,0.10) 25%,
+    rgba(128,160,190,0.22) 50%,
+    rgba(128,160,190,0.10) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; background: rgba(128,160,190,0.14); }
+}

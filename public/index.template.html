@@ -47,7 +47,7 @@
               <span id="boardRoleBadge" class="runtime-badge" data-mode="boot">BOARD //</span>
               <span id="dataModeBadge" class="runtime-badge" data-mode="boot">SYNC //</span>
             </div>
-            <div id="runtimeDetail" class="runtime-detail">Waiting for payload and snapshot metadata...</div>
+            <div id="runtimeDetail" class="runtime-detail"><span class="skeleton" style="min-width:150px"></span></div>
           </div>
           <div id="generatedAt" class="micro-badge">PAYLOAD // --</div>
           <div id="sysStatus" class="status-pill">SYS: OPERATIONAL</div>
@@ -64,7 +64,7 @@
 
       <div class="ticker-bar">
         <div class="section-stamp" data-i18n="intelRail">Headlines</div>
-        <div id="summaryLead" class="ticker-summary">Synchronising...</div>
+        <div id="summaryLead" class="ticker-summary"><span class="skeleton" style="min-width:220px"></span></div>
         <div class="ticker-window">
           <div id="newsRail" class="ticker-track"></div>
         </div>
@@ -132,7 +132,7 @@
           <div class="panel-head map-head">
             <div class="title-wrap">
               <div class="kicker" data-i18n="radar">Radar // Greater Kuching</div>
-              <div id="mapSummary" class="map-summary">Scanning sectors...</div>
+              <div id="mapSummary" class="map-summary"><span class="skeleton" style="min-width:260px"></span></div>
             </div>
             <div class="map-controls">
               <div id="layerToggle" class="segmented-control"></div>
@@ -156,6 +156,9 @@
               <div class="ae-slider-ticks" id="aeSliderTicks"></div>
             </div>
             <div class="radar-scan"></div>
+            <!-- The Catchment Story — click a gauge, get the argument, not the materials.
+                 Corner overlay inside the map (never a full-width bar across it). -->
+            <aside id="catchmentStory" class="catchment-story" role="dialog" aria-label="Catchment risk" hidden></aside>
           </div>
           <footer class="map-footer">
             <div id="mapLegend" class="map-legend"></div>

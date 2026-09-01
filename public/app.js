@@ -1294,7 +1294,10 @@ function renderMap(payload) {
         catchmentLine,
         { className: "marker-tooltip", direction: "top" },
       )
-      .on("click", () => highlightCatchment(s, color))
+      // Click a gauge → highlight its upstream drainage AND open the
+      // Catchment Story. The map click becomes an analytical brief, not a
+      // tooltip (the Phuket Slope Story lesson).
+      .on("click", () => { highlightCatchment(s, color); renderCatchmentStory(s); })
       .addTo(state.markerLayerGroup);
   });
   // Apims ground stations: square-ish markers via different radius/weight to distinguish.
@@ -3762,6 +3765,147 @@ function renderWardRisk(payload) {
   });
 }
 
+// === The Catchment Story ================================================
+// Learned from the Phuket dashboard's Slope Story
+// (phuket/dashboard/docs/SLOPE-STORY.md). That project's lesson, in its own
+// words: a visitor clicking around "saw materials, not an argument." Kuching
+// had the same problem — terrain, telemetry, satellite growth and a forecast,
+// each its own toggle, none of them speaking to each other.
+//
+// Click a gauge and this card states the chain plainly:
+//   the gauge → the ground → who is exposed → what is coming → why → act.
+// It fuses JPS Infobanjir telemetry, AlphaEarth impervious surface, the
+// TimesFM catchment forecast, the 525-locality register and the ward roster
+// into one sentence the council can act on today.
+//
+// Honesty rule (Production Doctrine law 3): every row degrades explicitly. A
+// station with no catchment model says so rather than borrowing another
+// station's numbers. Only 3 of 35 gauges carry the full six-source join;
+// the card never pretends otherwise.
+
+function closeCatchmentStory() {
+  const el = $("catchmentStory");
+  if (!el) return;
+  el.hidden = true;
+  el.innerHTML = "";
+  state.activeStation = null;
+}
+
+function renderCatchmentStory(station) {
+  const el = $("catchmentStory");
+  const payload = state.payload;
+  if (!el || !station || !payload) return;
+  state.activeStation = station.id;
+
+  const band = station.band || "normal";
+  el.dataset.band = band;
+  el.hidden = false;
+
+  const fc = payload.forecast?.stations?.[station.id];
+  // Impervious zones map to a gauge by `station`; when several drain to the
+  // same gauge keep the hardest-sealed one — that's the one that sets the risk.
+  const zone = (payload.impervious?.zones || [])
+    .filter(z => z.station === station.id)
+    .sort((a, b) => (b.impervious_fraction || 0) - (a.impervious_fraction || 0))[0];
+  const sealed = zone ? Math.round(zone.impervious_fraction * 100) : null;
+  const amc = fc?.amc;
+  const lag = fc?.lag_h;
+  const risk = fc?.risk_72h;
+
+  // Councillor join — same point-in-polygon path the ward matrix uses, so the
+  // ACT row can name the person who owns the response.
+  let councillor = null, wardLabel = null;
+  if ((state.wardFeatures || []).length && station.lat != null && station.lon != null) {
+    const feat = state.wardFeatures.find(f => pointInRing([station.lon, station.lat], f.geometry));
+    const code = feat?.properties?.wardCode;
+    if (code) {
+      const ward = (payload.mppCouncillors?.wards || [])
+        .find(w => w.code === code || (w.codeGroup || []).includes(code));
+      if (ward) { wardLabel = ward.label; councillor = ward.councillors?.[0]; }
+    }
+  }
+
+  // WHY — the causal chain in plain language. Sealed ground shortens the lag;
+  // wet soil removes the buffer. Both facts are already in the payload; the
+  // sentence is the only thing that was missing.
+  const arrival = lag === 0 ? "as soon as it falls" : lag != null ? `about ${lag} h later` : "downstream";
+  const soilClause = amc
+    ? amc.class === "I" ? "Soil is dry and can still absorb the first storms."
+    : amc.class === "II" ? "Soil is partly wet — a second storm would mostly run off."
+    : "Soil is already saturated; the next rain arrives almost entirely as runoff."
+    : null;
+  let why;
+  if (sealed != null && soilClause) {
+    why = `<span class="cs-num">${sealed}%</span> of this catchment is sealed surface, so rain reaches the gauge ${arrival}. ${soilClause}`;
+  } else if (soilClause) {
+    why = `Rain in this catchment reaches the gauge ${arrival}. ${soilClause}`;
+  } else if (station.humanBrief) {
+    why = escapeHtml(station.humanBrief);
+  } else {
+    why = `<em>No catchment model for this gauge yet — reading is telemetry only.</em>`;
+  }
+
+  // ACT — band drives the posture; the councillor makes it a phone call.
+  const contact = councillor
+    ? ` Call ${escapeHtml(councillor.title || "Cr.")} ${escapeHtml(councillor.name)}${councillor.phone ? " · " + escapeHtml(councillor.phone) : ""}.`
+    : "";
+  let act;
+  if (band === "danger" || band === "warning") {
+    act = `Evacuate-ready posture. Open the nearest shelter and notify the ward now.${contact}`;
+  } else if (band === "alert") {
+    act = `Pre-position one mobile crew and confirm the drain sweep upstream.${contact}`;
+  } else if (risk && risk.pct >= 25) {
+    act = `Sweep now, before the forecast load arrives. No pre-positioning yet.${contact}`;
+  } else {
+    act = `Routine sweep on schedule. Re-check after the next rain band.`;
+  }
+
+  const row = (label, body) => `
+    <div class="cs-row">
+      <div class="cs-row-label">${label}</div>
+      <div class="cs-row-body">${body}</div>
+    </div>`;
+
+  const level = station.waterLevelM != null
+    ? `<span class="cs-num">${station.waterLevelM} m</span>`
+    : `<em>no live reading</em>`;
+  const alertAt = station.thresholds?.alert != null ? ` · Alert at ${station.thresholds.alert} m` : "";
+
+  const ground = sealed != null
+    ? `<span class="cs-num">${sealed}%</span> sealed upstream${amc ? ` · soil ${escapeHtml(amc.label)} (${amc.class})` : ""}`
+    : amc ? `soil ${escapeHtml(amc.label)} (${amc.class}) · <em>no impervious survey here</em>`
+    : `<em>no catchment model for this gauge</em>`;
+
+  const next = fc
+    ? `rain p90 <span class="cs-num">${fc.cumulative_p90_mm?.day4 ?? "—"} mm</span>/4d · risk ${(risk?.band || "—").toUpperCase()} ${risk?.pct ?? "—"}%${lag === 0 ? " · arrives now" : lag != null ? ` · lag +${lag}h` : ""}`
+    : `<em>not in the TimesFM catchment set — telemetry only</em>`;
+
+  const sources = ["JPS Infobanjir", zone ? "AlphaEarth" : null, fc ? "TimesFM" : null, councillor ? "MPP roster" : null]
+    .filter(Boolean).join(" · ");
+
+  el.innerHTML = `
+    <div class="cs-head">
+      <div>
+        <div class="cs-kicker"><span class="cs-dot"></span>Catchment risk</div>
+        <div class="cs-name">${escapeHtml(station.name)}</div>
+        <div class="cs-sub">${escapeHtml(station.basin || "Sarawak basin")}${station.council ? " · " + escapeHtml(station.council) : ""}${wardLabel ? " · " + escapeHtml(wardLabel) : ""}</div>
+      </div>
+      <button type="button" class="cs-close" aria-label="Close catchment risk">✕</button>
+    </div>
+    <div class="cs-rows">
+      ${row("The gauge", `${level} · ${escapeHtml(station.bandLabel || band)}${alertAt}`)}
+      ${row("The ground", ground)}
+      ${row("Exposed", station.affectedEstimate ? escapeHtml(station.affectedEstimate) : `<em>exposure not yet surveyed for this gauge</em>`)}
+      ${row("Next 72h", next)}
+      ${row("Why", why)}
+      ${row("Act", act)}
+      ${station.lastEvent ? row("Last time", `<em>${escapeHtml(station.lastEvent)}</em>`) : ""}
+      <div class="cs-src">${sources}</div>
+    </div>`;
+
+  el.querySelector(".cs-close")?.addEventListener("click", closeCatchmentStory);
+}
+
 // Zone 5 — the strategic argument. Satellite-measured growth + sealed-surface
 // share, each hardening zone tied to the gauge that inherits its runoff.
 function renderGrowthStory(payload) {
@@ -3831,6 +3975,12 @@ function renderDashboard(payload) {
   renderCascade(payload);
   renderWardRisk(payload);
   renderGrowthStory(payload);
+  // Keep an open Catchment Story live across the 60s refresh — the gauge
+  // reading in it must never go stale while the card sits open.
+  if (state.activeStation) {
+    const fresh = (payload.infobanjir?.stations || []).find(s => s.id === state.activeStation);
+    if (fresh) renderCatchmentStory(fresh); else closeCatchmentStory();
+  }
 
   renderFloodAction(payload);
   renderHydroGauges(payload);
@@ -4069,6 +4219,8 @@ function setScope(scope, { silent = false } = {}) {
   if (state.scope === scope) return;
   state.scope = scope;
   writeStoredScope(scope);
+  // The open gauge may not exist in the new scope's station set.
+  closeCatchmentStory();
   // Keep the html data-view attribute in lockstep so the existing
   // `[data-view="secretary"]` CSS rules gate the trimmed panel set.
   document.documentElement.dataset.view = scope === "padawan" ? "secretary" : "full";
@@ -4473,9 +4625,10 @@ function setupKeyboardShortcuts() {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const k = e.key;
 
-    // ESC: close ward brief or help overlay
+    // ESC: close the topmost open surface — help, then catchment story, then ward
     if (k === "Escape") {
       if (!$("helpOverlay")?.hidden) { hideHelpOverlay(); e.preventDefault(); return; }
+      if (state.activeStation) { closeCatchmentStory(); e.preventDefault(); return; }
       if (state.activeWard) { setActiveWard(null); e.preventDefault(); return; }
       return;
     }

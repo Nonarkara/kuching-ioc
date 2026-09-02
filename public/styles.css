@@ -33,8 +33,8 @@
   color-scheme: light;
   --bg: #f5f7fa;
   --hud-bg: rgba(255, 255, 255, 0.95);
-  --cyan: #0077b6;
-  --cyan-glow: rgba(0, 119, 182, 0.3);
+  --cyan: #005f94; /* was #0077b6 — 7-8px cyan labels fell to 3.7:1 on light cards; this clears 4.5:1 */
+  --cyan-glow: rgba(0, 95, 148, 0.3);
   --amber: #e67700;
   --red: #d00036;
   --green: #00875a;
@@ -286,7 +286,7 @@ body::before {
   padding-top: 4px;
   border-top: 1px dashed transparent;
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.08em;
   color: var(--soft);
   opacity: 0;
@@ -301,10 +301,10 @@ body::before {
 }
 .metric-card .metric-source .src-name { color: var(--cyan); text-shadow: 0 0 2px var(--cyan-glow); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .metric-card .metric-source .src-fresh { color: var(--soft); white-space: nowrap; }
-.metric-label { font-size: 7px; color: var(--soft); text-transform: uppercase; letter-spacing: 0.05em; }
+.metric-label { font-size: 8px; color: var(--soft); text-transform: uppercase; letter-spacing: 0.05em; }
 .metric-value { font-size: 15px; font-weight: 700; color: var(--cyan); margin: 1px 0; text-shadow: var(--glow-soft); }
 .metric-unit { font-size: 8px; opacity: 0.7; }
-.metric-context { font-size: 7px; color: var(--soft); opacity: 0.9; }
+.metric-context { font-size: 8px; color: var(--soft); opacity: 0.9; }
 .metric-card[data-tone="warn"] .metric-value { color: var(--amber); text-shadow: 0 0 5px rgba(255,170,0,0.3); }
 .metric-card[data-tone="critical"] .metric-value { color: var(--red); }
 .metric-card[data-tone="focus"] .metric-value { color: var(--green); text-shadow: 0 0 5px rgba(0,255,170,0.3); }
@@ -374,7 +374,9 @@ body::before {
   display: grid;
   grid-template-columns: minmax(0, 2.4fr) minmax(300px, 1fr);
   grid-template-areas: "center situation";
-  flex: 1 0 480px;
+  /* Zone 3 fills the viewport when scrolled to: the map dominates, the rail
+     scrolls within the same row. Mobile override below stacks and unclamps. */
+  height: clamp(520px, calc(100svh - 96px), 1040px);
   min-height: 480px;
   background: var(--bg);
 }
@@ -384,7 +386,10 @@ body::before {
 .panel-head { padding: 6px 10px; border-bottom: 1px solid var(--line-strong); background: var(--card-bg); flex-shrink: 0; }
 .kicker { font-size: 8px; color: var(--cyan); font-weight: 700; letter-spacing: 0.1em; }
 .panel-head h2 { font-size: 11px; margin: 2px 0 0; color: var(--ink); text-transform: uppercase; letter-spacing: 0.05em; }
-.panel-inner { flex: 1; min-height: 0; }
+/* The rail scrolls INSIDE the board row beside the map (the Phuket
+   operations-panel pattern). Without this the ~3,600px of rail content was
+   clipped by .panel { overflow: hidden } and unreachable on desktop. */
+.panel-inner { flex: 1; min-height: 0; overflow-y: auto; }
 .section-group { border-bottom: 1px solid var(--line); }
 .situation-rail { grid-area: situation; }
 
@@ -588,7 +593,7 @@ body::before {
 }
 .map-compass-label {
   position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%);
-  font-size: 7px; letter-spacing: 0.18em; color: var(--cyan);
+  font-size: 8px; letter-spacing: 0.18em; color: var(--cyan);
   text-shadow: 0 0 2px var(--cyan-glow);
 }
 [data-theme="light"] .map-compass { color: var(--soft-strong, #687a8c); opacity: 0.7; }
@@ -616,7 +621,7 @@ body::before {
 .map-coord-hud.is-snapped { border-color: var(--amber); }
 .map-coord-hud.is-copied { border-color: var(--green); }
 .coord-label {
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--soft);
@@ -677,7 +682,7 @@ body::before {
 .legend-item { display: flex; align-items: center; gap: 3px; color: var(--soft); }
 .legend-dot { width: 7px; height: 7px; border-radius: 50%; }
 .watchpoint-list { display: flex; gap: 4px; flex-wrap: wrap; }
-.watchpoint-list span { padding: 1px 5px; border: 1px solid var(--line); font-size: 7px; text-transform: uppercase; color: var(--soft); }
+.watchpoint-list span { padding: 1px 5px; border: 1px solid var(--line); font-size: 8px; text-transform: uppercase; color: var(--soft); }
 
 .segmented-control { display: flex; gap: 2px; }
 .segmented-control button {
@@ -696,7 +701,7 @@ body::before {
 
 .urban-layer-tag {
   display: inline-block;
-  font-size: 7px;
+  font-size: 8px;
   padding: 1px 4px;
   border: 1px solid;
   border-radius: 2px;
@@ -877,7 +882,7 @@ body::before {
   flex: 1; text-align: center; padding: 6px 4px; border: 1px solid var(--line); background: var(--card-bg);
 }
 .airport-stat .stat-val { font-size: 18px; font-weight: 800; color: var(--ink); }
-.airport-stat .stat-label { font-size: 7px; color: var(--soft); text-transform: uppercase; letter-spacing: 0.05em; }
+.airport-stat .stat-label { font-size: 8px; color: var(--soft); text-transform: uppercase; letter-spacing: 0.05em; }
 .airport-stat.arrival .stat-val { color: var(--green); }
 .airport-stat.departure .stat-val { color: var(--amber); }
 
@@ -896,7 +901,7 @@ body::before {
   padding: 1px 4px;
   border: 1px solid var(--amber);
   color: var(--amber);
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.06em;
 }
 
@@ -929,7 +934,7 @@ body::before {
 }
 .news-intake-card span {
   color: var(--soft);
-  font-size: 7px;
+  font-size: 8px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -941,7 +946,7 @@ body::before {
   padding: 1px 5px;
   border: 1px solid var(--line-strong);
   color: var(--cyan);
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.08em;
 }
 .news-intake-note {
@@ -966,7 +971,7 @@ body::before {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 7px;
+  font-size: 8px;
   color: var(--soft);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1055,7 +1060,7 @@ body::before {
   text-shadow: 0 0 5px var(--cyan-glow);
 }
 .econ-pill-label {
-  font-size: 7px;
+  font-size: 8px;
   color: var(--soft);
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -1116,7 +1121,7 @@ body::before {
 }
 .news-digest-badge {
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.06em;
   padding: 1px 4px;
   border: 1px solid var(--line-strong);
@@ -1134,7 +1139,7 @@ body::before {
 }
 .news-digest-time {
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   color: var(--soft);
   white-space: nowrap;
   flex-shrink: 0;
@@ -1149,7 +1154,7 @@ body::before {
   gap: 2px;
 }
 .trends-band-head {
-  font-size: 7px;
+  font-size: 8px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--soft);
@@ -1180,7 +1185,7 @@ body::before {
 }
 .trend-traffic {
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   color: var(--amber);
   white-space: nowrap;
 }
@@ -1203,7 +1208,7 @@ body::before {
 }
 .gp-kicker {
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--soft);
@@ -1260,7 +1265,7 @@ body::before {
   white-space: nowrap;
 }
 .gp-unit {
-  font-size: 7px;
+  font-size: 8px;
   color: var(--soft);
   margin-left: 1px;
   margin-right: 3px;
@@ -1276,7 +1281,7 @@ body::before {
 }
 .gp-delta {
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.05em;
   padding: 1px 4px;
   border: 1px solid currentColor;
@@ -1301,7 +1306,7 @@ body::before {
 }
 .gp-trend {
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--amber);
@@ -1333,7 +1338,7 @@ body::before {
   grid-row: 1 / 3;
   align-self: start;
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.05em;
   padding: 1px 4px;
   border: 1px solid var(--line-strong);
@@ -1361,7 +1366,7 @@ body::before {
 }
 .gp-meta {
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   color: var(--soft);
   overflow: hidden;
   white-space: nowrap;
@@ -1417,7 +1422,7 @@ body::before {
 }
 .flood-day-label {
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   color: var(--soft);
 }
 .flood-day-val {
@@ -1427,7 +1432,7 @@ body::before {
 }
 .flood-day-val.warn { color: var(--amber); }
 .flood-model {
-  font-size: 7px;
+  font-size: 8px;
   color: var(--soft);
   margin-top: 2px;
 }
@@ -1452,7 +1457,7 @@ body::before {
 }
 .bypass-budget {
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   background: rgba(251, 191, 36, 0.15);
   color: var(--amber);
   padding: 1px 5px;
@@ -1487,12 +1492,12 @@ body::before {
 }
 .bypass-period {
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   color: var(--soft);
   white-space: nowrap;
 }
 .bypass-benefit {
-  font-size: 7px;
+  font-size: 8px;
   color: var(--soft);
   line-height: 1.4;
 }
@@ -1610,7 +1615,7 @@ body::before {
   align-items: center;
   gap: 6px;
   color: var(--soft);
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -1621,7 +1626,7 @@ body::before {
   padding: 1px 6px;
   border: 1px solid var(--amber);
   color: var(--amber);
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.08em;
 }
 .qualitative-source-item strong {
@@ -1635,7 +1640,7 @@ body::before {
 }
 .qualitative-source-note {
   color: var(--soft);
-  font-size: 7px;
+  font-size: 8px;
   line-height: 1.35;
 }
 .qualitative-source-empty {
@@ -1673,7 +1678,7 @@ body::before {
 }
 .source-matrix-card span {
   color: var(--soft);
-  font-size: 7px;
+  font-size: 8px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -1693,7 +1698,7 @@ body::before {
   padding: 1px 6px;
   border: 1px solid var(--line);
   color: var(--soft);
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -1752,11 +1757,11 @@ body::before {
 }
 .source-updated {
   color: var(--soft);
-  font-size: 7px;
+  font-size: 8px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-.source-status { padding: 1px 5px; border: 1px solid; font-size: 7px; text-transform: uppercase; letter-spacing: 0.05em; }
+.source-status { padding: 1px 5px; border: 1px solid; font-size: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
 .source-status[data-status="live"] { color: var(--green); border-color: var(--green); }
 .source-status[data-status="official"] { color: var(--cyan); border-color: var(--cyan); }
 .source-status[data-status="fallback"], .source-status[data-status="curated"] { color: var(--amber); border-color: var(--amber); }
@@ -1820,6 +1825,7 @@ body::before {
       "center"
       "situation";
     flex: 0 0 auto;
+    height: auto;
   }
   .panel-inner { overflow: visible; }
   .map-panel { min-height: 540px; }
@@ -1987,8 +1993,8 @@ body::before {
   color: var(--ink);
   letter-spacing: 0.5px;
 }
-.ward-chip-area { font-size: 7px; color: var(--soft); line-height: 1.15; min-height: 16px; }
-.ward-chip-stats { font-size: 7px; color: var(--cyan); letter-spacing: 0.3px; display: flex; gap: 2px; justify-content: center; flex-wrap: wrap; }
+.ward-chip-area { font-size: 8px; color: var(--soft); line-height: 1.15; min-height: 16px; }
+.ward-chip-stats { font-size: 8px; color: var(--cyan); letter-spacing: 0.3px; display: flex; gap: 2px; justify-content: center; flex-wrap: wrap; }
 
 .ward-detail {
   padding: 8px 10px;
@@ -2063,7 +2069,7 @@ body::before {
   gap: 0;
 }
 .locality-kpis .metric-label {
-  font-size: 7px;
+  font-size: 8px;
   color: var(--cyan);
   letter-spacing: 0.6px;
   text-transform: uppercase;
@@ -2529,7 +2535,7 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
   color: var(--soft);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  font-size: 7.5px;
+  font-size: 8px;
   margin-right: 6px;
 }
 .ward-brief-row .ward-brief-phone {
@@ -2542,7 +2548,7 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
   margin-left: 6px;
   padding: 1px 4px;
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   border: 1px solid var(--line);
@@ -3038,7 +3044,7 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
 }
 .cctv-status {
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   padding: 1px 4px;
   border: 1px solid;
 }
@@ -3265,11 +3271,11 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
 .fm-station { font-size: 9px; color: var(--text); display: flex; align-items: center; gap: 4px; flex: 1; flex-wrap: wrap; }
 .fm-stress  { color: var(--amber); font-size: 9px; }
 .fm-stress-mod { color: var(--soft); }
-.fm-row-amc { font-size: 7px; padding: 0 3px; border: 1px solid currentColor; letter-spacing: .05em; }
+.fm-row-amc { font-size: 8px; padding: 0 3px; border: 1px solid currentColor; letter-spacing: .05em; }
 .fm-row-amc[data-tone="good"]  { color: var(--green); }
 .fm-row-amc[data-tone="muted"] { color: var(--soft); }
 .fm-row-amc[data-tone="alert"] { color: var(--amber); }
-.fm-imp     { font-size: 7px; color: var(--soft); padding: 0 2px; }
+.fm-imp     { font-size: 8px; color: var(--soft); padding: 0 2px; }
 .fm-cells   { display: flex; gap: 4px; }
 .fm-band    { font-size: 8px; font-weight: 700; width: 32px; text-align: center; padding: 1px 0; letter-spacing: .04em; }
 .fm-band[data-tone="good"]  { color: var(--green); }
@@ -3299,7 +3305,7 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
 .cr-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .cr-type { font-size: 10px; font-weight: 700; color: var(--ink); display: flex; justify-content: space-between; align-items: center; gap: 6px; line-height: 1.3; text-transform: uppercase; letter-spacing: 0.04em; }
 
-.cr-status { font-size: 7px; letter-spacing: .1em; border: 1px solid currentColor; padding: 2px 4px; flex-shrink: 0; }
+.cr-status { font-size: 8px; letter-spacing: .1em; border: 1px solid currentColor; padding: 2px 4px; flex-shrink: 0; }
 .cr-status[data-tone="warn"]  { color: var(--amber); }
 .cr-status[data-tone="good"]  { color: var(--green); }
 .cr-status[data-tone="muted"] { color: var(--soft); }
@@ -3609,7 +3615,7 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
 .wr-ward { font-size: 10px; font-weight: 700; color: var(--ink); }
 .wr-area { font-size: 9px; color: var(--soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wr-props { font-size: 9px; color: var(--ink); text-align: right; }
-.wr-props sup { font-size: 7px; color: var(--soft); }
+.wr-props sup { font-size: 8px; color: var(--soft); }
 .wr-gauge { font-size: 8px; text-align: right; color: var(--soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* --- Zone 5: growth story --- */
@@ -3760,7 +3766,7 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
 .cs-src {
   margin-top: 7px; padding-top: 6px;
   border-top: 1px solid var(--line);
-  font-size: 7px; letter-spacing: 0.16em;
+  font-size: 8px; letter-spacing: 0.16em;
   text-transform: uppercase; color: var(--soft);
 }
 
@@ -3792,4 +3798,46 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
 }
 @media (prefers-reduced-motion: reduce) {
   .skeleton { animation: none; background: rgba(128,160,190,0.14); }
+}
+
+/* Cascade table has 7 columns — on narrow screens it scrolls inside its own
+   panel rather than pushing the page sideways (§11.8 rule 3). */
+.cascade-panel { overflow-x: auto; }
+
+/* Phone tap targets (§11.8 rule 2): every control ≥ 44px tall. Map markers are
+   excluded on purpose — they are canvas hit-areas, not buttons. */
+@media (max-width: 720px) {
+  .scope-btn, .dim-btn, .ctrl-btn, .lang-btn, .segmented-control button,
+  .urban-toggle button, .coord-copy, .fa-hotline, .councillor-phone,
+  .news-digest-tab, .locality-filter, .locality-search, .locality-reset,
+  .help-hint, .action-btn, .gp-title, .ward-risk-row {
+    min-height: 44px;
+  }
+  .scope-btn, .dim-btn, .ctrl-btn, .lang-btn, .segmented-control button,
+  .urban-toggle button, .news-digest-tab, .locality-filter, .help-hint, .action-btn {
+    display: inline-flex; align-items: center; justify-content: center; padding-left: 12px; padding-right: 12px;
+  }
+  .controls-row { flex-wrap: wrap; gap: 8px; }
+  .ward-risk-row { padding: 8px 0; }
+  .fa-hotline, .councillor-phone { display: flex; align-items: center; }
+}
+
+/* Print: the Command Brief zones join the A4 sitrep. Verdict + cascade table
+   print in black on white; overlays and decorative subtitles do not print. */
+@media print {
+  .catchment-story, .zone-sub, .cascade-fan, .outlook-grid .forecast-rail,
+  .growth-zones .gz-bar { display: none !important; }
+  .zone-head { background: #fff !important; border-top: 1px solid #000 !important; page-break-after: avoid; }
+  .zone-num { color: #000 !important; }
+  .zone-q, .verdict-verb, .verdict-why, .cascade-title, .cascade-explain,
+  .cascade-table td, .cascade-table th, .growth-lead, .growth-foot,
+  .growth-stat .g-val, .growth-stat .g-label, .gz-name, .gz-pct, .gz-gauge {
+    color: #000 !important; text-shadow: none !important;
+  }
+  .verdict-strip, .outlook-panel, .growth-panel, .growth-stat {
+    background: #fff !important; border-color: #999 !important;
+  }
+  .verdict-chip { color: #000 !important; border-color: #000 !important; }
+  .outlook-grid { grid-template-columns: 1fr !important; }
+  .cascade-table th { border-color: #000 !important; }
 }

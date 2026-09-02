@@ -1036,7 +1036,11 @@ async function loadDashboardPayload() {
   const liveDashboardUrl = apiUrl("/api/dashboard");
   const staticDashboardUrl = apiUrl("/api/dashboard.json");
   const manifestUrl = apiUrl("/api/build-manifest.json");
+  // On static hosting there is no live API; probing it 404s on every 60s
+  // refresh. Go straight to the baked snapshot (tier 2).
+  const liveAvailable = boardModeFromBoot() !== "pages-static";
   try {
+    if (!liveAvailable) throw new Error("static host — no live API");
     const [payload, exchange] = await Promise.all([fetchJson(liveDashboardUrl, 8000), loadExchangeRates()]);
     return decoratePayload({
       ...payload,
@@ -1181,7 +1185,6 @@ function renderMap(payload) {
       if (l.active) tl.addTo(state.map);
     });
     renderLayerToggle(layers);
-    renderFocusToggle();
     renderUrbanLayerToggle();
     loadWardFeatures();
 
@@ -1475,10 +1478,6 @@ function renderGisLegend(activeLayerIds) {
   el.innerHTML = html;
 }
 
-// renderFocusToggle was retired in the scope-toggle refactor — the masthead
-// .scope-btn segmented control now drives geographic scope and the map
-// re-fits reactively via setScope() (see above).
-function renderFocusToggle() { /* no-op: replaced by renderScopeToggle() */ }
 
 function renderUrbanLayerToggle() {
   const el = $("watchpointList");
@@ -3762,6 +3761,9 @@ function renderWardRisk(payload) {
 
   el.querySelectorAll(".ward-risk-row").forEach(row => {
     row.addEventListener("click", () => setActiveWard(row.dataset.ward));
+    row.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setActiveWard(row.dataset.ward); }
+    });
   });
 }
 
@@ -3789,6 +3791,7 @@ function closeCatchmentStory() {
   el.hidden = true;
   el.innerHTML = "";
   state.activeStation = null;
+  $("mapCanvas")?.focus({ preventScroll: true });
 }
 
 function renderCatchmentStory(station) {
@@ -3886,24 +3889,26 @@ function renderCatchmentStory(station) {
   el.innerHTML = `
     <div class="cs-head">
       <div>
-        <div class="cs-kicker"><span class="cs-dot"></span>Catchment risk</div>
+        <div class="cs-kicker"><span class="cs-dot"></span>${t("csKicker")}</div>
         <div class="cs-name">${escapeHtml(station.name)}</div>
         <div class="cs-sub">${escapeHtml(station.basin || "Sarawak basin")}${station.council ? " · " + escapeHtml(station.council) : ""}${wardLabel ? " · " + escapeHtml(wardLabel) : ""}</div>
       </div>
-      <button type="button" class="cs-close" aria-label="Close catchment risk">✕</button>
+      <button type="button" class="cs-close" aria-label="${t("csClose")}">✕</button>
     </div>
     <div class="cs-rows">
-      ${row("The gauge", `${level} · ${escapeHtml(station.bandLabel || band)}${alertAt}`)}
-      ${row("The ground", ground)}
-      ${row("Exposed", station.affectedEstimate ? escapeHtml(station.affectedEstimate) : `<em>exposure not yet surveyed for this gauge</em>`)}
-      ${row("Next 72h", next)}
-      ${row("Why", why)}
-      ${row("Act", act)}
-      ${station.lastEvent ? row("Last time", `<em>${escapeHtml(station.lastEvent)}</em>`) : ""}
+      ${row(t("csGauge"), `${level} · ${escapeHtml(station.bandLabel || band)}${alertAt}`)}
+      ${row(t("csGround"), ground)}
+      ${row(t("csExposed"), station.affectedEstimate ? escapeHtml(station.affectedEstimate) : `<em>exposure not yet surveyed for this gauge</em>`)}
+      ${row(t("csNext"), next)}
+      ${row(t("csWhy"), why)}
+      ${row(t("csAct"), act)}
+      ${station.lastEvent ? row(t("csLast"), `<em>${escapeHtml(station.lastEvent)}</em>`) : ""}
       <div class="cs-src">${sources}</div>
     </div>`;
 
-  el.querySelector(".cs-close")?.addEventListener("click", closeCatchmentStory);
+  const closeBtn = el.querySelector(".cs-close");
+  closeBtn?.addEventListener("click", closeCatchmentStory);
+  closeBtn?.focus({ preventScroll: true });
 }
 
 // Zone 5 — the strategic argument. Satellite-measured growth + sealed-surface
@@ -4151,10 +4156,13 @@ function setLang(lang) {
     pill.textContent = SCOPES[state.scope].pill[state.lang] || SCOPES[state.scope].pill.en;
   }
   // Re-render focus toggle labels
-  if (state.map) renderFocusToggle();
   if (state.payload) {
     renderRuntimeMeta(state.payload);
     renderVerdict(state.payload);
+    if (state.activeStation) {
+      const st = (state.payload.infobanjir?.stations || []).find(s => s.id === state.activeStation);
+      if (st) renderCatchmentStory(st);
+    }
     renderFloodAction(state.payload);
     renderHydroGauges(state.payload);
     renderForecastRail(state.payload);

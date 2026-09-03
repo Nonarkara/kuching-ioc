@@ -991,11 +991,11 @@ async function buildFallbackDashboard() {
       updatedAt: gen,
       score: 20,
       band: "watch",
-      verb: "STAY INFORMED",
-      verbBm: "SENTIASA IKUTI",
-      verbZh: "保持关注",
+      verb: "Keep watching",
+      verbBm: "Terus pantau",
+      verbZh: "继续留意",
       tone: "muted",
-      reason: "Reference hold — connect to live DID iHYDRO for gauge-backed action.",
+      reason: "Holding pattern — open live DID iHYDRO for gauge-backed action.",
       drivers: ["Live hydro feed unavailable in client-only mode"],
       checklist: [
         "Check iHYDRO Padawan gauges: Batu Kitang, Batu Kawa, Desa Wira, Siniawan.",
@@ -2720,7 +2720,7 @@ function renderFloodAction(payload) {
   }
   el.hidden = false;
   el.dataset.band = fa.band || "normal";
-  const verb = floodActionVerb(payload) || "ALL CLEAR";
+  const verb = floodActionVerb(payload) || "Rivers look fine";
   const checklist = (fa.checklist || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   const reality = fa.realityCheck || {};
   const headlines = (reality.headlines || []).slice(0, 2).map((h) =>
@@ -3604,28 +3604,33 @@ function renderVerdict(payload) {
   const aqiMetric = (payload.metrics || []).find(m => m.id === "aqi");
   const aqi = aqiMetric ? Math.round(aqiMetric.value) : null;
 
-  // Strip band: flood alert wins, then MET/air push to watch.
-  const floodBad = fa.band && fa.band !== "normal";
+  // Strip band for human eyes: only prepare/act go red. "watch" is amber —
+  // painting watch as alert made "Keep watching" look like a flood emergency.
+  const floodAct = fa.band === "act";
+  const floodPrep = fa.band === "prepare";
+  const floodWatch = fa.band === "watch";
   const airBad = aqi != null && aqi > 100;
-  const band = floodBad ? "alert" : (met.activeCount > 0 || airBad) ? "watch" : "normal";
+  const band = floodAct ? "alert" : (floodPrep || floodWatch || met.activeCount > 0 || airBad) ? "watch" : "normal";
   el.dataset.band = band;
 
   let verb = state.lang === "ms" ? (fa.verbBm || fa.verb) : state.lang === "zh" ? (fa.verbZh || fa.verb) : fa.verb;
-  // Honesty rule: never headline "all clear" while the strip is amber. When
-  // flood is fine but air/MET drives the watch, the verb names the driver.
-  if (!floodBad && band === "watch") {
+  // When flood is calm but weather/air drives the amber strip, name that driver
+  // in plain words — never leave a soft flood verb under a hard red chip set.
+  if (!floodAct && !floodPrep && band === "watch") {
     verb = met.activeCount > 0
-      ? (state.lang === "ms" ? "PERHATI — AMARAN MET" : state.lang === "zh" ? "关注 — 气象警报" : "WATCH — MET WARNING")
-      : (state.lang === "ms" ? `PERHATI — UDARA AQI ${aqi}` : state.lang === "zh" ? `关注 — 空气 AQI ${aqi}` : `WATCH — AIR AQI ${aqi}`);
+      ? (state.lang === "ms" ? `Pantau — ${met.activeCount} amaran cuaca` : state.lang === "zh" ? `留意 — ${met.activeCount} 则天气警报` : `Keep watching — ${met.activeCount} weather warning${met.activeCount > 1 ? "s" : ""}`)
+      : (state.lang === "ms" ? `Pantau — udara AQI ${aqi}` : state.lang === "zh" ? `留意 — 空气 AQI ${aqi}` : `Keep watching — air AQI ${aqi}`);
   }
   const chips = [];
-  chips.push(`<span class="verdict-chip" data-tone="${floodBad ? "alert" : "ok"}">FLOOD ${(ib.highestBandLabel || "normal").toUpperCase()} · ${ib.padawanLiveCount ?? ib.liveCount ?? 0} gauges</span>`);
-  chips.push(`<span class="verdict-chip" data-tone="${met.activeCount > 0 ? "alert" : "ok"}">MET ${met.activeCount > 0 ? met.activeCount + " WARNING" + (met.activeCount > 1 ? "S" : "") : "CLEAR"}</span>`);
-  if (aqi != null) chips.push(`<span class="verdict-chip" data-tone="${aqi > 150 ? "alert" : aqi > 100 ? "warn" : "ok"}">AIR AQI ${aqi}</span>`);
+  const riverLabel = (ib.highestBandLabel || "normal").toLowerCase();
+  const riverOk = !["alert", "warning", "danger"].includes(String(ib.highestBand || "").toLowerCase());
+  chips.push(`<span class="verdict-chip" data-tone="${riverOk ? "ok" : "alert"}">Rivers ${riverOk ? "OK" : riverLabel} · ${ib.padawanLiveCount ?? ib.liveCount ?? 0} gauges</span>`);
+  chips.push(`<span class="verdict-chip" data-tone="${met.activeCount > 0 ? "alert" : "ok"}">${met.activeCount > 0 ? `${met.activeCount} weather warning${met.activeCount > 1 ? "s" : ""}` : "Weather clear"}</span>`);
+  if (aqi != null) chips.push(`<span class="verdict-chip" data-tone="${aqi > 150 ? "alert" : aqi > 100 ? "warn" : "ok"}">Air ${aqi > 100 ? "unhealthy" : "OK"} · ${aqi}</span>`);
   const ff = payload.floodForecast;
   if (ff?.todayCms != null && ff?.peakCms != null) {
     const rising = ff.peakCms > ff.todayCms * 1.15;
-    chips.push(`<span class="verdict-chip" data-tone="${rising ? "warn" : "ok"}">RIVER ${Math.round(ff.todayCms)}→${Math.round(ff.peakCms)} m³/s</span>`);
+    chips.push(`<span class="verdict-chip" data-tone="${rising ? "warn" : "ok"}">River flow ${Math.round(ff.todayCms)}→${Math.round(ff.peakCms)} m³/s</span>`);
   }
 
   const why = [fa.reason, payload.summary?.headline].filter(Boolean).join(" · ");

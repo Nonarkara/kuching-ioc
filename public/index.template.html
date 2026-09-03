@@ -173,7 +173,7 @@
             <div id="hydroGaugePanel" class="hydro-gauge-panel"></div>
 
             <div class="section-group">
-              <div class="section-label" data-i18n="wardRisk">Ward exposure // gauge &times; holdings</div>
+              <div class="section-label" data-i18n="wardRisk">Wards most exposed</div>
               <div id="wardRiskPanel" class="ward-risk-panel"></div>
             </div>
 
@@ -182,7 +182,7 @@
             <section id="wardBrief" class="ward-brief" data-active="false" hidden></section>
 
             <div class="section-group">
-              <div class="section-label" data-i18n="directives">DIRECTIVES</div>
+              <div class="section-label" data-i18n="directives">What to do</div>
               <div id="operationList" class="operation-list"></div>
             </div>
 
@@ -198,25 +198,26 @@
 
             <div id="officialPulse"></div>
 
-            <div class="section-group">
-              <div class="section-label" data-i18n="councillors">COUNCILLORS // MPP 2025–2028</div>
-              <div id="councillorPanel" class="councillor-panel"></div>
-            </div>
-
-            <div class="section-group">
-              <div class="section-label" data-i18n="floodMatrix">Flood outlook by station</div>
-              <div id="floodMatrix" class="flood-matrix"></div>
-            </div>
-
-            <div class="section-group">
-              <div class="section-label" data-i18n="kchAirspace">Flights near KCH</div>
-              <div id="airportStats" class="airport-panel"></div>
-            </div>
-
-            <div class="section-group">
-              <div class="section-label" data-i18n="events24h">What changed in 24h</div>
-              <div id="eventsStack" class="events-stack"></div>
-            </div>
+            <!-- Secondary detail — collapsed so the eye hits act / gauges / wards first. -->
+            <details class="rail-more">
+              <summary class="rail-more-summary">More detail · councillors, stations, flights</summary>
+              <div class="section-group">
+                <div class="section-label" data-i18n="councillors">Who to call · MPP councillors</div>
+                <div id="councillorPanel" class="councillor-panel"></div>
+              </div>
+              <div class="section-group">
+                <div class="section-label" data-i18n="floodMatrix">Flood outlook by station</div>
+                <div id="floodMatrix" class="flood-matrix"></div>
+              </div>
+              <div class="section-group">
+                <div class="section-label" data-i18n="kchAirspace">Flights near KCH</div>
+                <div id="airportStats" class="airport-panel"></div>
+              </div>
+              <div class="section-group">
+                <div class="section-label" data-i18n="events24h">What changed in 24h</div>
+                <div id="eventsStack" class="events-stack"></div>
+              </div>
+            </details>
           </div>
         </aside>
       </main>

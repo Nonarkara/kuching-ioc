@@ -396,13 +396,34 @@ body::before {
 /* Compact section labels (replaces kicker+h2 in sidebar) */
 .section-label {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--cyan);
-  letter-spacing: 0.15em;
+  letter-spacing: 0.04em;
+  text-transform: none;
   padding: 8px 10px 4px;
   border-bottom: 1px solid var(--line);
 }
+
+/* Secondary rail drawer — keeps the first screen about action, not inventory. */
+.rail-more {
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+}
+.rail-more-summary {
+  list-style: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--soft);
+  letter-spacing: 0.04em;
+  padding: 10px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.rail-more-summary::-webkit-details-marker { display: none; }
+.rail-more[open] > .rail-more-summary { color: var(--cyan); border-bottom: 1px solid var(--line); }
 
 /* Posture block: the single most prominent element in the sidebar */
 .posture-block {
@@ -3179,8 +3200,8 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
 .flood-action-card[data-band="act"] { border-left-color: var(--red); }
 .fa-kicker { font-size: 9px; letter-spacing: .12em; color: var(--soft); text-transform: uppercase; }
 .fa-verb {
-  font-size: 22px; font-weight: 800; line-height: 1.1; margin: 4px 0 2px;
-  color: var(--green); letter-spacing: .04em;
+  font-size: 20px; font-weight: 800; line-height: 1.15; margin: 4px 0 2px;
+  color: var(--green); letter-spacing: 0.01em; text-transform: none;
 }
 .flood-action-card[data-band="watch"] .fa-verb,
 .flood-action-card[data-band="prepare"] .fa-verb { color: var(--amber); }
@@ -3479,10 +3500,11 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
   font-family: var(--font-sans);
   font-size: 22px;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  /* Sentence case — shouting ALL CAPS made calm verbs look like emergencies. */
+  text-transform: none;
   color: var(--ink);
-  line-height: 1.1;
+  line-height: 1.15;
 }
 .verdict-strip[data-band="normal"] .verdict-verb { color: var(--green); text-shadow: 0 0 6px rgba(0,255,170,0.35); }
 .verdict-strip[data-band="watch"]  .verdict-verb { color: var(--amber); text-shadow: 0 0 6px rgba(255,170,0,0.35); }

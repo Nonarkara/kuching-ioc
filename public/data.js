@@ -308,7 +308,7 @@ export const TRANSLATIONS = {
     growthRing: "Growth Ring", urbanSprawl: "Urban Sprawl",
     transit: "Transit Network", mpp_wards: "MPP Wards (Governance)", flood_zones: "Flood Zones (Historical)",
     growth: "Growth 2017→24 (AlphaEarth)", impervious: "Impervious Surface 2024 (AlphaEarth)",
-    governance: "Municipal Governance", councillors: "Councillors // MPP 2025–2028",
+    governance: "Municipal Governance", councillors: "Who to call · MPP councillors",
     chairman: "Chairman", deputy: "Deputy Chairman", ward: "Ward", portfolio: "Portfolio",
     phone: "Contact", allZones: "All Zones",
     localityExplorer: "Locality Explorer // Padawan", locality: "Locality", code: "Code",
@@ -338,7 +338,7 @@ export const TRANSLATIONS = {
     zone3: "Where, and who's exposed?", zone3Sub: "Live map · gauges · wards · councillors",
     zone4: "What are people saying?", zone4Sub: "Press in 3 languages · ground pulse · economy",
     zone5: "Is the city outrunning its drains?", zone5Sub: "Satellite growth 2017–2024 · impervious surface · 525 localities",
-    wardRisk: "Ward exposure // gauge × holdings",
+    wardRisk: "Wards most exposed",
     csKicker: "Catchment risk", csGauge: "The gauge", csGround: "The ground", csExposed: "Exposed", csNext: "Next 72h", csWhy: "Why", csAct: "Act", csLast: "Last time", csClose: "Close catchment risk",
     officialPulse: "Population snapshot",
     environment: "Environment right now",
@@ -368,7 +368,7 @@ export const TRANSLATIONS = {
     growthRing: "Gelang Pertumbuhan", urbanSprawl: "Serakan Bandar",
     transit: "Rangkaian Transit", mpp_wards: "Zon MPP (Tadbir Urus)", flood_zones: "Kawasan Banjir (Sejarah)",
     growth: "Gelang Pertumbuhan 2017→24 (AlphaEarth)", impervious: "Permukaan Kalis Air 2024 (AlphaEarth)",
-    governance: "Tadbir Urus Perbandaran", councillors: "Ahli Majlis // MPP 2025–2028",
+    governance: "Tadbir Urus Perbandaran", councillors: "Siapa dihubungi · Ahli Majlis MPP",
     chairman: "Pengerusi", deputy: "Timbalan Pengerusi", ward: "Zon", portfolio: "Portfolio",
     phone: "Hubungan", allZones: "Semua Zon",
     localityExplorer: "Penjelajah Kawasan // Padawan", locality: "Kawasan", code: "Kod",
@@ -428,7 +428,7 @@ export const TRANSLATIONS = {
     growthRing: "增长环", urbanSprawl: "城市扩张",
     transit: "过境网络", mpp_wards: "巴达旺选区 (治理)", flood_zones: "历史洪水区",
     growth: "增长环 2017→24 (AlphaEarth)", impervious: "不透水表面 2024 (AlphaEarth)",
-    governance: "市政治理", councillors: "议员名录 // MPP 2025–2028",
+    governance: "市政治理", councillors: "联系谁 · MPP 议员",
     chairman: "主席", deputy: "副主席", ward: "选区", portfolio: "职务",
     phone: "联络", allZones: "全部选区",
     localityExplorer: "地点浏览 // 巴达旺", locality: "地点", code: "代码",
@@ -551,8 +551,10 @@ export function buildSatelliteCards() {
 
 export function buildMapLayers() {
   return [
-    { id: "dark", label: "Dark", url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", active: true },
-    { id: "light", label: "Light", url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", active: false },
+    // Esri canvas tiles — no API key. CartoCDN now watermarks "API KEY REQUIRED"
+    // which made the map unreadable for humans (the opposite of a map).
+    { id: "dark", label: "Dark", url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", active: true },
+    { id: "light", label: "Light", url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", active: false },
     { id: "street", label: "Street", url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", active: false },
     { id: "imagery", label: "Satellite", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", active: false },
   ];

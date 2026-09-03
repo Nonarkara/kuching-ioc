@@ -1098,17 +1098,28 @@ function buildSatelliteCards() {
 }
 
 function buildMapLayers() {
+  // Esri / OSM — no API key. CartoCDN now watermarks "API KEY REQUIRED",
+  // which hid the city under a wall of legal text (unusable for humans).
   return [
+    {
+      id: "dark",
+      label: "Dark",
+      type: "tile",
+      kind: "reference",
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+      attribution: "Tiles &copy; Esri",
+      maxZoom: 16,
+      active: true,
+    },
     {
       id: "light",
       label: "Light",
       type: "tile",
       kind: "reference",
-      url: "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
-      subdomains: "abcd",
-      attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
-      maxZoom: 20,
-      active: true,
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+      attribution: "Tiles &copy; Esri",
+      maxZoom: 16,
+      active: false,
     },
     {
       id: "street",
@@ -1810,10 +1821,11 @@ const HYDRO_BANDS = [
 ];
 
 const FLOOD_ACTION_BANDS = {
-  normal:  { verb: "ALL CLEAR",        verbBm: "SEMUA SELAMAT",   verbZh: "一切安全", scoreMin: 0,  tone: "good" },
-  watch:   { verb: "STAY INFORMED",    verbBm: "SENTIASA IKUTI",  verbZh: "保持关注", scoreMin: 20, tone: "muted" },
-  prepare: { verb: "PREPARE",          verbBm: "BERSEDIA",        verbZh: "做好准备", scoreMin: 45, tone: "warn" },
-  act:     { verb: "ACT NOW",          verbBm: "BERTINDAK SEKARANG", verbZh: "立即行动", scoreMin: 70, tone: "alert" },
+  // Plain speech for a Secretary, not radio codes for an operator.
+  normal:  { verb: "Rivers look fine", verbBm: "Sungai tenang",     verbZh: "河况平稳", scoreMin: 0,  tone: "good" },
+  watch:   { verb: "Keep watching",    verbBm: "Terus pantau",      verbZh: "继续留意", scoreMin: 20, tone: "muted" },
+  prepare: { verb: "Get ready",        verbBm: "Bersedia",          verbZh: "做好准备", scoreMin: 45, tone: "warn" },
+  act:     { verb: "Act now",          verbBm: "Bertindak sekarang", verbZh: "立即行动", scoreMin: 70, tone: "alert" },
 };
 
 // Documented / recently activated PPS and permanent centres for Greater Kuching.

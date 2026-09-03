@@ -197,3 +197,19 @@ slope → toll → tonight → why → act. Kuching had exactly the same disease
 Deliberately NOT copied: Phuket uses Inter (violates workspace §11.11 banned fonts);
 Kuching's JetBrains Mono + Manrope is already more compliant. framer-motion is a dead
 dependency there — no imports anywhere in src.
+
+## IOC 3.1.1 — polish pass "until perfect" (2026-09-03)
+
+Measured, not guessed — probes at 1440×900 and 375×812 on a fresh asset stamp.
+- [x] Rail regression (mine, from the 100vh fix): ~3,600px of Zone 3 clipped behind
+      `.panel { overflow: hidden }`. Rail now scrolls inside the board row beside the
+      map (Phuket operations-panel pattern); board fills the viewport when reached.
+- [x] Tier-1 `/api/dashboard` probe 404'd every 60s on Pages — gated by `boardModeFromBoot()`.
+- [x] Type floor: 46 rules at 7/7.5px → 8px. Zero text under 8px on the page.
+- [x] Light `--cyan` #0077b6 → #005f94: `.metric-label` contrast 3.69 → 5.18.
+- [x] Phone tap targets: 64 controls under 44px → 0 (map canvas markers excluded by design).
+- [x] Print stylesheet covers the five zones; overlays and decorative subtitles don't print.
+- [x] Ward-risk rows keyboard-operable (Enter/Space); story dialog focuses ✕ and returns
+      focus to the map on close; story labels + kicker in EN/BM/ZH, re-render on lang switch.
+- [x] Retired `renderFocusToggle` no-op and its two call sites.
+- [ ] Not touched: ipapi.co 401 in the shared visitor tracker (external, fire-and-forget).

@@ -3820,6 +3820,8 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
   .controls-row { flex-wrap: wrap; gap: 8px; }
   .ward-risk-row { padding: 8px 0; }
   .fa-hotline, .councillor-phone { display: flex; align-items: center; }
+  /* inline source citations still need a thumb-sized hit area */
+  .fa-source a { display: inline-block; padding: 14px 0; }
 }
 
 /* Print: the Command Brief zones join the A4 sitrep. Verdict + cascade table

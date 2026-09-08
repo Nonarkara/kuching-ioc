@@ -1259,15 +1259,14 @@ function renderMap(payload) {
     const color = hydroBandColors[s.band] || "#8aa2c8";
     const isLive = s.waterLevelM != null;
     const hasCatchment = s.catchment?.status === "snapped";
-    const radius = s.band === "danger" ? 9 : s.band === "warning" ? 8 : s.band === "alert" ? 7 : isLive ? 6 : 5;
+    const radius = s.band === "danger" ? 7 : s.band === "warning" ? 6 : s.band === "alert" ? 5 : isLive ? 5 : 4;
     // Pulse-ring overlay — period coded to freshness (faster = newer data).
-    // Reference stations get a slow pulse so the radar sweep still has anchors;
-    // their muted colour signals "no live reading", honest visual semantics.
+    // Keep rings small so the basemap stays readable (Lopburi quiet-cartography).
     const period = isLive
       ? freshnessPeriodSeconds(s.observedAt || payload?.infobanjir?.updatedAt)
       : 9;
-    const pulseHtml = `<div class="pulse-marker" data-station="${s.id}" style="--pulse-period:${period}s;color:${color};opacity:${isLive ? 1 : 0.55}"></div>`;
-    const pulseIcon = window.L.divIcon({ className: "", html: pulseHtml, iconSize: [8, 8], iconAnchor: [4, 4] });
+    const pulseHtml = `<div class="pulse-marker" data-station="${s.id}" style="--pulse-period:${period}s;color:${color};opacity:${isLive ? 0.9 : 0.45}"></div>`;
+    const pulseIcon = window.L.divIcon({ className: "", html: pulseHtml, iconSize: [5, 5], iconAnchor: [2.5, 2.5] });
     const pulse = window.L.marker([s.lat, s.lon], { icon: pulseIcon, interactive: false, zIndexOffset: -100 }).addTo(state.markerLayerGroup);
     state.pulseMarkerEls.set(s.id, { lat: s.lat, lon: s.lon, marker: pulse });
     const catchmentLine = hasCatchment

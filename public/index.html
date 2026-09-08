@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=human-eyes" />
-    <link rel="mask-icon" href="./favicon.svg?v=human-eyes" color="#00f3ff" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=ef5ad0760105-001354" />
+    <link rel="mask-icon" href="./favicon.svg?v=ef5ad0760105-001354" color="#00f3ff" />
     <meta name="theme-color" content="#010203" />
     <title>Greater Kuching IOC</title>
     <meta name="description" content="Greater Kuching Intelligent Operation Center — a municipal command surface for Secretary Daniel Goh, MPP." />
@@ -12,9 +12,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-    <link rel="stylesheet" href="./styles.css?v=human-eyes" />
+    <link rel="stylesheet" href="./styles.css?v=ef5ad0760105-001354" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-    <script>window.__IOC_BOOT__ = {"assetVersion":"human-eyes","builtAt":null,"deploymentMode":"live-service","boardLabel":"LIVE BOARD","pagesUrl":"https://kuching.nonarkara.org/","liveUrl":"https://kuching.nonarkara.org/"};</script>
+    <script>window.__IOC_BOOT__ = {"assetVersion":"ef5ad0760105-001354","builtAt":"2026-09-08T00:13:54.501Z","deploymentMode":"pages-static","boardLabel":"SNAPSHOT BOARD","pagesUrl":"https://kuching.nonarkara.org/","liveUrl":"https://kuching.nonarkara.org/"};</script>
   </head>
   <body>
     <div class="dashboard-shell">
@@ -35,7 +35,7 @@
             </div>
             <div class="dim-toggle segmented-control" role="group" aria-label="Map dimension">
               <button class="dim-btn active" data-dim="2d" title="2D Leaflet view.">2D</button>
-              <button class="dim-btn" data-dim="3d" title="3D digital-twin view — CesiumJS, real jurisdiction extrusions, hydro cylinders, Sarawak River, land-use extrusions.">3D</button>
+              <button class="dim-btn" data-dim="3d" title="3D view — terrain, river, and station pins.">3D</button>
             </div>
             <button id="themeToggle" class="ctrl-btn">LIGHT</button>
             <button class="lang-btn active" data-lang="en">EN</button>
@@ -70,22 +70,11 @@
         </div>
       </div>
 
-      <!-- ZONE 1 · The verdict — one glance answers "do I need to act?" -->
-      <div class="zone-head" data-zone="1">
-        <span class="zone-num">01</span>
-        <span class="zone-q" data-i18n="zone1">Do I need to act?</span>
-        <span class="zone-sub" data-i18n="zone1Sub">Verdict · today's numbers · directives</span>
-      </div>
+      <!-- HERO · verb + numbers + brief (Lopburi-style glance layer) -->
+<section id="verdictBar" class="verdict-strip" data-band="boot"></section>
 
-      <section id="verdictBar" class="verdict-strip" data-band="boot"></section>
+      
 
-      <section id="deltaStrip" class="delta-strip" data-empty="true">
-        <div class="delta-stamp">DELTA //</div>
-        <div id="deltaSince" class="delta-since"></div>
-        <div id="deltaList" class="delta-list"></div>
-      </section>
-
-      <section id="metricBand" class="metric-band"></section>
       <section class="brief-strip">
         <article class="brief-card" data-tone="alert">
           <div class="brief-kicker" data-i18n="briefNow">Do this today</div>
@@ -101,37 +90,26 @@
         </article>
       </section>
 
-      <!-- ZONE 2 · The outlook — rain that falls upstream arrives on a clock -->
-      <div class="zone-head" data-zone="2">
-        <span class="zone-num">02</span>
-        <span class="zone-q" data-i18n="zone2">What's coming?</span>
-        <span class="zone-sub" data-i18n="zone2Sub">14-day outlook · rain-to-river cascade</span>
-      </div>
+      <section id="metricBand" class="metric-band"></section>
 
-      <section class="outlook-grid">
-        <div class="panel outlook-panel">
-          <div id="cascadePanel" class="cascade-panel"></div>
-        </div>
-        <div class="panel outlook-panel">
-          <div class="section-label" data-i18n="forecast">14 days ahead</div>
-          <div id="forecastRail" class="forecast-rail"></div>
-          <div class="section-label" data-i18n="riverDischarge">River flow forecast</div>
-          <div id="floodForecast" class="flood-forecast"></div>
-        </div>
-      </section>
+      
+<main class="board-grid war-room">
+        <aside class="panel news-rail" aria-label="What people are saying">
+          <div class="panel-head">
+            <div class="kicker" data-i18n="newsDigest">News digest</div>
+            <h2>What people are saying</h2>
+          </div>
+          <div class="panel-inner">
+            <div id="newsIntakePanel" class="sentiment-panel"></div>
+            <div id="newsDigest" class="news-digest"></div>
+            <div id="groundPulse" class="ground-pulse"></div>
+          </div>
+        </aside>
 
-      <!-- ZONE 3 · The map — where is it, and who is exposed -->
-      <div class="zone-head" data-zone="3">
-        <span class="zone-num">03</span>
-        <span class="zone-q" data-i18n="zone3">Where, and who's exposed?</span>
-        <span class="zone-sub" data-i18n="zone3Sub">Live map · gauges · wards · councillors</span>
-      </div>
-
-      <main class="board-grid">
         <section class="panel map-panel">
           <div class="panel-head map-head">
             <div class="title-wrap">
-              <div class="kicker" data-i18n="radar">Radar // Greater Kuching</div>
+              <div class="kicker" data-i18n="radar">Map · Greater Kuching</div>
               <div id="mapSummary" class="map-summary"><span class="skeleton" style="min-width:260px"></span></div>
             </div>
             <div class="map-controls">
@@ -222,6 +200,40 @@
         </aside>
       </main>
 
+      <details class="deeper-brief">
+        <summary class="deeper-brief-summary">
+          <span class="deeper-brief-title">Outlook · growth · sources · localities</span>
+          <span class="deeper-brief-hint">Open when you need the full picture</span>
+        </summary>
+
+      <section id="deltaStrip" class="delta-strip" data-empty="true">
+        <div class="delta-stamp">DELTA //</div>
+        <div id="deltaSince" class="delta-since"></div>
+        <div id="deltaList" class="delta-list"></div>
+      </section>
+
+<!-- ZONE 2 · The outlook — rain that falls upstream arrives on a clock -->
+      <div class="zone-head" data-zone="2">
+        <span class="zone-num">02</span>
+        <span class="zone-q" data-i18n="zone2">What's coming?</span>
+        <span class="zone-sub" data-i18n="zone2Sub">14-day outlook · rain-to-river cascade</span>
+      </div>
+
+      <section class="outlook-grid">
+        <div class="panel outlook-panel">
+          <div id="cascadePanel" class="cascade-panel"></div>
+        </div>
+        <div class="panel outlook-panel">
+          <div class="section-label" data-i18n="forecast">14 days ahead</div>
+          <div id="forecastRail" class="forecast-rail"></div>
+          <div class="section-label" data-i18n="riverDischarge">River flow forecast</div>
+          <div id="floodForecast" class="flood-forecast"></div>
+        </div>
+      </section>
+
+      
+
+
       <!-- ZONE 4 · The conversation — what's said vs what's measured -->
       <div class="zone-head" data-zone="4">
         <span class="zone-num">04</span>
@@ -232,21 +244,17 @@
       <section class="lower-grid">
         <section class="panel intel-panel">
           <div class="panel-head">
-            <div class="kicker">GROUND SIGNAL</div>
-            <h2>Press + Pulse + Economy</h2>
+            <div class="kicker">Economy + pulse</div>
+            <h2>Background signal</h2>
           </div>
-          <div id="groundPulse" class="ground-pulse"></div>
-          <div class="section-label" data-i18n="newsDigest">News digest</div>
-          <div id="newsIntakePanel" class="sentiment-panel"></div>
-          <div id="newsDigest" class="news-digest"></div>
-          <div id="econBand" class="econ-band"></div>
+<div id="econBand" class="econ-band"></div>
           <div id="trendsBand" class="trends-band"></div>
           <div id="bypassTracker" class="bypass-tracker"></div>
         </section>
         <section class="panel qualitative-panel">
           <div class="panel-head">
-            <div class="kicker">HUMAN LENS</div>
-            <h2>Scene Read</h2>
+            <div class="kicker">Human read</div>
+            <h2>Scene brief</h2>
           </div>
           <div class="qualitative-body">
             <div id="qualHero" class="qual-hero"></div>
@@ -302,7 +310,10 @@
         <div id="localityList" class="locality-list"></div>
       </section>
 
-      <div id="telemetryStrip" class="telemetry-strip" aria-hidden="true"></div>
+      
+      </details>
+
+<div id="telemetryStrip" class="telemetry-strip" aria-hidden="true"></div>
 
       <footer class="bottom-bar">
         <span>KCH-IOC // V3.0</span>
@@ -356,7 +367,7 @@
         </footer>
       </div>
     </div>
-    <script src="./app.js?v=human-eyes" type="module"></script>
+    <script src="./app.js?v=ef5ad0760105-001354" type="module"></script>
 
   <!-- NON visitor tracker — fire-and-forget, no cookies -->
   <script>

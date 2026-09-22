@@ -19,6 +19,11 @@
   --card-bg: rgba(0, 243, 255, 0.02);
   --card-hover: rgba(0, 243, 255, 0.06);
   --grid-opacity: 0.25;
+  /* One 12-part operating grid: header, strips, and war-room rails resolve
+     against the same rhythm even when their content has different weights. */
+  --grid-left: 2fr;
+  --grid-center: 7fr;
+  --grid-right: 3fr;
   /* ponytail: aliases so late-added components don't fall back to inherited color. */
   --text: var(--ink);
   --border: var(--line);
@@ -78,18 +83,19 @@ body::before {
 
 /* === Masthead === */
 .masthead {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 4px 16px; border-bottom: 2px solid var(--line-strong);
+  display: grid;
+  grid-template-columns: minmax(280px, 4fr) minmax(0, 8fr);
+  align-items: center;
+  padding: 8px 16px; border-bottom: 2px solid var(--line-strong);
   background: var(--hud-bg); backdrop-filter: blur(12px); z-index: 100;
-  gap: 16px;
+  column-gap: 12px;
   flex: 0 0 auto;
-  flex-wrap: nowrap;
 }
 
-.title-block { flex: 1; min-width: 0; }
+.title-block { min-width: 0; padding-right: 12px; border-right: 1px solid var(--line); }
 .title-block h1 {
-  font-family: var(--font-sans); font-weight: 800; font-size: 15px;
-  text-transform: uppercase; letter-spacing: 0.22em; margin: 0;
+  font-family: var(--font-sans); font-weight: 800; font-size: 14px;
+  text-transform: uppercase; letter-spacing: 0.14em; margin: 0;
   color: var(--cyan); text-shadow: var(--glow);
   line-height: 1.1;
 }
@@ -97,7 +103,21 @@ body::before {
 .eyebrow > span:first-child { flex: 0 1 auto; }
 .summary-lead { font-size: 9px; color: var(--soft); margin-top: 2px; line-height: 1.4; }
 
-.status-block { display: flex; align-items: center; gap: 4px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.status-block {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "controls payload system"
+    "runtime runtime partners";
+  align-items: center;
+  gap: 5px 8px;
+  min-width: 0;
+}
+.controls-row { grid-area: controls; min-width: 0; }
+.runtime-meta { grid-area: runtime; }
+#generatedAt { grid-area: payload; }
+#sysStatus { grid-area: system; }
+.partner-row { grid-area: partners; justify-self: end; }
 .controls-row { display: flex; gap: 4px; align-items: center; }
 .ctrl-btn, .lang-btn {
   background: transparent; border: 1px solid var(--line); color: var(--soft);
@@ -239,7 +259,9 @@ body::before {
 
 /* === Ticker === */
 .ticker-bar {
-  display: flex; align-items: center; background: var(--hud-bg);
+  display: grid;
+  grid-template-columns: var(--grid-left) 2fr var(--grid-center);
+  align-items: center; background: var(--hud-bg);
   border-bottom: 1px solid var(--line); overflow: hidden; height: 26px;
   flex: 0 0 26px;
 }
@@ -260,11 +282,12 @@ body::before {
 
 /* === Metrics === */
 .metric-band {
-  display: grid; grid-template-columns: repeat(6, 1fr);
+  display: grid; grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 2px; background: var(--line); border-bottom: 1px solid var(--line-strong);
   flex: 0 0 auto;
 }
 .metric-card {
+  grid-column: span 2;
   background: var(--hud-bg);
   padding: 6px 8px;
   border: 1px solid transparent;
@@ -314,7 +337,7 @@ body::before {
 /* === Brief Strip === */
 .brief-strip {
   display: grid;
-  grid-template-columns: 1.1fr 1fr 1fr;
+  grid-template-columns: repeat(3, 4fr);
   gap: 2px;
   background: var(--line);
   border-bottom: 1px solid var(--line-strong);
@@ -325,10 +348,7 @@ body::before {
   padding: 8px 10px;
   display: grid;
   gap: 6px;
-  background:
-    linear-gradient(135deg, rgba(255,255,255,0.02), transparent 45%),
-    linear-gradient(90deg, rgba(0, 243, 255, 0.03), transparent 75%),
-    var(--hud-bg);
+  background: var(--hud-bg);
   position: relative;
 }
 .brief-card::before {
@@ -381,7 +401,7 @@ body::before {
   background: var(--bg);
 }
 .board-grid.war-room {
-  grid-template-columns: minmax(220px, 0.78fr) minmax(0, 2.5fr) minmax(300px, 1.05fr);
+  grid-template-columns: minmax(200px, var(--grid-left)) minmax(0, var(--grid-center)) minmax(300px, var(--grid-right));
   grid-template-areas: "news center situation";
   /* Subtract masthead + ticker + verdict + metrics + brief (~280px). */
   height: clamp(520px, calc(100svh - 280px), 900px);
@@ -1876,6 +1896,7 @@ body::before {
 
 @media (max-width: 1240px) {
   .metric-band { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .metric-card { grid-column: auto; }
   .brief-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .board-grid { grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); }
   .board-grid.war-room {
@@ -1889,8 +1910,8 @@ body::before {
   html, body { overflow-x: hidden; overflow-y: auto; }
   .dashboard-shell { height: auto; min-height: 100svh; overflow: visible; }
   .masthead {
+    grid-template-columns: minmax(0, 1fr);
     align-items: flex-start;
-    flex-direction: column;
     padding: 8px 12px;
     flex: 0 0 auto;
     flex-wrap: wrap;
@@ -1902,9 +1923,15 @@ body::before {
   .title-block h1 { white-space: normal; }
   .status-block {
     width: 100%;
-    justify-content: space-between;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "controls controls"
+      "runtime runtime"
+      "payload system"
+      "partners partners";
     gap: 6px;
   }
+  .partner-row { justify-self: start; }
   .runtime-meta {
     min-width: 0;
     max-width: none;
@@ -1965,6 +1992,7 @@ body::before {
   html, body { font-size: 12px; }
   body::before { background-size: 24px 24px; opacity: 0.14; }
   .masthead { padding: 6px 10px; gap: 6px; }
+  .controls-row { flex-wrap: wrap; }
   .title-block h1 {
     font-size: 13px;
     letter-spacing: 0.12em;
@@ -3573,10 +3601,10 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
 
 /* --- Zone 1: verdict strip — the single-glance answer --- */
 .verdict-strip {
-  display: flex;
+  display: grid;
+  grid-template-columns: 4fr 4fr 4fr;
   align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
+  column-gap: 16px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--line);
   background: var(--card-bg);
@@ -3603,11 +3631,10 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
   font-size: 11px;
   color: var(--soft);
   line-height: 1.5;
-  flex: 1;
-  min-width: 240px;
+  min-width: 0;
 }
 .verdict-why strong { color: var(--ink); font-weight: 700; }
-.verdict-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.verdict-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .verdict-chip {
   font-family: var(--font-mono);
   font-size: 9px;

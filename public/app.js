@@ -83,6 +83,17 @@ function writeStoredDim(dim) {
   try { localStorage.setItem(DIM_STORAGE_KEY, dim); } catch (_) { /* quota */ }
 }
 
+// Reading size is a user preference, not a zoom workaround. The board starts
+// at a more legible operational scale and this control gives presentations and
+// lower-vision users a genuinely larger mode without changing map geometry.
+const TEXT_SCALE_STORAGE_KEY = "kch_ioc_text_scale_v1";
+function readStoredTextScale() {
+  try { return localStorage.getItem(TEXT_SCALE_STORAGE_KEY) === "large" ? "large" : "default"; } catch (_) { return "default"; }
+}
+function writeStoredTextScale(value) {
+  try { localStorage.setItem(TEXT_SCALE_STORAGE_KEY, value); } catch (_) { /* quota */ }
+}
+
 const SOURCE_STATUS_LABEL = {
   live: "live",
   official: "official",
@@ -103,6 +114,7 @@ const state = {
   activeWaterPath: null,
   scope: readStoredScope(),
   dimension: readStoredDim(),
+  textScale: readStoredTextScale(),
   cesiumViewer: null,
   cesiumInitialised: false,
   localityFilter: { ward: null, stateCode: null, parliamentCode: null, propertyType: null, search: "" },
@@ -114,6 +126,7 @@ const state = {
 // the same way as before. Setting this once at module load is enough —
 // setScope() will update it again when the user toggles.
 document.documentElement.dataset.view = state.scope === "padawan" ? "secretary" : "full";
+document.documentElement.dataset.textScale = state.textScale;
 
 // --- DOM ---
 const $ = id => document.getElementById(id);
@@ -2816,27 +2829,56 @@ function renderFloodAction(payload) {
   const shelters = (fa.shelters || []).slice(0, 3).map((s) =>
     `<a class="fa-shelter" href="${escapeHtml(s.maps || "#")}" target="_blank" rel="noopener"><span><strong>${escapeHtml(s.name)}</strong><br>${escapeHtml(s.area)} · ${escapeHtml(s.status)}</span><span>MAP</span></a>`,
   ).join("");
+  const stations = payload?.infobanjir?.stations || [];
+  const pathStation = (fa.worstStation && stations.find((station) => station.id === fa.worstStation.id))
+    || stations.find((station) => station.focus === "padawan")
+    || null;
+  const level = pathStation?.waterLevelM != null ? `${pathStation.waterLevelM} m · ${pathStation.bandLabel || pathStation.band}` : "No current level returned";
+  const pressure = (fa.drivers || []).slice(0, 2).join(" · ") || "No observed driver above the action threshold.";
+  const pathText = pathStation?.catchment?.status === "snapped"
+    ? `${pathStation.catchment.segmentCount} mapped drainage segments · ${pathStation.catchment.totalLengthKm} km connected reach`
+    : "Select a gauge to load its connected public drainage reach";
+  const traceButton = pathStation
+    ? `<button class="fa-path-button" type="button" data-station="${escapeHtml(pathStation.id)}">Trace ${escapeHtml(pathStation.name)} on map <span>↗</span></button>`
+    : "";
 
   el.innerHTML = `
     <div class="fa-kicker">${t("floodAction")}</div>
     <div class="fa-verb">${escapeHtml(verb)}</div>
     <div class="fa-reason">${escapeHtml(fa.reason || "")}</div>
-    <div class="fa-meta">
-      <span>Confidence <strong>${escapeHtml(fa.confidence || "—")}</strong></span>
-      <span>Padawan gauges <strong>${fa.padawanLive ?? 0}</strong> · Metro <strong>${fa.metroLive ?? 0}</strong></span>
-      <span>Urgency score <strong>${fa.score ?? "—"}</strong>/100</span>
+    <div class="fa-watch-head"><span>Water watch</span><strong>${fa.score ?? "—"}<small>/100</small></strong><em>attention index · not a flood forecast</em></div>
+    <div class="fa-story" aria-label="Water situation from observation to action">
+      <div class="fa-story-row"><span>01 · observed</span><strong>${escapeHtml(pathStation?.name || "Padawan gauges")}</strong><p>${escapeHtml(level)}</p></div>
+      <div class="fa-story-row"><span>02 · pressure</span><p>${escapeHtml(pressure)}</p></div>
+      <div class="fa-story-row fa-story-path"><span>03 · connected path</span><p>${escapeHtml(pathText)}</p>${traceButton}</div>
+      <div class="fa-story-row"><span>04 · act</span><p>Use the checklist below; follow DID, MET Malaysia, and district directions for official warnings or evacuation orders.</p></div>
     </div>
     <ul class="fa-checklist">${checklist}</ul>
-    <div class="fa-reality" data-verdict="${escapeHtml(reality.verdict || "CALM")}">
-      What people are saying · <strong>${escapeHtml(reality.verdict || "CALM")}</strong>
-      · ${reality.newsCount ?? 0} news hits · rivers measured as ${escapeHtml(String(reality.measuredBand || "—"))}
-      ${headlines ? `<div style="margin-top:3px">${headlines}</div>` : ""}
+    <div class="fa-meta">
+      <span><strong>${escapeHtml(fa.confidence || "—")}</strong></span>
+      <span>Padawan <strong>${fa.padawanLive ?? 0}</strong> · Metro <strong>${fa.metroLive ?? 0}</strong> reporting</span>
     </div>
-    <div class="fa-kicker">Call these numbers</div>
-    <div class="fa-hotlines">${hotlines}</div>
-    <div class="fa-kicker" style="margin-top:6px">Shelters / PPS</div>
-    <div class="fa-shelters">${shelters}</div>
+    <details class="fa-details">
+      <summary>Cross-check, contacts &amp; shelters</summary>
+      <div class="fa-reality" data-verdict="${escapeHtml(reality.verdict || "CALM")}">
+        Field/news signal · <strong>${escapeHtml(reality.verdict || "CALM")}</strong>
+        · ${reality.newsCount ?? 0} news hits · rivers measured as ${escapeHtml(String(reality.measuredBand || "—"))}
+        ${headlines ? `<div>${headlines}</div>` : ""}
+      </div>
+      <div class="fa-kicker">Call these numbers</div>
+      <div class="fa-hotlines">${hotlines}</div>
+      <div class="fa-kicker fa-subsection">Shelters / PPS</div>
+      <div class="fa-shelters">${shelters}</div>
+    </details>
     <div class="fa-source">Source: <a href="${escapeHtml(fa.sourceUrl || "https://ihydro.sarawak.gov.my/")}" target="_blank" rel="noopener">${escapeHtml(fa.source || "DID Sarawak iHYDRO")}</a></div>`;
+
+  el.querySelector(".fa-path-button")?.addEventListener("click", () => {
+    const station = stations.find((item) => item.id === pathStation?.id);
+    if (!station) return;
+    if (station.lat != null && station.lon != null && state.map) state.map.setView([station.lat, station.lon], 14);
+    const colors = { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" };
+    openWaterPath(station, colors[station.band] || "#8aa2c8");
+  });
 }
 
 function renderHydroGauges(payload) {
@@ -4246,6 +4288,28 @@ function toggleTheme() {
   if (btn) btn.textContent = state.theme === "dark" ? "LIGHT" : "DARK";
 }
 
+function toggleTextScale() {
+  state.textScale = state.textScale === "large" ? "default" : "large";
+  document.documentElement.dataset.textScale = state.textScale;
+  writeStoredTextScale(state.textScale);
+  const btn = $("textScaleToggle");
+  if (btn) {
+    const large = state.textScale === "large";
+    btn.setAttribute("aria-pressed", String(large));
+    btn.textContent = large ? "TEXT −" : "TEXT +";
+  }
+  state.map?.invalidateSize?.();
+}
+
+function renderTextScaleToggle() {
+  const btn = $("textScaleToggle");
+  if (!btn) return;
+  const large = state.textScale === "large";
+  btn.setAttribute("aria-pressed", String(large));
+  btn.textContent = large ? "TEXT −" : "TEXT +";
+  btn.addEventListener("click", toggleTextScale);
+}
+
 // --- Language Toggle ---
 function setLang(lang) {
   state.lang = lang;
@@ -4837,6 +4901,7 @@ setupExport();
 setupConnectors();
 setupKeyboardShortcuts();
 $("themeToggle")?.addEventListener("click", toggleTheme);
+renderTextScaleToggle();
 document.querySelectorAll(".lang-btn").forEach(btn => btn.addEventListener("click", () => setLang(btn.dataset.lang)));
 renderScopeToggle();
 renderDimensionToggle();

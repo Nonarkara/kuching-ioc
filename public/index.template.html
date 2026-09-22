@@ -101,8 +101,14 @@
           </div>
           <div class="panel-inner">
             <div id="newsIntakePanel" class="sentiment-panel"></div>
-            <div id="newsDigest" class="news-digest"></div>
-            <div id="groundPulse" class="ground-pulse"></div>
+            <details class="rail-disclosure">
+              <summary class="rail-disclosure-summary"><span>News digest</span><span>headlines &amp; language lanes</span></summary>
+              <div id="newsDigest" class="news-digest rail-disclosure-body"></div>
+            </details>
+            <details class="rail-disclosure">
+              <summary class="rail-disclosure-summary"><span>Ground pulse</span><span>what the field is reporting</span></summary>
+              <div id="groundPulse" class="ground-pulse rail-disclosure-body"></div>
+            </details>
           </div>
         </aside>
 
@@ -164,17 +170,20 @@
               <div id="operationList" class="operation-list"></div>
             </div>
 
-            <div class="section-group">
-              <div class="section-label" data-i18n="citizenReports">Citizen reports</div>
-              <div id="citizenReports" class="citizen-reports"></div>
-            </div>
+            <details class="rail-disclosure">
+              <summary class="rail-disclosure-summary"><span data-i18n="citizenReports">Citizen reports</span><span>field reports &amp; work orders</span></summary>
+              <div id="citizenReports" class="citizen-reports rail-disclosure-body"></div>
+            </details>
 
-            <div class="section-group">
-              <div class="section-label" data-i18n="environment">Environment right now</div>
-              <div id="signalCards" class="signal-cards"></div>
-            </div>
+            <details class="rail-disclosure">
+              <summary class="rail-disclosure-summary"><span data-i18n="environment">Environment right now</span><span>weather, air &amp; ground signals</span></summary>
+              <div id="signalCards" class="signal-cards rail-disclosure-body"></div>
+            </details>
 
-            <div id="officialPulse"></div>
+            <details class="rail-disclosure">
+              <summary class="rail-disclosure-summary"><span>Official data pulse</span><span>agency updates &amp; provenance</span></summary>
+              <div id="officialPulse" class="rail-disclosure-body"></div>
+            </details>
 
             <!-- Secondary detail — collapsed so the eye hits act / gauges / wards first. -->
             <details class="rail-more">

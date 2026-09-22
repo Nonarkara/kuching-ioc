@@ -96,9 +96,11 @@ const SOURCE_STATUS_LABEL = {
 const state = {
   map: null, boundaryLayerGroup: null, markerLayerGroup: null, labelLayerGroup: null,
   urbanLayerGroups: new Map(),
+  drainageFeatures: null, drainageFeatureIndex: null,
   tileLayers: new Map(), activeLayerId: "dark", payload: null, hasInitialMapFit: false,
   theme: "dark", lang: "en", mapResizeObserver: null,
   activeWard: null,
+  activeWaterPath: null,
   scope: readStoredScope(),
   dimension: readStoredDim(),
   cesiumViewer: null,
@@ -1159,6 +1161,83 @@ function highlightCatchment(station, bandColor) {
   }
 }
 
+// Rebuild a deliberately bounded connected reach after the public drainage
+// layer loads. OSM geometry describes network connection only: it cannot prove
+// flow direction, arrival time, or an inundation footprint.
+function deriveConnectedWaterPath(station, features) {
+  if (!station || !Array.isArray(features) || !features.length) return null;
+  const quant = (lon, lat) => `${Math.round(lon * 1e4)}|${Math.round(lat * 1e4)}`;
+  const kmBetween = (aLat, aLon, bLat, bLon) => {
+    const rad = Math.PI / 180;
+    const dLat = (bLat - aLat) * rad;
+    const dLon = (bLon - aLon) * rad;
+    const area = Math.sin(dLat / 2) ** 2 + Math.cos(aLat * rad) * Math.cos(bLat * rad) * Math.sin(dLon / 2) ** 2;
+    return 6371 * 2 * Math.atan2(Math.sqrt(area), Math.sqrt(1 - area));
+  };
+  const segments = new Map();
+  const endpoints = new Map();
+  let nearest = null;
+  for (const feature of features) {
+    const coords = feature?.geometry?.type === "LineString" ? feature.geometry.coordinates : null;
+    const rawId = feature?.id ?? feature?.properties?.id;
+    if (rawId == null || !Array.isArray(coords) || coords.length < 2) continue;
+    const id = String(rawId);
+    const ends = [quant(coords[0][0], coords[0][1]), quant(coords[coords.length - 1][0], coords[coords.length - 1][1])];
+    let lengthKm = 0;
+    coords.forEach(([lon, lat], index) => {
+      if (index) lengthKm += kmBetween(coords[index - 1][1], coords[index - 1][0], lat, lon);
+      const distanceKm = kmBetween(station.lat, station.lon, lat, lon);
+      if (!nearest || distanceKm < nearest.distanceKm) nearest = { id, distanceKm };
+    });
+    segments.set(id, { id, ends, lengthKm });
+    ends.forEach((end) => {
+      if (!endpoints.has(end)) endpoints.set(end, new Set());
+      endpoints.get(end).add(id);
+    });
+  }
+  if (!nearest || nearest.distanceKm > 2) return { status: "unsnapped", note: "No mapped waterway within 2 km." };
+  const visited = new Set([nearest.id]);
+  const queue = [{ id: nearest.id, depth: 0 }];
+  while (queue.length && visited.size < 80) {
+    const { id, depth } = queue.shift();
+    if (depth >= 6) continue;
+    for (const end of segments.get(id)?.ends || []) {
+      for (const neighbour of endpoints.get(end) || []) {
+        if (!visited.has(neighbour)) { visited.add(neighbour); queue.push({ id: neighbour, depth: depth + 1 }); }
+        if (visited.size >= 80) break;
+      }
+    }
+  }
+  const connected = [...visited].map((id) => segments.get(id)).filter(Boolean);
+  return {
+    status: "snapped",
+    segmentIds: connected.map((segment) => segment.id),
+    segmentCount: connected.length,
+    totalLengthKm: Math.round(connected.reduce((sum, segment) => sum + segment.lengthKm, 0) * 100) / 100,
+    snapDistanceKm: Math.round(nearest.distanceKm * 1000) / 1000,
+    method: "connected-reach",
+  };
+}
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function openWaterPath(station, bandColor) {
+  if (!station) return;
+  renderCatchmentStory({ ...station, catchment: { status: "loading" } });
+  if (!state.drainageFeatures?.length) {
+    const drainage = URBAN_LAYERS.find((layer) => layer.id === "drainage");
+    const toggle = document.querySelector("#urbanLayerToggle button[data-id='drainage']");
+    if (drainage && !drainage.active && toggle) toggle.click();
+    for (let attempt = 0; attempt < 60 && !state.drainageFeatures?.length; attempt++) await wait(150);
+  }
+  const path = deriveConnectedWaterPath(station, state.drainageFeatures);
+  const pathStation = path ? { ...station, catchment: path } : station;
+  state.activeStation = pathStation.id;
+  state.activeWaterPath = pathStation.catchment || null;
+  renderCatchmentStory(pathStation);
+  highlightCatchment(pathStation, bandColor);
+}
+
 function renderMap(payload) {
   if (!window.L) return;
   const mc = $("mapCanvas");
@@ -1270,9 +1349,9 @@ function renderMap(payload) {
     const pulse = window.L.marker([s.lat, s.lon], { icon: pulseIcon, interactive: false, zIndexOffset: -100 }).addTo(state.markerLayerGroup);
     state.pulseMarkerEls.set(s.id, { lat: s.lat, lon: s.lon, marker: pulse });
     const catchmentLine = hasCatchment
-      ? `<br><span style="color:${color}">Catchment: ${s.catchment.segmentCount} seg · ${s.catchment.totalLengthKm} km · snap ${s.catchment.snapDistanceKm} km</span><br><em>Click to highlight</em>`
+      ? `<br><span style="color:${color}">Connected reach: ${s.catchment.segmentCount} seg · ${s.catchment.totalLengthKm} km · snap ${s.catchment.snapDistanceKm} km</span><br><em>Click for water-path context</em>`
       : s.catchment?.status === "cold"
-        ? "<br><em>Toggle Drainage layer to enable catchment</em>"
+        ? "<br><em>Click for connected water-path context</em>"
         : s.catchment?.status === "unsnapped"
           ? "<br><em>No waterway within 2 km</em>"
           : "";
@@ -1296,10 +1375,9 @@ function renderMap(payload) {
         catchmentLine,
         { className: "marker-tooltip", direction: "top" },
       )
-      // Click a gauge → highlight its upstream drainage AND open the
-      // Catchment Story. The map click becomes an analytical brief, not a
-      // tooltip (the Phuket Slope Story lesson).
-      .on("click", () => { highlightCatchment(s, color); renderCatchmentStory(s); })
+      // Click a gauge → load the public drainage geometry if needed, then
+      // highlight its connected reach and open the analytical brief.
+      .on("click", () => { openWaterPath(s, color); })
       .addTo(state.markerLayerGroup);
   });
   // Apims ground stations: square-ish markers via different radius/weight to distinguish.
@@ -1610,7 +1688,10 @@ function renderUrbanLayerToggle() {
         },
       }).addTo(state.map);
       state.urbanLayerGroups.set(layer.id, group);
-      if (layer.id === "drainage") state.drainageFeatureIndex = featureLayers;
+      if (layer.id === "drainage") {
+        state.drainageFeatureIndex = featureLayers;
+        state.drainageFeatures = fc.features || [];
+      }
       if (layer.id === "mpp_wards") {
         state.wardFeatures = fc.features || [];
         state.wardLayerGroup = group;
@@ -2805,6 +2886,10 @@ function renderHydroGauges(payload) {
       if (station?.lat != null && station?.lon != null && state.map) {
         state.map.setView([station.lat, station.lon], 14);
       }
+      if (station) {
+        const colors = { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" };
+        openWaterPath(station, colors[station.band] || "#8aa2c8");
+      }
       row.classList.toggle("hg-open");
     });
   });
@@ -3795,6 +3880,7 @@ function closeCatchmentStory() {
   el.hidden = true;
   el.innerHTML = "";
   state.activeStation = null;
+  state.activeWaterPath = null;
   $("mapCanvas")?.focus({ preventScroll: true });
 }
 
@@ -3818,6 +3904,8 @@ function renderCatchmentStory(station) {
   const amc = fc?.amc;
   const lag = fc?.lag_h;
   const risk = fc?.risk_72h;
+  const path = station.catchment;
+  const observedRain = payload.metrics?.find((metric) => metric.id === "rain6h");
 
   // Councillor join — same point-in-polygon path the ward matrix uses, so the
   // ACT row can name the person who owns the response.
@@ -3887,7 +3975,13 @@ function renderCatchmentStory(station) {
     ? `rain p90 <span class="cs-num">${fc.cumulative_p90_mm?.day4 ?? "—"} mm</span>/4d · risk ${(risk?.band || "—").toUpperCase()} ${risk?.pct ?? "—"}%${lag === 0 ? " · arrives now" : lag != null ? ` · lag +${lag}h` : ""}`
     : `<em>not in the TimesFM catchment set — telemetry only</em>`;
 
-  const sources = ["JPS Infobanjir", zone ? "AlphaEarth" : null, fc ? "TimesFM" : null, councillor ? "MPP roster" : null]
+  const waterPath = path?.status === "snapped"
+    ? `${observedRain?.value != null ? `<span class="cs-num">${observedRain.value} mm</span> observed rain / 6 h → ` : ""}<span class="cs-num">${path.segmentCount} segments · ${path.totalLengthKm} km</span> connected drainage reach → this gauge. <em>Geometry shows connection, not flow direction, flood arrival, or inundation.</em>`
+    : path?.status === "loading"
+      ? `<em>Loading public drainage geometry for this water-path context…</em>`
+      : `<em>Public drainage geometry is unavailable for this gauge. The level remains a JPS/iHYDRO observation.</em>`;
+
+  const sources = ["JPS/iHYDRO", path?.status === "snapped" ? "OpenStreetMap drainage (reference geometry)" : null, observedRain ? "Open-Meteo rain" : null, zone ? "AlphaEarth" : null, fc ? "TimesFM" : null, councillor ? "MPP roster" : null]
     .filter(Boolean).join(" · ");
 
   el.innerHTML = `
@@ -3902,6 +3996,7 @@ function renderCatchmentStory(station) {
     <div class="cs-rows">
       ${row(t("csGauge"), `${level} · ${escapeHtml(station.bandLabel || band)}${alertAt}`)}
       ${row(t("csGround"), ground)}
+      ${row("Path", waterPath)}
       ${row(t("csExposed"), station.affectedEstimate ? escapeHtml(station.affectedEstimate) : `<em>exposure not yet surveyed for this gauge</em>`)}
       ${row(t("csNext"), next)}
       ${row(t("csWhy"), why)}
@@ -3988,7 +4083,10 @@ function renderDashboard(payload) {
   // reading in it must never go stale while the card sits open.
   if (state.activeStation) {
     const fresh = (payload.infobanjir?.stations || []).find(s => s.id === state.activeStation);
-    if (fresh) renderCatchmentStory(fresh); else closeCatchmentStory();
+    if (fresh) {
+      const path = deriveConnectedWaterPath(fresh, state.drainageFeatures) || state.activeWaterPath;
+      renderCatchmentStory(path ? { ...fresh, catchment: path } : fresh);
+    } else closeCatchmentStory();
   }
 
   renderFloodAction(payload);
@@ -4002,6 +4100,10 @@ function renderDashboard(payload) {
   const curated = metricOrder.map(id => payload.metrics.find(m => m.id === id)).filter(Boolean);
   renderMetrics(curated.length >= 4 ? curated : payload.metrics.slice(0, 6));
   renderMap(payload);
+  if (state.activeStation && state.activeWaterPath) {
+    const fresh = (payload.infobanjir?.stations || []).find((station) => station.id === state.activeStation);
+    if (fresh) highlightCatchment({ ...fresh, catchment: state.activeWaterPath }, { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" }[fresh.band] || "#8aa2c8");
+  }
   renderAirportStats(payload.airport);
   renderNewsIntake(payload.news);
   renderOfficialPulse(payload);

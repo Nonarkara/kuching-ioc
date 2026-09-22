@@ -112,7 +112,13 @@ async function main() {
     await waitForServer();
     console.log("Server ready.");
 
-    // 2. Fetch the dashboard payload.
+    // 2. Warm the public drainage cache before the dashboard payload. This
+    // lets the Pages snapshot carry connected-reach context without asking a
+    // mayor to toggle a layer and wait for a later refresh.
+    console.log("Warming /api/layers/drainage for water-path context...");
+    await fetchWithRetry(`${BASE}/api/layers/drainage`, 2, 90_000);
+
+    // 2.1. Fetch the dashboard payload.
     console.log("Fetching /api/dashboard...");
     const dashboard = await fetchWithRetry(`${BASE}/api/dashboard`);
     const dashboardPath = join(PUBLIC_DIR, "api", "dashboard.json");

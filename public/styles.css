@@ -3861,7 +3861,7 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
 .catchment-story[data-band="danger"]  { border-left-color: var(--red); }
 
 .cs-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 9px 12px 0; }
-.cs-kicker { display: flex; align-items: center; gap: 6px; font-size: 8px; font-weight: 700; letter-spacing: 0.2em; color: var(--soft); text-transform: uppercase; }
+.cs-kicker { display: flex; align-items: center; gap: 6px; font-size: 9px; font-weight: 700; letter-spacing: 0.18em; color: var(--soft); text-transform: uppercase; }
 .cs-kicker .cs-dot { width: 7px; height: 7px; background: var(--soft); }
 .catchment-story[data-band="normal"]  .cs-dot { background: var(--green); }
 .catchment-story[data-band="alert"]   .cs-dot { background: #ffd000; }
@@ -3873,7 +3873,7 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
   color: var(--ink); margin: 3px 0 1px;
   line-height: 1.15;
 }
-.cs-sub { font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--soft); }
+.cs-sub { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--soft); }
 .cs-close {
   flex-shrink: 0; background: transparent; border: 1px solid var(--line);
   color: var(--soft); font-family: var(--font-mono); font-size: 10px;
@@ -3891,11 +3891,11 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
 .cs-row:first-child { border-top: 0; }
 .cs-row-label {
   width: 66px; flex-shrink: 0;
-  font-size: 8px; font-weight: 700;
+  font-size: 9px; font-weight: 700;
   letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--cyan); padding-top: 1px;
 }
-.cs-row-body { flex: 1; min-width: 0; font-size: 10px; line-height: 1.55; color: var(--ink); }
+.cs-row-body { flex: 1; min-width: 0; font-size: 11px; line-height: 1.55; color: var(--ink); }
 .cs-row-body em { color: var(--soft); font-style: italic; }
 .cs-num { font-weight: 700; color: var(--cyan); }
 .catchment-story[data-band="alert"]   .cs-num { color: #ffd000; }
@@ -3904,7 +3904,7 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
 .cs-src {
   margin-top: 7px; padding-top: 6px;
   border-top: 1px solid var(--line);
-  font-size: 8px; letter-spacing: 0.16em;
+  font-size: 9px; letter-spacing: 0.14em;
   text-transform: uppercase; color: var(--soft);
 }
 

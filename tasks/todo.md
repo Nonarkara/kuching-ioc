@@ -213,3 +213,20 @@ Measured, not guessed — probes at 1440×900 and 375×812 on a fresh asset stam
       focus to the map on close; story labels + kicker in EN/BM/ZH, re-render on lang switch.
 - [x] Retired `renderFocusToggle` no-op and its two call sites.
 - [ ] Not touched: ipapi.co 401 in the shared visitor tracker (external, fire-and-forget).
+
+## ✅ COMPLETED — Lopburi grid + reading-surface session (2026-09-22/23)
+
+Six commits, 3121f9a → bacd40e, all deployed to Cloudflare Pages by CI:
+- [x] `a34df3d` (09-08) Board reads like Lopburi: map-first war room, quieter chrome.
+- [x] `3121f9a` Align IOC layout to shared grid
+- [x] `60f86a4` Flood water paths explorable
+- [x] `04a758f` Focus the operational reading surface
+- [x] `240be93` Retain compact rail in Pages build
+- [x] `6e2ab04` Clarify water watch and reading scale
+- [x] `bacd40e` (09-23, 00:52 MYT) Restore readable phone command view — Dr Non's field
+      preview showed a fragmented masthead and one-word-wide verdict at ≤720px; fixed
+      with explicit phone rows (masthead single-column, controls 2-up grid, verdict
+      single-column, 44px toggles) in styles.css.
+- [x] CDPT verified live (2026-09-23): boot payload on kuching.nonarkara.org carries
+      assetVersion `bacd40e00d9...`; live styles.css contains the phone-layout rules.
+      Commit+push+deploy+live-test all green — session closed.

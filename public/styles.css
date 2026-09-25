@@ -3572,6 +3572,225 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
   .qualitative-panel { display: none !important; }
 }
 
+/* ============================================================
+   Operational reading scale
+   ------------------------------------------------------------
+   A command surface is read in a meeting and at arm's length, not inspected
+   like a terminal.  The previous HUD scale left primary labels at 8–10px and
+   desktop controls below a practical hit area.  This late, scoped layer keeps
+   the map, its evidence layers and the existing grid intact, while making the
+   decision path (posture → action → map → evidence) readable first.
+   ============================================================ */
+:root {
+  --grid-opacity: 0.13;
+}
+
+html,
+body {
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.masthead {
+  grid-template-columns: minmax(360px, 4fr) minmax(0, 8fr);
+  padding: 16px 24px;
+  column-gap: 24px;
+}
+.title-block { padding-right: 24px; }
+.title-block h1 {
+  font-size: clamp(26px, 2vw, 34px);
+  letter-spacing: 0.035em;
+  line-height: 1.08;
+}
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; margin-bottom: 6px; }
+.summary-lead { font-size: 15px; line-height: 1.45; margin-top: 6px; }
+
+.status-block { gap: 10px 12px; }
+.controls-row { gap: 8px; flex-wrap: wrap; }
+.ctrl-btn,
+.lang-btn,
+.scope-btn,
+.dim-btn,
+.segmented-control button,
+.action-btn {
+  min-height: 36px;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+.ctrl-btn,
+.lang-btn,
+.action-btn { padding: 7px 12px; }
+.scope-toggle,
+.dim-toggle { height: 36px; font-size: 14px; }
+.scope-btn,
+.dim-btn { padding: 0 12px; }
+.scope-pill,
+.micro-badge,
+.runtime-badge,
+.status-pill {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.scope-pill { padding: 5px 9px; }
+.micro-badge,
+.status-pill { padding: 7px 10px; min-height: 36px; display: inline-flex; align-items: center; }
+.runtime-meta { padding: 8px 10px; gap: 6px; max-width: 340px; }
+.runtime-badge { min-height: 28px; padding: 4px 8px; }
+.runtime-detail { font-size: 12px; line-height: 1.4; }
+.partner-row { gap: 10px; }
+.partner-row img { height: 30px; padding: 3px 5px; }
+
+.ticker-bar { min-height: 36px; height: auto; flex-basis: 36px; }
+.section-stamp { font-size: 12px; line-height: 36px; letter-spacing: 0.06em; }
+.ticker-summary,
+.ticker-item { font-size: 13px; }
+
+.verdict-strip { padding-top: 16px; padding-bottom: 16px; }
+.verdict-verb { font-size: clamp(25px, 2.2vw, 34px); line-height: 1.12; }
+.verdict-why { font-size: 16px; line-height: 1.5; }
+.verdict-chip { font-size: 13px; padding: 6px 10px; }
+
+.metric-card { padding: 12px 14px; min-height: 104px; }
+.metric-label { font-size: 13px; letter-spacing: 0.03em; }
+.metric-value { font-size: 27px; line-height: 1.1; margin: 4px 0; }
+.metric-unit,
+.metric-context { font-size: 13px; line-height: 1.35; }
+.metric-card .metric-source { font-size: 11px; margin-top: 7px; padding-top: 6px; }
+.sparkline { height: 20px; }
+
+.brief-card { min-height: 128px; padding: 14px 16px; gap: 10px; }
+.brief-kicker { font-size: 13px; letter-spacing: 0.05em; }
+.brief-list { gap: 8px; }
+.brief-item { grid-template-columns: 30px minmax(0, 1fr); gap: 8px; font-size: 14px; line-height: 1.5; }
+
+.board-grid.war-room {
+  grid-template-columns: minmax(280px, var(--grid-left)) minmax(0, var(--grid-center)) minmax(320px, var(--grid-right));
+  height: clamp(560px, calc(100svh - 360px), 960px);
+}
+.panel-head { padding: 14px 16px; }
+.kicker,
+.section-label { font-size: 13px; letter-spacing: 0.03em; }
+.panel-head h2,
+.news-rail .panel-head h2 { font-size: 20px; line-height: 1.2; }
+.map-summary { font-size: 15px; line-height: 1.45; }
+.posture-block { padding: 16px; }
+.posture-title { font-size: 25px; line-height: 1.12; letter-spacing: 0.02em; }
+.posture-detail { font-size: 14px; line-height: 1.5; margin-top: 8px; }
+.section-label { padding: 12px 14px 7px; }
+.rail-disclosure-summary { min-height: 52px; padding: 12px 14px; font-size: 14px; }
+.rail-disclosure-summary > span:last-child { font-size: 12px; }
+.rail-more-summary,
+.deeper-brief-title { font-size: 14px; }
+.deeper-brief-hint { font-size: 13px; }
+.deeper-brief-summary { padding: 15px 16px; min-height: 52px; }
+
+/* Secondary evidence remains available, but never falls below a meeting-safe
+   reading size.  This intentionally covers legacy components added over time. */
+.news-item,
+.news-card,
+.news-digest-item,
+.source-item,
+.source-detail,
+.source-name,
+.ground-pulse,
+.gp-title,
+.gp-meta,
+.signal-card strong,
+.signal-card .meta,
+.trend-item strong,
+.trend-item .meta,
+.operation-card strong,
+.operation-detail,
+.clock-card .country,
+.flight-type,
+.source-updated,
+.source-status,
+.map-footer,
+.watchpoint-list span,
+.bottom-bar {
+  font-size: 13px;
+  line-height: 1.45;
+}
+.signal-card .val,
+.airport-stat .stat-val { font-size: 25px; }
+.source-status { padding: 4px 7px; }
+.bottom-bar { padding: 9px 16px; }
+
+@media (max-width: 1240px) {
+  .board-grid.war-room {
+    grid-template-columns: minmax(260px, 0.85fr) minmax(0, 2.1fr) minmax(300px, 1fr);
+  }
+}
+
+@media (max-width: 1040px) {
+  .masthead { padding: 16px; }
+  .board-grid.war-room { height: auto; }
+  .map-panel { min-height: 560px; }
+  .map-frame { min-height: 460px; }
+}
+
+@media (max-width: 720px) {
+  html,
+  body { font-size: 16px; line-height: 1.5; }
+  body::before { opacity: 0.08; }
+  .masthead { padding: 16px; gap: 14px; }
+  .title-block h1 { font-size: 25px; letter-spacing: 0.01em; line-height: 1.14; }
+  .eyebrow { font-size: 11px; line-height: 1.4; letter-spacing: 0.04em; }
+  .summary-lead { display: block; font-size: 14px; }
+  .controls-row { gap: 8px; }
+  .ctrl-btn,
+  .lang-btn,
+  .scope-btn,
+  .dim-btn,
+  .segmented-control button,
+  .action-btn { min-height: 48px; font-size: 15px; }
+  .scope-toggle,
+  .dim-toggle { height: 48px; font-size: 15px; }
+  .runtime-badge,
+  .runtime-detail,
+  .micro-badge,
+  .status-pill { font-size: 13px; }
+  .partner-row img { height: 28px; }
+  .ticker-bar { min-height: 40px; }
+  .section-stamp { font-size: 13px; line-height: 40px; }
+  .ticker-summary,
+  .ticker-item { font-size: 14px; line-height: 1.45; }
+  .verdict-strip { padding: 18px 16px; }
+  .verdict-verb { font-size: 28px; }
+  .verdict-why { font-size: 16px; }
+  .verdict-chip { font-size: 13px; min-height: 36px; display: inline-flex; align-items: center; }
+  .metric-band { grid-template-columns: 1fr; }
+  .metric-card { min-height: 108px; padding: 14px 16px; }
+  .metric-label { font-size: 14px; }
+  .metric-value { font-size: 30px; }
+  .metric-unit,
+  .metric-context { font-size: 14px; }
+  .brief-card { min-height: 0; padding: 16px; }
+  .brief-kicker { font-size: 14px; }
+  .brief-item { font-size: 15px; }
+  .panel-head { padding: 16px; }
+  .panel-head h2,
+  .news-rail .panel-head h2 { font-size: 22px; }
+  .map-summary { font-size: 15px; }
+  .map-panel { min-height: 500px; }
+  .map-frame { min-height: 420px; }
+  .posture-title { font-size: 27px; }
+  .posture-detail,
+  .rail-disclosure-summary,
+  .news-item,
+  .news-card,
+  .news-digest-item,
+  .source-item,
+  .source-detail,
+  .source-name,
+  .ground-pulse,
+  .gp-title,
+  .gp-meta,
+  .map-footer,
+  .watchpoint-list span,
+  .bottom-bar { font-size: 15px; }
+}
+
 /* AlphaEarth Time Slider */
 .alphaearth-slider-container {
   position: absolute;
@@ -4104,4 +4323,20 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
   .verdict-chip { color: #000 !important; border-color: #000 !important; }
   .outlook-grid { grid-template-columns: 1fr !important; }
   .cascade-table th { border-color: #000 !important; }
+}
+
+/* Keep the final phone-target rule aligned with the operational reading
+   scale above.  This sits after the legacy 44px target safeguard so a phone
+   retains the larger 48px controls and 15px labels. */
+@media (max-width: 720px) {
+  .scope-btn, .dim-btn, .ctrl-btn, .lang-btn, .segmented-control button,
+  .urban-toggle button, .coord-copy, .fa-hotline, .councillor-phone,
+  .news-digest-tab, .locality-filter, .locality-search, .locality-reset,
+  .help-hint, .action-btn, .gp-title, .ward-risk-row {
+    min-height: 48px;
+  }
+  .scope-btn, .dim-btn, .ctrl-btn, .lang-btn, .segmented-control button,
+  .urban-toggle button, .news-digest-tab, .locality-filter, .help-hint, .action-btn {
+    font-size: 15px;
+  }
 }

@@ -108,3 +108,26 @@ The board now predicts and detects change, not just reports the present.
 ### Deferred (next increment)
 - JPS Infobanjir **rainfall** station scrape (state=SRK) alongside water level.
 - DOSM **district-level** population/income (Kuching/Padawan/Samarahan) in `loadGovStats`.
+
+## MPP service ledger + open-data gap audit (2026-09-25)
+
+`loadMppServiceLedger()` in server.mjs scrapes MPP's own HTML tables (6h cache) → `payload.mppService`, rendered by `renderMppLedger()` under Official Pulse. It also drives a "Client Charter" directive for the weakest pledge below 95%. Tested by `tests/mpp-ledger.test.mjs`.
+
+| Section | MPP page (webpage_view id) | Notes |
+|---|---|---|
+| Client charter achievement | 266 (2026), 261 (2025) | Year pages are found from the home-page menu, so 2027 is picked up automatically |
+| Active tenders | 265 | **Titles are images.** Only counts and dates are scraped. MPP's table and text disagree on tender 1's publish date (22.09 vs 08.09) |
+| Grade-A food premises | 226 | Lists Grade A only, so it is not a pass rate |
+| Refuse collection zones | 245 (2025, Trienekens) | Zone count; also linked in mpp-services.js |
+| Public parks | 251 | Lot numbers, no coordinates. Mapping them would need a cadastral join |
+| Night markets | 161 | 4 markets, hours + operator |
+
+**Blind spots (checked, not buildable):** DCC & village library list (241) is images only. Online Transaction Statistic returns "No Record Found". Tender titles are images.
+
+**Skipped on purpose:** by-laws, assessment discount tables, parking orders (paperwork, no ops signal). Sarawak Facts & Figures (latest on CKAN is 2016; DOSM covers population). Kawasanku (census geography already covered). MPP Facebook (no clean public feed).
+
+**Corrected 2026-09-25:**
+- Tourism KPI was an unsourced 2.1M. It is now 4,831,650: Sarawak entry-point arrivals for 2024, Immigration Dept via catalog.sarawak.gov.my `sarawak-visitor-arrivals-2024`. Refresh each March.
+- The MPP flood-hotline number was 082-615991. The contact page says 082-615566.
+- Holdings split per MPP profile (1.1.2026): 76,193 residential / 5,778 commercial / 1,773 industrial. Population 260,058 is labelled Census 2020.
+- Grok's "1,432 km²" and "340–360k population" have no primary source. Not used.

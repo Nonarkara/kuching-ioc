@@ -715,7 +715,7 @@ function buildMetrics(w, a, ap, j, n, pz, tr) {
     { id:"pdw-share", label:"Padawan", value:pdw?.areaSharePct??0, unit:"%", tone:"focus", context:`${pdw?.areaKm2??0} km2` },
     { id:"gdp", label:"GDP/Cap", value:CITY_DEMOGRAPHICS.gdpPerCapitaUsd, unit:"USD", tone:"neutral", context:`Unemployment ${CITY_DEMOGRAPHICS.unemploymentPct}%` },
     { id:"birth", label:"Birth Rate", value:CITY_DEMOGRAPHICS.birthRate, unit:"/1k", tone:"neutral", context:`Median age ${CITY_DEMOGRAPHICS.medianAge}` },
-    { id:"tourism", label:"Tourism", value:round(CITY_DEMOGRAPHICS.touristArrivals2025/1000000,1), unit:"M", tone:"neutral", context:"Annual arrivals" },
+    { id:"tourism", label:"Tourism", value:round(CITY_DEMOGRAPHICS.touristArrivals2024/1000000,1), unit:"M", tone:"neutral", context:"Sarawak arrivals 2024 · Immigration" },
   ];
 }
 
@@ -832,6 +832,7 @@ async function buildFallbackDashboard() {
       updatedAt: gen,
       districts: [],
     },
+    mppService: { status: "unavailable", source: "mpp.sarawak.gov.my" },
     metWarnings: {
       status: "fallback",
       activeCount: 0,
@@ -1036,7 +1037,7 @@ async function buildFallbackDashboard() {
       ],
       hotlines: [
         { id: "999", label: "Emergency", number: "999" },
-        { id: "mpp", label: "Majlis Perbandaran Padawan", number: "082-615991", url: "https://mpp.sarawak.gov.my/" },
+        { id: "mpp", label: "Majlis Perbandaran Padawan", number: "082-615566", url: "https://mpp.sarawak.gov.my/" },
         { id: "ihydro", label: "DID Sarawak iHYDRO", number: null, url: "https://ihydro.sarawak.gov.my/" },
       ],
       source: "DID Sarawak iHYDRO",
@@ -3194,7 +3195,32 @@ function renderOfficialPulse(payload) {
         </div>
       </div>
       ${districtChips}
-    </div>`;
+    </div>
+    ${renderMppLedger(payload.mppService)}`;
+}
+
+// MPP's own published service numbers. Each stat links to the page it came from;
+// a section that failed to scrape is simply absent, never zero.
+function renderMppLedger(ledger) {
+  const head = `<div class="pulse-header"><span class="pulse-label">${t("mppLedger")}</span></div>`;
+  if (!ledger || ledger.status !== "live") {
+    return `<div class="official-pulse-block">${head}<p class="pulse-note">${t("ledgerMissing")} <a href="https://mpp.sarawak.gov.my/" target="_blank" rel="noopener noreferrer">mpp.sarawak.gov.my ↗</a></p></div>`;
+  }
+  const stat = (part, value, label) => part && part.status !== "unavailable" && value != null
+    ? `<a class="pulse-stat" href="${escapeHtml(part.url)}" target="_blank" rel="noopener noreferrer"><strong>${value}</strong><span>${label}</span></a>` : "";
+  const c = ledger.charter, q = c?.quarters?.find((x) => x.label === c.latestQuarter);
+  const tn = ledger.tenders, f = ledger.food, r = ledger.refuse, pk = ledger.parks, m = ledger.markets;
+  const stats = [
+    stat(c, q?.score != null ? `${q.score}%` : null, `${t("ledgerCharter")} · ${escapeHtml(c?.latestQuarter || "")}`),
+    stat(tn, tn?.active, `${t("ledgerTenders")}${tn?.nextClosing ? ` · ${t("ledgerNextClose")} ${escapeHtml(tn.nextClosing)}` : ""}`),
+    stat(f, f?.gradeA, `${t("ledgerFood")}${f?.latestInspection ? ` · ${escapeHtml(f.latestInspection)}` : ""}`),
+    stat(r, r?.zones, `${t("ledgerRefuse")}${r?.year ? ` · ${escapeHtml(r.year)}` : ""}`),
+    stat(pk, pk?.count, `${t("ledgerParks")}${pk?.areaSqm ? ` · ${num(pk.areaSqm / 10000, 1)} ha` : ""}`),
+    stat(m, m?.items?.length || null, t("ledgerMarkets")),
+  ].join("");
+  const weak = c?.weakest?.length
+    ? `<p class="pulse-note">${t("ledgerWeakest")}: ${c.weakest.map((w) => `#${w.no} ${w.score}%`).join(" · ")}${c.updated ? ` · MPP ${escapeHtml(c.updated)}` : ""}</p>` : "";
+  return `<div class="official-pulse-block">${head}<div class="pulse-metagrid">${stats}</div>${weak}</div>`;
 }
 
 // --- MPP governance: councillor roster + locality explorer -------------------

@@ -228,7 +228,7 @@ const JURISDICTIONS = [
     population: 260058,
     properties: 83744,
     source:
-      "MPP council profile lists a jurisdiction area of 984.34 km², population 260,058, and 83,744 private holdings.",
+      "MPP council profile: jurisdiction 984.34 km²; population 260,058 (DOSM Census 2020); 83,744 private holdings as at 1.1.2026 (76,193 residential 91%, 5,778 commercial 7%, 1,773 industrial 2%).",
     sourceUrl: "https://mpp.sarawak.gov.my/web/subpage/webpage_view/55",
     mapReferenceLabel: "MPP Zoning Map",
     mapReferenceUrl:
@@ -275,7 +275,7 @@ const NEWS_FEEDS = [
     language: "en",
     languageLabel: "English",
     url:
-      "https://news.google.com/rss/search?q=%28Kuching%20OR%20Padawan%20OR%20%22Batu%20Kawa%22%20OR%20Siburan%20OR%20Stutong%20OR%20Penrissen%20OR%20%22Petra%20Jaya%22%29%20%28site%3Atheborneopost.com%20OR%20site%3Adayakdaily.com%20OR%20site%3Asarawaktribune.com%20OR%20site%3Abernama.com%20OR%20site%3Amalaymail.com%29%20when%3A14d&hl=en-MY&gl=MY&ceid=MY%3Aen",
+      "https://news.google.com/rss/search?q=%28Kuching%20OR%20Padawan%20OR%20%22Batu%20Kawa%22%20OR%20Siburan%20OR%20Stutong%20OR%20Penrissen%20OR%20%22Petra%20Jaya%22%29%20%28site%3Atheborneopost.com%20OR%20site%3Adayakdaily.com%20OR%20site%3Asarawaktribune.com%20OR%20site%3Abernama.com%20OR%20site%3Amalaymail.com%20OR%20site%3Asarawakdaily.com%29%20when%3A14d&hl=en-MY&gl=MY&ceid=MY%3Aen",
   },
   {
     id: "kuching-press-ms",
@@ -909,6 +909,113 @@ async function loadMbksNews() {
 async function loadMppAnnouncements() {
   const html = await fetchText("https://mpp.sarawak.gov.my/web/subpage/announcement_list/", 12000);
   return parseMppAnnouncements(html);
+}
+
+// MPP service ledger — the council's own published performance and service
+// lists (client charter, active tenders, food grading, refuse zones, parks,
+// night markets). All are plain HTML tables on mpp.sarawak.gov.my. Tender titles
+// are published as images only, so we report counts and dates, never titles.
+const MPP_BASE = "https://mpp.sarawak.gov.my";
+const MPP_PAGES = { charter: 266, tenders: 265, food: 226, refuse: 245, parks: 251, markets: 161 };
+
+function htmlTableRows(html) {
+  return Array.from(html.matchAll(/<tr[\s\S]*?<\/tr>/gi), (row) =>
+    Array.from(row[0].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi), (c) => stripTags(c[1])),
+  ).filter((cells) => cells.some(Boolean));
+}
+
+const pctOf = (cell) => { const m = /(\d+(?:\.\d+)?)\s*%/.exec(cell || ""); return m ? Number(m[1]) : null; };
+
+function parseMppCharter(html) {
+  const rows = htmlTableRows(html);
+  const header = rows.find((r) => r.some((c) => /Jan-Mar/i.test(c)));
+  const quarterLabels = header ? header.slice(-4) : ["Q1", "Q2", "Q3", "Q4"];
+  const totalRow = rows.find((r) => /Total Score/i.test(r[0]));
+  const quarters = quarterLabels.map((label, i) => ({ label, score: totalRow ? pctOf(totalRow[1 + i]) : null }));
+  const latestIdx = quarters.map((q) => q.score != null).lastIndexOf(true);
+  const pledges = rows
+    .filter((r) => /^\d+$/.test(r[0]) && r.length >= 3)
+    .map((r) => ({ no: Number(r[0]), pledge: r[1], scores: r.slice(2, 6).map(pctOf) }));
+  const weakest = latestIdx < 0 ? [] : pledges
+    .filter((p) => p.scores[latestIdx] != null && p.scores[latestIdx] < 95)
+    .sort((a, b) => a.scores[latestIdx] - b.scores[latestIdx])
+    .slice(0, 3)
+    .map((p) => ({ no: p.no, pledge: p.pledge, score: p.scores[latestIdx] }));
+  const updated = /Updated on\s*([\d.]+)/i.exec(stripTags(html))?.[1] || null;
+  return { quarters, latestQuarter: quarters[latestIdx]?.label || null, pledgeCount: pledges.length, weakest, updated };
+}
+
+function parseMppTenders(html) {
+  const items = htmlTableRows(html)
+    .filter((r) => /^\d+$/.test(r[0]) && /\d{2}\.\d{2}\.\d{4}/.test(r[2] || ""))
+    .map((r) => ({ published: r[1], closes: r[2] }));
+  const iso = (d) => d.split(".").reverse().join("-");
+  const nextClosing = items.map((i) => i.closes).sort((a, b) => iso(a).localeCompare(iso(b)))[0] || null;
+  return { active: items.length, nextClosing, items };
+}
+
+function parseMppFoodGrading(html) {
+  const rows = htmlTableRows(html).filter((r) => /^\d+$/.test(r[0]) && r.length >= 8);
+  const dates = rows.map((r) => r[7]).filter((d) => /\d{2}\/\d{2}\/\d{4}/.test(d));
+  const iso = (d) => d.split("/").reverse().join("-");
+  return {
+    premises: rows.length,
+    gradeA: rows.filter((r) => /^A$/i.test(r[5])).length,
+    latestInspection: dates.sort((a, b) => iso(b).localeCompare(iso(a)))[0] || null,
+  };
+}
+
+function parseMppRefuseZones(html) {
+  const text = stripTags(html);
+  const zones = new Set(Array.from(text.matchAll(/\bPH[HC]\s?(?:\d+[A-Z]?|RED)\b|\bPSC\s?\d+\b/g), (m) => m[0].replace(/\s/g, "")));
+  const year = /Refuse Collection Schedule[^<]*?(\d{4})/i.exec(html)?.[1] || null;
+  return { zones: zones.size, year };
+}
+
+function parseMppParks(html) {
+  const rows = htmlTableRows(html).filter((r) => /^\d+$/.test(r[0]) && r.length >= 7);
+  return { count: rows.length, areaSqm: rows.reduce((s, r) => s + (Number(r[6].replace(/[^\d.]/g, "")) || 0), 0) };
+}
+
+function parseMppNightMarkets(html) {
+  return Array.from(
+    html.matchAll(/class="market-title"[^>]*>([\s\S]*?)<\/div>[\s\S]*?class="market-info"[^>]*>([\s\S]*?)<\/div>/gi),
+    (m) => {
+      const info = stripTags(m[2]);
+      return {
+        name: stripTags(m[1]),
+        hours: /Operating Hour(?:\/Day)?:\s*(.+?)\s*Operated by/i.exec(info)?.[1] || null,
+        operator: /Operated by:\s*(.+?)\s*Contact/i.exec(info)?.[1] || null,
+      };
+    },
+  );
+}
+
+async function loadMppServiceLedger() {
+  return cached("mpp-service-ledger", 6 * 60 * 60 * 1000, async () => {
+    // Charter and tender pages are re-issued yearly under new ids; find the
+    // newest from the home-page menu, fall back to the 2026 ids.
+    const pages = { ...MPP_PAGES };
+    try {
+      const home = await fetchText(`${MPP_BASE}/`, 12000);
+      const newest = (re) => Array.from(home.matchAll(re), (m) => ({ id: Number(m[1]), year: Number(m[2]) }))
+        .sort((a, b) => b.year - a.year)[0]?.id;
+      pages.charter = newest(/webpage_view\/(\d+)"[^>]*>\s*CLIENT CHARTER ACHIEVEMENT (\d{4})/gi) || pages.charter;
+      pages.tenders = newest(/webpage_view\/(\d+)"[^>]*>[\s\S]{0,200}?Tender \/ Quotation (\d{4})/gi) || pages.tenders;
+    } catch { /* keep defaults */ }
+
+    const url = (key) => `${MPP_BASE}/web/subpage/webpage_view/${pages[key]}`;
+    const parsers = { charter: parseMppCharter, tenders: parseMppTenders, food: parseMppFoodGrading, refuse: parseMppRefuseZones, parks: parseMppParks, markets: parseMppNightMarkets };
+    const keys = Object.keys(parsers);
+    const results = await Promise.allSettled(keys.map((k) => fetchText(url(k), 15000).then(parsers[k])));
+    const ledger = { status: "live", updatedAt: nowIso(), source: "mpp.sarawak.gov.my" };
+    keys.forEach((k, i) => {
+      const r = results[i];
+      ledger[k] = r.status === "fulfilled" ? { ...(Array.isArray(r.value) ? { items: r.value } : r.value), url: url(k) } : { status: "unavailable", url: url(k) };
+    });
+    if (keys.every((k) => ledger[k].status === "unavailable")) ledger.status = "unavailable";
+    return ledger;
+  }).catch(() => ({ status: "unavailable", updatedAt: nowIso(), source: "mpp.sarawak.gov.my" }));
 }
 
 async function loadDbkuNews() {
@@ -1860,7 +1967,7 @@ const FLOOD_HOTLINES = [
   { id: "999", label: "Emergency (Police / Fire / Ambulance)", number: "999" },
   { id: "jpam", label: "Civil Defence (JPAM Sarawak)", number: "082-441144", note: "Confirm via directory if engaged" },
   { id: "did", label: "DID Sarawak (iHYDRO operations)", number: "082-440666", url: "https://ihydro.sarawak.gov.my/" },
-  { id: "mpp", label: "Majlis Perbandaran Padawan", number: "082-615991", url: "https://mpp.sarawak.gov.my/" },
+  { id: "mpp", label: "Majlis Perbandaran Padawan", number: "082-615566", url: "https://mpp.sarawak.gov.my/" },
   { id: "infobanjir", label: "JPS Public Infobanjir", number: null, url: "https://publicinfobanjir.water.gov.my/?lang=en" },
 ];
 
@@ -3205,7 +3312,7 @@ function buildMetricCards(weather, air, airport, jurisdictions, news, padawanZon
   ];
 }
 
-function buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast, floodMatrix, nrebApi }) {
+function buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast, floodMatrix, nrebApi, mppService }) {
   const rain6h = round(weather.nextHours.reduce((sum, hour) => sum + hour.precipitationMm, 0), 1);
   const padawan = jurisdictions.items.find((item) => item.id === "mpp");
   const sarawakStats = govStats.sarawak;
@@ -3225,6 +3332,19 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
       title: `NREB API ${worst.api} (${worst.band}) — ${worst.name}`,
       detail: `NREB Sarawak monitoring${nrebApi.takenAt ? `, ${nrebApi.takenAt}` : ""}: Kuching ${kuching ? `${kuching.api} (${kuching.band})` : "no reading"}. Suspend any open burning, stage masks for outdoor crews, defer non-essential outdoor work.`,
       humanContext: "These are the state's own gauges, not a model — sensitive groups feel this first. NREB outranks this board.",
+    });
+  }
+
+  // Client-charter directive — MPP's own published quarterly score. Names the
+  // weakest pledge below 95% so the Secretary sees the gap before a councillor does.
+  const charterGap = mppService?.charter?.weakest?.[0];
+  if (charterGap) {
+    items.push({
+      severity: charterGap.score < 80 ? "medium" : "low",
+      owner: "Client Charter",
+      title: `Charter #${charterGap.no} at ${charterGap.score}% (${mppService.charter.latestQuarter})`,
+      detail: `${charterGap.pledge.replace(/\.\s*$/, "").slice(0, 140)}${charterGap.pledge.length > 140 ? "…" : ""}. MPP published achievement, updated ${mppService.charter.updated || "n/a"}.`,
+      humanContext: "Source: MPP Client Charter Achievement page. The council's own number, not this board's estimate.",
     });
   }
 
@@ -3932,7 +4052,7 @@ async function buildDashboard() {
     padawanZoning, trends, govStats,
     infobanjirRaw, apims, ckanHarvest, exchange, metWarnings, floodForecast,
     mppCouncillors, mppLocalities, forecast, alphaEarth, imperviousData, cityReports,
-    nrebApi,
+    nrebApi, mppService,
   ] = await Promise.all([
     loadWeather(),
     loadAirQuality(),
@@ -3957,6 +4077,7 @@ async function buildDashboard() {
     loadImperviousData(),
     loadCityReports(),
     loadNrebApi(),
+    loadMppServiceLedger(),
   ]);
 
   // Catchment enrichment compounds Infobanjir + OSM drainage. Pure post-process,
@@ -3986,6 +4107,7 @@ async function buildDashboard() {
     exchange,
     fires,
     quakes,
+    mppService,
     govStats: { latestSarawakPop: govStats.dosm.latestSarawakPop, year: govStats.dosm.year, datasetCount: govStats.sarawak.datasetCount, updatedAt: govStats.updatedAt, districts: govStats.dosm.districts || [] },
     sarawakStats: govStats.sarawak,
     openDosmStats: govStats.dosm,
@@ -4004,7 +4126,7 @@ async function buildDashboard() {
     mppCouncillors,
     mppLocalities,
     osm: getOsmStatusSnapshot(),
-    operations: buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast, floodMatrix: buildFloodRiskMatrix(forecast, imperviousData), nrebApi }),
+    operations: buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast, floodMatrix: buildFloodRiskMatrix(forecast, imperviousData), nrebApi, mppService }),
     sources: [
       sourceRecord(
         "mpp-reference-map",
@@ -4109,6 +4231,7 @@ async function buildDashboard() {
       sourceRecord("nreb-api", "NREB Sarawak / Air Pollutant Index", nrebApi?.status === "ready" ? "live" : nrebApi?.status || "absent", "State-tier official API readings from NREB's own monitoring network — outranks modeled AQI.", nrebApi?.scaleUrl || "https://www.nreb.gov.my/web/subpage/webpage_view/548", generatedAt),
       sourceRecord("mbks-news", "MBKS News Collections", news.status, "Official MBKS municipal news lane.", "https://mbks.sarawak.gov.my/web/subpage/news_list/", generatedAt),
       sourceRecord("mpp-announcements", "MPP Announcement List", news.status, "Official MPP announcement lane.", "https://mpp.sarawak.gov.my/web/subpage/announcement_list/", generatedAt),
+      sourceRecord("mpp-service-ledger", "MPP Client Charter + service lists", mppService.status, "Quarterly charter achievement, active tenders (count/dates only; titles are images), Grade-A food premises, refuse zones, parks, night markets.", mppService.charter?.url || "https://mpp.sarawak.gov.my/", mppService.updatedAt || generatedAt),
       sourceRecord("dbku-news", "DBKU News Release", news.status, "Official DBKU news release lane.", "https://dbku.sarawak.gov.my/modules/web/pages.php?mod=news&menu_id=0&sub_id=266", generatedAt),
       sourceRecord(
         "nasa-firms",

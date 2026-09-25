@@ -172,7 +172,9 @@ export const CITY_DEMOGRAPHICS = {
   literacyRate: 96.2,
   gdpPerCapitaUsd: 14200,
   unemploymentPct: 3.2,
-  touristArrivals2025: 2100000,
+  // Immigration Dept Malaysia (Sarawak) via data.sarawak.gov.my, "Sarawak Visitor Arrivals (2024)".
+  // Sarawak-wide entry-point arrivals (2,962,820 international + 1,868,830 Malaysian). Annual; refresh each March.
+  touristArrivals2024: 4831650,
   dailyWaterConsumptionMld: 580, // megalitres per day
   solidWasteTpd: 1200, // tonnes per day
   drainageNetworkKm: 485,
@@ -341,6 +343,7 @@ export const TRANSLATIONS = {
     wardRisk: "Wards most exposed",
     csKicker: "Catchment risk", csGauge: "The gauge", csGround: "The ground", csExposed: "Exposed", csNext: "Next 72h", csWhy: "Why", csAct: "Act", csLast: "Last time", csClose: "Close catchment risk",
     officialPulse: "Population snapshot",
+    mppLedger: "MPP service ledger", ledgerCharter: "Client charter", ledgerTenders: "Active tenders", ledgerNextClose: "next closes", ledgerFood: "Grade-A food premises", ledgerRefuse: "Refuse zones", ledgerParks: "Public parks", ledgerMarkets: "Night markets", ledgerWeakest: "Below 95%", ledgerMissing: "Not in this snapshot. Check the MPP website.",
     environment: "Environment right now",
     newsDigest: "News digest",
     events24h: "What changed in 24h",
@@ -401,6 +404,7 @@ export const TRANSLATIONS = {
     wardRisk: "Dedahan wad // tolok × pegangan",
     csKicker: "Risiko tadahan", csGauge: "Tolok", csGround: "Tanah", csExposed: "Terdedah", csNext: "72 jam depan", csWhy: "Mengapa", csAct: "Tindakan", csLast: "Kali terakhir", csClose: "Tutup risiko tadahan",
     officialPulse: "Snapshot penduduk",
+    mppLedger: "Lejar perkhidmatan MPP", ledgerCharter: "Piagam pelanggan", ledgerTenders: "Tender aktif", ledgerNextClose: "tutup seterusnya", ledgerFood: "Premis makanan Gred A", ledgerRefuse: "Zon kutipan sampah", ledgerParks: "Taman awam", ledgerMarkets: "Pasar malam", ledgerWeakest: "Bawah 95%", ledgerMissing: "Tiada dalam snapshot ini. Semak laman web MPP.",
     environment: "Alam sekitar sekarang",
     newsDigest: "Ringkasan berita",
     events24h: "Apa berubah dalam 24 jam",
@@ -461,6 +465,7 @@ export const TRANSLATIONS = {
     wardRisk: "选区暴露 // 水位 × 物业",
     csKicker: "集水区风险", csGauge: "水位站", csGround: "地面", csExposed: "受影响", csNext: "未来72小时", csWhy: "原因", csAct: "行动", csLast: "上次", csClose: "关闭集水区风险",
     officialPulse: "人口快照",
+    mppLedger: "MPP 服务记录", ledgerCharter: "客户服务承诺", ledgerTenders: "进行中的招标", ledgerNextClose: "最近截止", ledgerFood: "A级食品业者", ledgerRefuse: "垃圾收集区", ledgerParks: "公共公园", ledgerMarkets: "夜市", ledgerWeakest: "低于95%", ledgerMissing: "本次快照未包含。请查阅 MPP 官网。",
     environment: "当前环境",
     newsDigest: "新闻摘要",
     events24h: "24小时内变化",

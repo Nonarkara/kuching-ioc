@@ -58,6 +58,7 @@ export function setupOperatorGuide(version = '') {
     button.addEventListener('click', () => {
       const target = document.getElementById(id);
       if (!target) return;
+      if (id === 'sourceMatrix') target.closest('.source-panel')?.classList.add('operator-revealed');
       for (let parent = target.parentElement; parent; parent = parent.parentElement) {
         if (parent.tagName === 'DETAILS') parent.open = true;
       }

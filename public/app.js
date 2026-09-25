@@ -514,7 +514,7 @@ function buildBoardBrief(payload) {
 
   const blind = [];
   if (payload.delivery?.mode !== "live-api") {
-    blind.push("This page refreshes about every 6 hours — not a live stream");
+    blind.push("Static snapshot — check the payload date; page refresh does not update the source observations");
   }
   const actionableBlind = degradedSources.filter((source) => ["fallback", "offline"].includes(source.status));
   actionableBlind.slice(0, 3).forEach((source) => blind.push(`${source.name} is ${SOURCE_STATUS_LABEL[source.status] || source.status}`));
@@ -2052,7 +2052,7 @@ function composeTodayBrief(payload) {
   if (metCount > 0) {
     segments.push(`<span class="brief-flag" data-tone="alert">${metCount} weather warning${metCount > 1 ? "s" : ""}</span>`);
   } else {
-    segments.push(`<span class="brief-flag" data-tone="ok">Weather clear</span>`);
+    segments.push(`<span class="brief-flag" data-tone="muted">Check MET bulletin</span>`);
   }
 
   const hydroBand = payload?.infobanjir?.highestBand;
@@ -2065,7 +2065,7 @@ function composeTodayBrief(payload) {
   const apims = payload?.apims?.worst;
   if (apims?.aqi != null) {
     const tone = apims.aqi >= 100 ? "warn" : apims.aqi >= 75 ? "warn" : "muted";
-    const airWord = apims.aqi >= 100 ? "Unhealthy air" : apims.aqi >= 75 ? "Hazy air" : "Air OK";
+    const airWord = "APIMS-linked index";
     segments.push(`<span class="brief-flag" data-tone="${tone}">${airWord} · ${apims.aqi}</span>`);
   }
 
@@ -3771,7 +3771,7 @@ function renderVerdict(payload) {
   const chips = [];
   chips.push(`<span class="verdict-chip" data-tone="${health.uncertain ? "warn" : health.highest === "normal" ? "ok" : "alert"}">${health.uncertain ? "Rivers: verify data" : `Gauge band: ${health.highest}`} · ${health.count}/${health.total} readings</span>`);
   chips.push(`<span class="verdict-chip" data-tone="${met.activeCount > 0 ? "alert" : "warn"}">${met.activeCount > 0 ? `${met.activeCount} weather warning${met.activeCount > 1 ? "s" : ""} in payload` : "Weather: check official bulletin"}</span>`);
-  if (aqi != null) chips.push(`<span class="verdict-chip" data-tone="${aqi > 150 ? "alert" : aqi > 100 ? "warn" : "ok"}">Air index · ${aqi}</span>`);
+  if (aqi != null) chips.push(`<span class="verdict-chip" data-tone="${aqi > 150 ? "alert" : aqi > 100 ? "warn" : "ok"}">Open-Meteo AQI · ${aqi}</span>`);
   const ff = payload.floodForecast;
   if (ff?.todayCms != null && ff?.peakCms != null) {
     const rising = ff.peakCms > ff.todayCms * 1.15;

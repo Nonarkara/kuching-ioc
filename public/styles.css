@@ -12,8 +12,8 @@
   --soft: #91a1b1;
   --line: rgba(0, 243, 255, 0.2);
   --line-strong: rgba(0, 243, 255, 0.5);
-  --font-mono: "JetBrains Mono", "Courier New", monospace;
-  --font-sans: "Manrope", "Inter", sans-serif;
+  --font-mono: "Helvetica Neue", Helvetica, Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-sans: "Helvetica Neue", Helvetica, Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   --glow: 0 0 8px var(--cyan-glow);
   --glow-soft: 0 0 4px var(--cyan-glow);
   --card-bg: rgba(0, 243, 255, 0.02);
@@ -53,6 +53,16 @@
 }
 
 * { box-sizing: border-box; }
+
+/* Secretary's reading preference applies to legacy hard-coded HUD faces too. */
+.dashboard-shell, .dashboard-shell *, .help-overlay, .help-overlay * {
+  font-family: var(--font-sans) !important;
+  letter-spacing: normal !important;
+  font-variant-numeric: tabular-nums;
+}
+html:lang(zh-Hans) { --font-sans:"Helvetica Neue",Helvetica,Arial,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif; }
+html:lang(zh-Hans) .dashboard-shell { line-height:1.7; }
+.masthead h1 { text-shadow:none; }
 
 html, body {
   height: 100%; margin: 0;

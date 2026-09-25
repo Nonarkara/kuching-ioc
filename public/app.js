@@ -19,6 +19,8 @@ const {
   sourceRecord, buildMapLayers, URBAN_LAYERS, ECONOMY_FALLBACK, RIVER_BYPASS_PROJECT, MPP_WARD_PROJECTS,
   WARD_TENSION, WARD_TENSION_ILLUSTRATIVE, CCTV_FEEDS
 } = await import(__dataUrl__);
+const { dataHealth } = await import(`./data-health.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { setupOperatorGuide } = await import(`./operator-guide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 
 const BOOT = window.__IOC_BOOT__ || {};
 
@@ -2165,7 +2167,8 @@ function renderEventsStack(payload) {
 function buildSitrepText(p) {
   const now = new Date();
   const stamp = now.toLocaleString("en-MY", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Kuching" });
-  const posture = (p.summary?.posture || "stable").toUpperCase();
+  const health = dataHealth(p, state.scope);
+  const posture = health.uncertain ? "VERIFY DATA / FIELD CONDITIONS" : (p.summary?.posture || "unconfirmed").toUpperCase();
   const acts = (p.operations || []).filter(o => o.severity === "high").slice(0, 3);
   const env = [];
   const heat = p.metrics?.find(m => m.id === "heat");
@@ -2180,10 +2183,12 @@ function buildSitrepText(p) {
     env.push(`${worst.name}: ${worst.waterLevelM != null ? worst.waterLevelM + "m" : "ref"} (${worst.bandLabel || worst.band})`);
   }
   const met = p.metWarnings;
-  if (met?.activeCount > 0) env.push(`MET warning active: ${met.items[0].heading || ""}`);
+  if (met?.activeCount > 0) env.push(`MET warning in payload: ${met.items?.[0]?.heading || "Check official bulletin"}`);
   const air = p.airport?.movements;
   const lines = [
     "🛰 KUCHING SITREP · " + stamp,
+    `DATA TIMESTAMP: ${p.generatedAt || "Unknown"} · ${p.delivery?.modeLabel || "Check source times"}`,
+    "Verify observation times before action. Task marks are browser-local, not dispatched assignments.",
     "",
     "POSTURE: " + posture + (p.summary?.headline ? " — " + p.summary.headline : ""),
     "",
@@ -2396,13 +2401,14 @@ function renderDirectives(ops) {
       mutated = true;
     }
     const age = ageBucket(entry.firstSeen);
-    const status = entry.status || "queued";
-    const stale = age === "stale" ? `<span class="directive-stale-mark">↻ STALE</span>` : "";
-    const ownerSafe = (o.owner || "").replace(/"/g, "&quot;");
-    const titleSafe = (o.title || "").replace(/</g, "&lt;");
+    const status = Object.hasOwn(DIRECTIVE_NEXT_STATUS, entry.status) ? entry.status : "queued";
+    const stale = age === "stale" ? `<span class="directive-stale-mark">FIRST SEEN &gt;8H AGO</span>` : "";
+    const ownerSafe = escapeHtml(o.owner || "");
+    const titleSafe = escapeHtml(o.title || "");
     return `
-      <article class="operation-card"
-               data-severity="${o.severity || "low"}"
+      <article class="operation-card" role="button" tabindex="0"
+               aria-label="${titleSafe}: ${escapeHtml(status)}. Change local task status"
+               data-severity="${escapeHtml(o.severity || "low")}"
                data-status="${status}"
                data-age="${age}"
                data-hash="${hash}"
@@ -2410,8 +2416,8 @@ function renderDirectives(ops) {
         <span class="directive-status" data-status="${status}">${DIRECTIVE_STATUS_GLYPH[status]}</span>
         <div class="kicker">${ownerSafe}${stale}</div>
         <strong>${titleSafe}</strong>
-        <div class="operation-detail">${o.detail || ""}</div>
-        ${o.humanContext ? `<div class="directive-context">${o.humanContext}</div>` : ""}
+        <div class="operation-detail">${escapeHtml(o.detail || "")}</div>
+        ${o.humanContext ? `<div class="directive-context">${escapeHtml(o.humanContext)}</div>` : ""}
       </article>`;
   }).join("");
 
@@ -2419,6 +2425,9 @@ function renderDirectives(ops) {
 
   // Click cycles status. Reads the table on each click (avoids stale closure).
   root.querySelectorAll(".operation-card").forEach(card => {
+    card.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); card.click(); }
+    });
     card.addEventListener("click", () => {
       const hash = card.dataset.hash;
       if (!hash) return;
@@ -2428,6 +2437,7 @@ function renderDirectives(ops) {
       t[hash] = entry;
       saveDirectiveState(t);
       card.dataset.status = entry.status;
+      card.setAttribute("aria-label", `${card.querySelector('strong').textContent}: ${entry.status}. Change local task status`);
       const glyph = card.querySelector(".directive-status");
       if (glyph) {
         glyph.dataset.status = entry.status;
@@ -2446,6 +2456,9 @@ function deliveryToneToStatus(tone) {
 }
 
 function renderRuntimeMeta(payload) {
+  const health = dataHealth(payload, state.scope);
+  const system = $("sysStatus");
+  if (system) system.textContent = health.outdated ? "DATA: TIME NEEDS REVIEW" : health.count === 0 ? "DATA: RIVER READINGS MISSING" : "DATA: CHECK SOURCE TIMES";
   const badge = $("dataModeBadge");
   const board = $("boardRoleBadge");
   const detail = $("runtimeDetail");
@@ -2813,7 +2826,9 @@ function renderFloodAction(payload) {
   }
   el.hidden = false;
   el.dataset.band = fa.band || "normal";
-  const verb = floodActionVerb(payload) || "Rivers look fine";
+  const health = dataHealth(payload, state.scope);
+  const coverageWarning = state.lang === "ms" ? "Sahkan keadaan sungai — data tidak lengkap atau lama." : state.lang === "zh" ? "请核实河流情况：数据不完整或已过时。" : "Verify river conditions — data incomplete or outdated.";
+  const verb = health.uncertain && !["act", "prepare"].includes(fa.band) ? coverageWarning : floodActionVerb(payload) || "Check river conditions";
   const checklist = (fa.checklist || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   const reality = fa.realityCheck || {};
   const headlines = (reality.headlines || []).slice(0, 2).map((h) =>
@@ -2845,7 +2860,7 @@ function renderFloodAction(payload) {
   el.innerHTML = `
     <div class="fa-kicker">${t("floodAction")}</div>
     <div class="fa-verb">${escapeHtml(verb)}</div>
-    <div class="fa-reason">${escapeHtml(fa.reason || "")}</div>
+    <div class="fa-reason">${escapeHtml(health.uncertain ? coverageWarning : fa.reason || "")}</div>
     <div class="fa-watch-head"><span>Water watch</span><strong>${fa.score ?? "—"}<small>/100</small></strong><em>attention index · not a flood forecast</em></div>
     <div class="fa-story" aria-label="Water situation from observation to action">
       <div class="fa-story-row"><span>01 · observed</span><strong>${escapeHtml(pathStation?.name || "Padawan gauges")}</strong><p>${escapeHtml(level)}</p></div>
@@ -2922,6 +2937,9 @@ function renderHydroGauges(payload) {
     ${rows}`;
 
   el.querySelectorAll(".hg-row[data-station]").forEach((row) => {
+    row.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); row.click(); }
+    });
     row.addEventListener("click", () => {
       const id = row.getAttribute("data-station");
       const station = (ib?.stations || []).find((s) => s.id === id);
@@ -3727,8 +3745,9 @@ function renderVerdict(payload) {
   const fa = payload.floodAction || {};
   const met = payload.metWarnings || {};
   const ib = payload.infobanjir || {};
+  const health = dataHealth(payload, state.scope);
   const aqiMetric = (payload.metrics || []).find(m => m.id === "aqi");
-  const aqi = aqiMetric ? Math.round(aqiMetric.value) : null;
+  const aqi = typeof aqiMetric?.value === "number" && Number.isFinite(aqiMetric.value) ? Math.round(aqiMetric.value) : null;
 
   // Strip band for human eyes: only prepare/act go red. "watch" is amber —
   // painting watch as alert made "Keep watching" look like a flood emergency.
@@ -3736,7 +3755,7 @@ function renderVerdict(payload) {
   const floodPrep = fa.band === "prepare";
   const floodWatch = fa.band === "watch";
   const airBad = aqi != null && aqi > 100;
-  const band = floodAct ? "alert" : (floodPrep || floodWatch || met.activeCount > 0 || airBad) ? "watch" : "normal";
+  const band = floodAct ? "alert" : (health.uncertain || floodPrep || floodWatch || met.activeCount > 0 || airBad) ? "watch" : "normal";
   el.dataset.band = band;
 
   let verb = state.lang === "ms" ? (fa.verbBm || fa.verb) : state.lang === "zh" ? (fa.verbZh || fa.verb) : fa.verb;
@@ -3745,21 +3764,21 @@ function renderVerdict(payload) {
   if (!floodAct && !floodPrep && band === "watch") {
     verb = met.activeCount > 0
       ? (state.lang === "ms" ? `Pantau — ${met.activeCount} amaran cuaca` : state.lang === "zh" ? `留意 — ${met.activeCount} 则天气警报` : `Keep watching — ${met.activeCount} weather warning${met.activeCount > 1 ? "s" : ""}`)
-      : (state.lang === "ms" ? `Pantau — udara AQI ${aqi}` : state.lang === "zh" ? `留意 — 空气 AQI ${aqi}` : `Keep watching — air AQI ${aqi}`);
+      : airBad ? (state.lang === "ms" ? `Pantau — udara AQI ${aqi}` : state.lang === "zh" ? `留意 — 空气 AQI ${aqi}` : `Keep watching — air AQI ${aqi}`) : verb;
   }
+  const coverageWarning = state.lang === "ms" ? "Sahkan keadaan sungai — data tidak lengkap atau lama." : state.lang === "zh" ? "请核实河流情况：数据不完整或已过时。" : "Verify river conditions — data incomplete or outdated.";
+  if (health.uncertain && !floodAct && !floodPrep && !(met.activeCount > 0) && !airBad) verb = coverageWarning;
   const chips = [];
-  const riverLabel = (ib.highestBandLabel || "normal").toLowerCase();
-  const riverOk = !["alert", "warning", "danger"].includes(String(ib.highestBand || "").toLowerCase());
-  chips.push(`<span class="verdict-chip" data-tone="${riverOk ? "ok" : "alert"}">Rivers ${riverOk ? "OK" : riverLabel} · ${ib.padawanLiveCount ?? ib.liveCount ?? 0} gauges</span>`);
-  chips.push(`<span class="verdict-chip" data-tone="${met.activeCount > 0 ? "alert" : "ok"}">${met.activeCount > 0 ? `${met.activeCount} weather warning${met.activeCount > 1 ? "s" : ""}` : "Weather clear"}</span>`);
-  if (aqi != null) chips.push(`<span class="verdict-chip" data-tone="${aqi > 150 ? "alert" : aqi > 100 ? "warn" : "ok"}">Air ${aqi > 100 ? "unhealthy" : "OK"} · ${aqi}</span>`);
+  chips.push(`<span class="verdict-chip" data-tone="${health.uncertain ? "warn" : health.highest === "normal" ? "ok" : "alert"}">${health.uncertain ? "Rivers: verify data" : `Gauge band: ${health.highest}`} · ${health.count}/${health.total} readings</span>`);
+  chips.push(`<span class="verdict-chip" data-tone="${met.activeCount > 0 ? "alert" : "warn"}">${met.activeCount > 0 ? `${met.activeCount} weather warning${met.activeCount > 1 ? "s" : ""} in payload` : "Weather: check official bulletin"}</span>`);
+  if (aqi != null) chips.push(`<span class="verdict-chip" data-tone="${aqi > 150 ? "alert" : aqi > 100 ? "warn" : "ok"}">Air index · ${aqi}</span>`);
   const ff = payload.floodForecast;
   if (ff?.todayCms != null && ff?.peakCms != null) {
     const rising = ff.peakCms > ff.todayCms * 1.15;
     chips.push(`<span class="verdict-chip" data-tone="${rising ? "warn" : "ok"}">River flow ${Math.round(ff.todayCms)}→${Math.round(ff.peakCms)} m³/s</span>`);
   }
 
-  const why = [fa.reason, payload.summary?.headline].filter(Boolean).join(" · ");
+  const why = health.uncertain ? coverageWarning : [fa.reason, payload.summary?.headline].filter(Boolean).join(" · ");
   el.innerHTML = `
     <span class="verdict-verb">${escapeHtml(verb || payload.summary?.posture || "—")}</span>
     <div class="verdict-why">${escapeHtml(why)}</div>
@@ -3947,7 +3966,7 @@ function renderCatchmentStory(station) {
   const lag = fc?.lag_h;
   const risk = fc?.risk_72h;
   const path = station.catchment;
-  const observedRain = payload.metrics?.find((metric) => metric.id === "rain6h");
+  const observedRain = payload.metrics?.find((metric) => metric.id === "rain6h"); // Forecast metric, not an observation.
 
   // Councillor join — same point-in-polygon path the ward matrix uses, so the
   // ACT row can name the person who owns the response.
@@ -4018,7 +4037,7 @@ function renderCatchmentStory(station) {
     : `<em>not in the TimesFM catchment set — telemetry only</em>`;
 
   const waterPath = path?.status === "snapped"
-    ? `${observedRain?.value != null ? `<span class="cs-num">${observedRain.value} mm</span> observed rain / 6 h → ` : ""}<span class="cs-num">${path.segmentCount} segments · ${path.totalLengthKm} km</span> connected drainage reach → this gauge. <em>Geometry shows connection, not flow direction, flood arrival, or inundation.</em>`
+    ? `${observedRain?.value != null ? `<span class="cs-num">${escapeHtml(observedRain.value)} mm</span> forecast rain / 6 h → ` : ""}<span class="cs-num">${path.segmentCount} segments · ${path.totalLengthKm} km</span> connected drainage reach → this gauge. <em>Geometry shows connection, not flow direction, flood arrival, or inundation.</em>`
     : path?.status === "loading"
       ? `<em>Loading public drainage geometry for this water-path context…</em>`
       : `<em>Public drainage geometry is unavailable for this gauge. The level remains a JPS/iHYDRO observation.</em>`;
@@ -4313,10 +4332,11 @@ function renderTextScaleToggle() {
 // --- Language Toggle ---
 function setLang(lang) {
   state.lang = lang;
+  document.documentElement.lang = lang === "zh" ? "zh-Hans" : lang;
+  document.dispatchEvent(new CustomEvent("operator-language", { detail: lang }));
   // Update labels
   $("titleText").textContent = t("title");
   $("subtitleText").textContent = t("subtitle");
-  $("sysStatus").textContent = t("sysOperational");
   document.querySelectorAll("[data-i18n]").forEach(el => {
     el.textContent = t(el.dataset.i18n);
   });
@@ -4798,7 +4818,7 @@ function setupKeyboardShortcuts() {
   });
 
   document.addEventListener("keydown", (e) => {
-    if (isTypingTarget(e.target)) return;
+    if (isTypingTarget(e.target) || document.querySelector('dialog[open]')) return;
     // Modifier-aware: Shift used as a modifier; Ctrl/Cmd/Alt always pass through.
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const k = e.key;
@@ -4897,6 +4917,7 @@ async function boot() {
 }
 
 // Init controls
+setupOperatorGuide(__ASSET_VER__);
 setupExport();
 setupConnectors();
 setupKeyboardShortcuts();

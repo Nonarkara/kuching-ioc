@@ -2849,7 +2849,7 @@ function renderFloodAction(payload) {
     || stations.find((station) => station.focus === "padawan")
     || null;
   const level = pathStation?.waterLevelM != null ? `${pathStation.waterLevelM} m · ${pathStation.bandLabel || pathStation.band}` : "No current level returned";
-  const pressure = (fa.drivers || []).slice(0, 2).join(" · ") || "No observed driver above the action threshold.";
+  const pressure = (fa.drivers || []).slice(0, 2).join(" · ") || "No driver supplied. Check agency readings before deciding.";
   const pathText = pathStation?.catchment?.status === "snapped"
     ? `${pathStation.catchment.segmentCount} mapped drainage segments · ${pathStation.catchment.totalLengthKm} km connected reach`
     : "Select a gauge to load its connected public drainage reach";
@@ -2863,15 +2863,15 @@ function renderFloodAction(payload) {
     <div class="fa-reason">${escapeHtml(health.uncertain ? coverageWarning : fa.reason || "")}</div>
     <div class="fa-watch-head"><span>Water watch</span><strong>${fa.score ?? "—"}<small>/100</small></strong><em>attention index · not a flood forecast</em></div>
     <div class="fa-story" aria-label="Water situation from observation to action">
-      <div class="fa-story-row"><span>01 · observed</span><strong>${escapeHtml(pathStation?.name || "Padawan gauges")}</strong><p>${escapeHtml(level)}</p></div>
+      <div class="fa-story-row"><span>01 · observation in payload</span><strong>${escapeHtml(pathStation?.name || "Padawan gauges")}</strong><p>${escapeHtml(level)} · ${escapeHtml(pathStation?.observedAt || "Observation time unavailable")}</p></div>
       <div class="fa-story-row"><span>02 · pressure</span><p>${escapeHtml(pressure)}</p></div>
       <div class="fa-story-row fa-story-path"><span>03 · connected path</span><p>${escapeHtml(pathText)}</p>${traceButton}</div>
       <div class="fa-story-row"><span>04 · act</span><p>Use the checklist below; follow DID, MET Malaysia, and district directions for official warnings or evacuation orders.</p></div>
     </div>
     <ul class="fa-checklist">${checklist}</ul>
     <div class="fa-meta">
-      <span><strong>${escapeHtml(fa.confidence || "—")}</strong></span>
-      <span>Padawan <strong>${fa.padawanLive ?? 0}</strong> · Metro <strong>${fa.metroLive ?? 0}</strong> reporting</span>
+      <span><strong>${escapeHtml(health.uncertain ? coverageWarning : "Check observation times before action")}</strong></span>
+      <span>Selected scope: <strong>${health.count}/${health.total}</strong> readings in payload</span>
     </div>
     <details class="fa-details">
       <summary>Cross-check, contacts &amp; shelters</summary>
@@ -2932,7 +2932,7 @@ function renderHydroGauges(payload) {
   el.innerHTML = `
     <div class="hg-head">
       <span class="hg-title">${t("hydroGauges")}</span>
-      <span class="hg-live" data-status="${escapeHtml(ib?.status || "reference")}">${ib?.liveCount ?? 0}/${ib?.stationCount ?? 0} live</span>
+      <span class="hg-live" data-status="${escapeHtml(ib?.status || "reference")}">${stations.filter(s => typeof s.waterLevelM === "number" && Number.isFinite(s.waterLevelM)).length}/${stations.length} readings in payload</span>
     </div>
     ${rows}`;
 

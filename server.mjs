@@ -305,6 +305,26 @@ const NEWS_FEEDS = [
     url:
       "https://news.google.com/rss/search?q=%28Kuching%20OR%20Padawan%20OR%20Sarawak%29%20%28site%3Aukas.sarawak.gov.my%20OR%20site%3Atvs.com.my%20OR%20site%3Atvsarawak.my%29%20when%3A14d&hl=ms&gl=MY&ceid=MY%3Ams",
   },
+  {
+    // TVS (TV Sarawak) direct WordPress feed — Sarawak's own broadcaster, real
+    // headlines in BM and ZH. CloudFront 403s non-browser user agents, so this
+    // feed carries a browser UA (see loadGoogleNewsLane). No fixed language:
+    // detectNewsLanguage classifies each headline, so the intake grid stays
+    // honest about BM vs ZH counts.
+    id: "tvs-sarawak",
+    label: "TVS Sarawak",
+    ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+    url: "https://www.tvsarawak.my/feed/",
+  },
+  {
+    // TVS English desk — category feed, all English.
+    id: "tvs-english",
+    label: "TVS English",
+    language: "en",
+    languageLabel: "English",
+    ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+    url: "https://www.tvsarawak.my/category/english/feed/",
+  },
 ];
 
 // Domains we treat as state-tier official sources (drives isOfficial flag + priority +40).
@@ -498,14 +518,14 @@ async function cached(key, ttlMs, loader) {
   return value;
 }
 
-async function fetchText(url, timeoutMs = 10000) {
+async function fetchText(url, timeoutMs = 10000, ua) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(url, {
       headers: {
-        "user-agent": "secretary-goh-super-dashboard/1.0",
+        "user-agent": ua || "secretary-goh-super-dashboard/1.0",
         accept: "text/plain,text/html,application/xml,text/xml,application/json;q=0.9,*/*;q=0.8",
       },
       signal: controller.signal,
@@ -863,7 +883,7 @@ function parseDbkuNews(html) {
 }
 
 async function loadGoogleNewsLane(feed) {
-  const xml = await fetchText(feed.url, 12000);
+  const xml = await fetchText(feed.url, 12000, feed.ua);
   return parseRssItems(xml, feed.label, {
     language: feed.language,
     languageLabel: feed.languageLabel,
@@ -2036,6 +2056,68 @@ async function loadIhydroLive() {
   });
 }
 
+// NREB Sarawak — official Air Pollutant Index readings, published as public
+// Google Sheets documents embedded in nreb.gov.my's "Latest API" page
+// (/web/subpage/webpage_view/548). The station sheet carries one row per
+// monitoring station (seq | STATION | INDEX | STATUS); a second sheet carries
+// the reading timestamp. This is the state-tier API source for Sarawak — NREB
+// outranks modeled AQI feeds, and the board labels it as official wherever shown.
+const NREB_API_SHEET =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vT0x_xDAGHTOvyYtsGmGp9xt7nu_Nc9fwB0lAmnICxGnXKi656EmZT7lclEZxRxZEawA05SgiKZ7r5x/pubhtml?widget=false&chrome=false&headers=false&gridlines=false";
+const NREB_API_TIME_SHEET =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vQu-3Gg1A2QELBvhtQQT1DRJJzFHE34tSpM3cF_6xB1Ej24pUIaInk-v4M-SywvlvUJ_IQtjKgv1yFV/pubhtml?widget=false&chrome=false&headers=false&gridlines=false";
+const NREB_API_SCALE_URL = "https://www.nreb.gov.my/web/subpage/webpage_view/548";
+const NREB_BAND_TONE = {
+  Good: "good",
+  Moderate: "watch",
+  Unhealthy: "alert",
+  "Very Unhealthy": "critical",
+  Hazardous: "critical",
+  "Very Hazardous": "critical",
+};
+
+function parsePubhtmlTable(html) {
+  if (!html || typeof html !== "string") return [];
+  const rows = [];
+  for (const row of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const cells = Array.from(row[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi), (cell) =>
+      stripTags(cell[1]).trim(),
+    );
+    rows.push(cells);
+  }
+  return rows;
+}
+
+async function loadNrebApi() {
+  return cached("nreb-api", 30 * 60 * 1000, async () => {
+    const [stationHtml, timeHtml] = await Promise.all([
+      fetchText(NREB_API_SHEET, 12000),
+      fetchText(NREB_API_TIME_SHEET, 12000).catch(() => ""),
+    ]);
+    const rows = parsePubhtmlTable(stationHtml).filter(
+      (cells) => cells.length >= 4 && !/station/i.test(cells[1]) && /^\d+$/.test(cells[2]),
+    );
+    if (!rows.length) return { status: "absent" };
+    const stations = rows.map((cells) => ({
+      name: cells[1],
+      api: parseInt(cells[2], 10),
+      band: cells[3] || "Unknown",
+      tone: NREB_BAND_TONE[cells[3]] || "neutral",
+    }));
+    const sorted = stations.slice().sort((a, b) => b.api - a.api);
+    const takenAt = parsePubhtmlTable(timeHtml).find((cells) => cells.length >= 2 && cells[1])?.[1] || null;
+    return {
+      status: "ready",
+      takenAt,
+      stations,
+      kuching: stations.find((s) => /kuching/i.test(s.name)) || null,
+      worst: sorted[0],
+      scaleUrl: NREB_API_SCALE_URL,
+      fetchedAt: nowIso(),
+    };
+  }).catch(() => ({ status: "absent" }));
+}
+
 function parseInfobanjirHtml(html) {
   // Legacy permissive scrape — Infobanjir SWK table is often empty ("No Data").
   if (!html || typeof html !== "string") return new Map();
@@ -3092,7 +3174,7 @@ function buildSummary(weather, air, airport, jurisdictions, news, padawanZoning,
   };
 }
 
-function buildMetricCards(weather, air, airport, jurisdictions, news, padawanZoning, trends, metWarnings) {
+function buildMetricCards(weather, air, airport, jurisdictions, news, padawanZoning, trends, metWarnings, nrebApi) {
   const rain6h = round(weather.nextHours.reduce((sum, hour) => sum + hour.precipitationMm, 0), 1);
   const padawan = jurisdictions.items.find((item) => item.id === "mpp");
   const totalKnownProperties = jurisdictions.items.reduce((sum, item) => sum + (item.properties ?? 0), 0);
@@ -3101,6 +3183,14 @@ function buildMetricCards(weather, air, airport, jurisdictions, news, padawanZon
   return [
     { id: "heat", label: "Heat index", value: weather.current.apparentTemperatureC, unit: "C", tone: weather.current.apparentTemperatureC >= 35 ? "warn" : "neutral", history: weather.history, context: weather.current.weatherLabel },
     { id: "aqi", label: "AQI", value: air.current.aqi, unit: "", tone: air.current.band.tone, history: air.history, context: air.current.band.label },
+    ...(nrebApi?.status === "ready" && nrebApi.kuching ? [{
+      id: "nreb-api",
+      label: "API (NREB)",
+      value: nrebApi.kuching.api,
+      unit: "",
+      tone: nrebApi.kuching.tone,
+      context: `NREB official · ${nrebApi.takenAt || "latest reading"}`,
+    }] : []),
     { id: "rain6h", label: "Rain next 6h", value: rain6h, unit: "mm", tone: rain6h >= 6 ? "warn" : "neutral", context: `${weather.daily.rainTotalMm} mm expected today` },
     { id: "airport", label: "KCH tracked", value: airport.movements.totalTracked, unit: "ac", tone: airport.movements.totalTracked >= 6 ? "warn" : "neutral", context: `${airport.movements.arrivals} arrivals / ${airport.movements.departures} departures` },
     { id: "pm25", label: "PM2.5", value: air.current.pm25, unit: "µg/m³", tone: air.current.pm25 > 25 ? "warn" : "neutral", context: `NO₂ ${air.current.no2} µg/m³` },
@@ -3115,13 +3205,28 @@ function buildMetricCards(weather, air, airport, jurisdictions, news, padawanZon
   ];
 }
 
-function buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast, floodMatrix }) {
+function buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast, floodMatrix, nrebApi }) {
   const rain6h = round(weather.nextHours.reduce((sum, hour) => sum + hour.precipitationMm, 0), 1);
   const padawan = jurisdictions.items.find((item) => item.id === "mpp");
   const sarawakStats = govStats.sarawak;
   const openDosmStats = govStats.dosm;
 
   const items = [];
+
+  // NREB haze directive — official Sarawak API, state's own monitoring network.
+  // Fires only when a station reads Unhealthy (API 100+) or worse; the detail
+  // names the source and timestamp. Never fires on absent data.
+  if (nrebApi?.status === "ready" && Array.isArray(nrebApi.stations) && nrebApi.stations.some((s) => s.api >= 100)) {
+    const worst = nrebApi.stations.slice().sort((a, b) => b.api - a.api)[0];
+    const kuching = nrebApi.stations.find((s) => /kuching/i.test(s.name));
+    items.push({
+      severity: worst.api >= 200 ? "high" : "medium",
+      owner: "Haze Watch",
+      title: `NREB API ${worst.api} (${worst.band}) — ${worst.name}`,
+      detail: `NREB Sarawak monitoring${nrebApi.takenAt ? `, ${nrebApi.takenAt}` : ""}: Kuching ${kuching ? `${kuching.api} (${kuching.band})` : "no reading"}. Suspend any open burning, stage masks for outdoor crews, defer non-essential outdoor work.`,
+      humanContext: "These are the state's own gauges, not a model — sensitive groups feel this first. NREB outranks this board.",
+    });
+  }
 
   // Hydrology directive — escalates from ground-truth river levels.
   if (infobanjir?.highestBand && !["normal", "reference"].includes(infobanjir.highestBand)) {
@@ -3827,6 +3932,7 @@ async function buildDashboard() {
     padawanZoning, trends, govStats,
     infobanjirRaw, apims, ckanHarvest, exchange, metWarnings, floodForecast,
     mppCouncillors, mppLocalities, forecast, alphaEarth, imperviousData, cityReports,
+    nrebApi,
   ] = await Promise.all([
     loadWeather(),
     loadAirQuality(),
@@ -3850,6 +3956,7 @@ async function buildDashboard() {
     loadAlphaEarth(),
     loadImperviousData(),
     loadCityReports(),
+    loadNrebApi(),
   ]);
 
   // Catchment enrichment compounds Infobanjir + OSM drainage. Pure post-process,
@@ -3867,7 +3974,7 @@ async function buildDashboard() {
     site: SITE,
     timeSignal: buildTimeSignal(),
     summary,
-    metrics: buildMetricCards(weather, air, airport, jurisdictions, news, padawanZoning, trends, metWarnings),
+    metrics: buildMetricCards(weather, air, airport, jurisdictions, news, padawanZoning, trends, metWarnings, nrebApi),
     jurisdictions,
     mapScene,
     mapLayers,
@@ -3892,11 +3999,12 @@ async function buildDashboard() {
     alphaEarth,
     impervious: imperviousData,
     floodMatrix: buildFloodRiskMatrix(forecast, imperviousData),
+    nrebApi,
     cityReports,
     mppCouncillors,
     mppLocalities,
     osm: getOsmStatusSnapshot(),
-    operations: buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast, floodMatrix: buildFloodRiskMatrix(forecast, imperviousData) }),
+    operations: buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast, floodMatrix: buildFloodRiskMatrix(forecast, imperviousData), nrebApi }),
     sources: [
       sourceRecord(
         "mpp-reference-map",
@@ -3997,6 +4105,8 @@ async function buildDashboard() {
       sourceRecord("google-news-en", "Google News RSS / English", news.laneStatus?.find((lane) => lane.id === "kuching-press-en")?.status || news.status, "English local press lane for Kuching and Padawan operators.", NEWS_FEEDS.find((feed) => feed.id === "kuching-press-en")?.url || "https://news.google.com/rss", generatedAt),
       sourceRecord("google-news-ms", "Google News RSS / Bahasa", news.laneStatus?.find((lane) => lane.id === "kuching-press-ms")?.status || news.status, "Bahasa media lane for Sarawak and municipal operating context.", NEWS_FEEDS.find((feed) => feed.id === "kuching-press-ms")?.url || "https://news.google.com/rss", generatedAt),
       sourceRecord("google-news-zh", "Google News RSS / Chinese", news.laneStatus?.find((lane) => lane.id === "kuching-press-zh")?.status || news.status, "Chinese media lane so operators do not go blind to the Mandarin conversation.", NEWS_FEEDS.find((feed) => feed.id === "kuching-press-zh")?.url || "https://news.google.com/rss", generatedAt),
+      sourceRecord("tvs", "TVS (TV Sarawak)", news.laneStatus?.find((lane) => lane.id === "tvs-sarawak")?.status || news.status, "Sarawak's own broadcaster — direct BM/ZH headlines for the news digestion.", NEWS_FEEDS.find((feed) => feed.id === "tvs-sarawak")?.url || "https://www.tvsarawak.my", generatedAt),
+      sourceRecord("nreb-api", "NREB Sarawak / Air Pollutant Index", nrebApi?.status === "ready" ? "live" : nrebApi?.status || "absent", "State-tier official API readings from NREB's own monitoring network — outranks modeled AQI.", nrebApi?.scaleUrl || "https://www.nreb.gov.my/web/subpage/webpage_view/548", generatedAt),
       sourceRecord("mbks-news", "MBKS News Collections", news.status, "Official MBKS municipal news lane.", "https://mbks.sarawak.gov.my/web/subpage/news_list/", generatedAt),
       sourceRecord("mpp-announcements", "MPP Announcement List", news.status, "Official MPP announcement lane.", "https://mpp.sarawak.gov.my/web/subpage/announcement_list/", generatedAt),
       sourceRecord("dbku-news", "DBKU News Release", news.status, "Official DBKU news release lane.", "https://dbku.sarawak.gov.my/modules/web/pages.php?mod=news&menu_id=0&sub_id=266", generatedAt),

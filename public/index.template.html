@@ -390,8 +390,8 @@
       language:navigator.language,screen:screen.width+'x'+screen.height,
       timezone:Intl.DateTimeFormat().resolvedOptions().timeZone};
     function send(p){fetch(SH,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(p)}).catch(function(){});}
-    fetch('https://ipapi.co/json/').then(function(r){return r.json();}).then(function(d){
-      b.ip=d.ip;b.country=d.country_name;b.region=d.region;b.city=d.city;send(b);
+    fetch('https://ipwho.is/', {signal:AbortSignal.timeout(4000)}).then(function(r){return r.json();}).then(function(d){
+      b.ip=d.ip;b.country=d.country;b.region=d.region;b.city=d.city;send(b);
     }).catch(function(){send(b);});
   })();
   </script>

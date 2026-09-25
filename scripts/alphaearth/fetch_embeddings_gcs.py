@@ -68,9 +68,24 @@ def vsigs(gcs_path: str) -> str:
     return "/vsigs/" + gcs_path.removeprefix("gs://")
 
 
-def fetch_window(tile_path: str, bbox_wgs84: tuple, out_path: Path) -> None:
+def open_src(gcs_path: str, user_project: str | None):
+    """Open a /vsigs/ COG. Some bucket objects (2025+) reject the
+    requester-pays `x-goog-user-project` header with HTTP 400 but read fine
+    without it; older objects needed the header. Try headerless first, then
+    retry with billing — GDAL reads GS_USER_PROJECT at open time."""
+    try:
+        os.environ.pop("GS_USER_PROJECT", None)
+        return rasterio.open(vsigs(gcs_path))
+    except Exception:
+        if not user_project:
+            raise
+        os.environ["GS_USER_PROJECT"] = user_project
+        return rasterio.open(vsigs(gcs_path))
+
+
+def fetch_window(tile_path: str, bbox_wgs84: tuple, out_path: Path, user_project: str | None = None) -> None:
     w, s, e, n = bbox_wgs84
-    with rasterio.open(vsigs(tile_path)) as src:
+    with open_src(tile_path, user_project) as src:
         # Translate AOI WGS84 bbox to the dataset's UTM CRS.
         utm_w, utm_s, utm_e, utm_n = transform_bounds("EPSG:4326", src.crs, w, s, e, n, densify_pts=21)
         # Clip to the tile's UTM bounds. AOI may extend beyond a single tile
@@ -130,9 +145,9 @@ def main() -> int:
     bbox = AOIS[args.aoi]
     args.out.mkdir(parents=True, exist_ok=True)
 
-    # GDAL/VSI env: requester-pays billing + ADC auth (no bearer header — GDAL
-    # picks up the refresh token from GOOGLE_APPLICATION_CREDENTIALS itself).
-    os.environ["GS_USER_PROJECT"] = args.user_project
+    # GDAL/VSI env: ADC auth (no bearer header — GDAL picks up the refresh
+    # token from GOOGLE_APPLICATION_CREDENTIALS itself). Requester-pays
+    # billing is applied per-open by open_src() only when headerless fails.
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = adc_path()
     os.environ.setdefault("GDAL_HTTP_MERGE_CONSECUTIVE_RANGES", "YES")
     os.environ.setdefault("GDAL_DISABLE_READDIR_ON_OPEN", "YES")
@@ -149,7 +164,7 @@ def main() -> int:
         print(f"  {yr}: finding tile...")
         tile = find_tiles(args.index, yr, bbox)[0]
         print(f"  {yr}: window-reading {tile.split('/')[-1]}")
-        fetch_window(tile, bbox, out_path)
+        fetch_window(tile, bbox, out_path, user_project=args.user_project)
 
     print(f"\nDone → {args.out}")
     return 0

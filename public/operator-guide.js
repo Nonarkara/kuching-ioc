@@ -95,7 +95,7 @@ export function setupOperatorGuide(version = '') {
     dialog.innerHTML = `<header><h2 id="operatorGuideTitle">${copy.title}</h2><button type="button" data-close>${copy.close}</button></header><nav aria-label="Guide language">${[['en','English'],['ms','Bahasa Melayu'],['zh','简体中文']].map(([key,label]) => `<button type="button" data-guide-lang="${key}" lang="${key === 'zh' ? 'zh-Hans' : key}" aria-pressed="${key === language}">${label}</button>`).join('')}</nav><p>${copy.note}</p>${copy.sections.map(([title,body], i) => `<details ${i === 0 ? 'open' : ''}><summary>${title}</summary><p>${body}</p></details>`).join('')}`;
     dialog.querySelector('[data-close]').addEventListener('click', () => dialog.close());
     dialog.querySelectorAll('[data-guide-lang]').forEach(button => button.addEventListener('click', () => {
-      render(button.dataset.guideLang);
+      document.dispatchEvent(new CustomEvent('operator-language-request',{detail:button.dataset.guideLang}));
       dialog.querySelector(`[data-guide-lang="${language}"]`).focus();
     }));
   }

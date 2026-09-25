@@ -21,6 +21,15 @@ const {
 } = await import(__dataUrl__);
 const { dataHealth } = await import(`./data-health.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupOperatorGuide } = await import(`./operator-guide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { setupMppServices } = await import(`./mpp-services.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { setupUiLanguage, createTranslator } = await import(`./ui-language.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { findNewsSummary } = await import(`./news-translation.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const translateUi = createTranslator(TRANSLATIONS);
+let newsTranslations = [];
+const translationsReady = fetch(`./news-translations.json?v=${encodeURIComponent(__ASSET_VER__)}`, {signal:AbortSignal.timeout(5000)})
+  .then(async response => {
+    if (response.ok) { const data = await response.json(); newsTranslations = Array.isArray(data.entries) ? data.entries : []; }
+  }).catch(()=>{}); // Missing translations never block the map or data loader.
 
 const BOOT = window.__IOC_BOOT__ || {};
 
@@ -2201,7 +2210,7 @@ function buildSitrepText(p) {
     "KCH AIRSPACE",
     air ? `${air.totalTracked} aircraft tracked · ${air.arrivals} arrivals / ${air.departures} departures` : "—",
     "",
-    "— Office of Secretary Daniel Goh, MPP",
+    "— Municipal Secretary’s Office, MPP · Ir. Ts. Goh Thiam Ho",
   ];
   return lines.join("\n");
 }
@@ -2226,7 +2235,7 @@ async function exportSitrepWhatsApp() {
     // Fallback: open a new window with the text selected (user copies manually).
     const w = window.open("", "_blank");
     if (w) {
-      w.document.body.style = "background:#010203;color:#e8f4ff;font:13px 'JetBrains Mono',monospace;padding:24px;white-space:pre-wrap;";
+      w.document.body.style = "background:#fff;color:#17212b;font:17px/1.6 'Helvetica Neue',Helvetica,Arial,sans-serif;padding:24px;white-space:pre-wrap;";
       w.document.body.textContent = text;
       showToast("◐ CLIPBOARD BLOCKED · text in new tab", "error");
     } else {
@@ -2631,7 +2640,7 @@ function renderNewsIntake(news) {
             <strong>${item.source}</strong>
             <span>${formatShortStamp(item.publishedAt)}</span>
           </div>
-          <div class="news-intake-title">${item.title}</div>
+          <div class="news-intake-title">${newsSummaryHtml(item)}</div>
         </article>`).join("")}
     </div>`;
 }
@@ -2682,7 +2691,7 @@ function renderNewsDigest(news) {
       ? items.map(i => `
           <div class="news-digest-item">
             <span class="news-digest-badge">${i.source?.slice(0, 12) ?? code.toUpperCase()}</span>
-            <span class="news-digest-title">${i.title}</span>
+            <span class="news-digest-title">${newsSummaryHtml(i)}</span>
             <span class="news-digest-time">${formatShortStamp(i.publishedAt)}</span>
           </div>`).join("")
       : `<div class="news-digest-item"><span class="news-digest-title" style="color:var(--soft)">No ${code.toUpperCase()} items in this cycle.</span></div>`;
@@ -2697,14 +2706,28 @@ function renderNewsDigest(news) {
 
   renderTab("en");
 
-  if (!el.dataset.bound) {
-    el.addEventListener("click", (event) => {
+  el.onclick = (event) => {
       const btn = event.target.closest(".news-digest-tab");
       if (!btn) return;
       renderTab(btn.dataset.lang);
-    });
-    el.dataset.bound = "1";
-  }
+  };
+}
+
+function newsSummaryHtml(item) {
+  const summary = findNewsSummary(newsTranslations,item,state.lang);
+  const label = summary ? 'Headline summary · machine translated; verify the original' : 'Translation pending · original retained';
+  let url;
+  try { const parsed = new URL(item.link); if (['https:','http:'].includes(parsed.protocol)) url = parsed.href; } catch {}
+  return `<span lang="${summary ? state.lang === 'zh' ? 'zh-Hans' : state.lang : item.language === 'zh' ? 'zh-Hans' : item.language || 'en'}" data-original-source>${escapeHtml(summary || item.title || '')}</span><small class="news-translation-label">${escapeHtml(translateUi(label,state.lang))}</small>${url ? `<a class="news-original-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(translateUi('Read original',state.lang))} ↗</a>` : ''}`;
+}
+
+function renderNewsTicker(payload) {
+  const allNews = payload.news?.items || [];
+  const news = isPadawanScope() ? [...allNews.filter(i=>i.isOfficial),...allNews.filter(i=>!i.isOfficial)].slice(0,8) : allNews.slice(0,8);
+  $("newsRail").innerHTML = [...news,...news].map(item=>{
+    const summary = findNewsSummary(newsTranslations,item,state.lang);
+    return `<span class="ticker-item" data-original-source title="${escapeHtml(item.title || '')}"><span class="ticker-source">${escapeHtml(item.languageBadge || item.source || '')}</span> ${escapeHtml(summary || item.title || '')}${summary ? '' : ` · ${escapeHtml(translateUi('Translation pending · original retained',state.lang))}`}</span>`;
+  }).join('');
 }
 
 function renderTrendsBand(trends) {
@@ -4175,11 +4198,7 @@ function renderDashboard(payload) {
   renderDirectives(payload.operations || []);
 
   // Ticker — Padawan scope prefers official-tier headlines (UKAS / TVS / MPP / MBKS / DBKU) first
-  const allNews = payload.news.items || [];
-  const news = isPadawanScope()
-    ? [...allNews.filter(i => i.isOfficial), ...allNews.filter(i => !i.isOfficial)].slice(0, 8)
-    : allNews.slice(0, 8);
-  $("newsRail").innerHTML = [...news,...news].map(n=>`<span class="ticker-item"><span class="ticker-source">${n.languageBadge || (n.isOfficial ? "OFF" : n.source)}</span> ${n.title}</span>`).join("");
+  renderNewsTicker(payload);
 
   // Signals
   const signalHtml = payload.metrics.slice(0,4).map(s=>`
@@ -4331,7 +4350,9 @@ function renderTextScaleToggle() {
 
 // --- Language Toggle ---
 function setLang(lang) {
-  state.lang = lang;
+  state.lang = ['en','ms','zh'].includes(lang) ? lang : 'en';
+  lang = state.lang;
+  try { localStorage.setItem('kch_ioc_language_v1',lang); } catch {}
   document.documentElement.lang = lang === "zh" ? "zh-Hans" : lang;
   document.dispatchEvent(new CustomEvent("operator-language", { detail: lang }));
   // Update labels
@@ -4356,6 +4377,9 @@ function setLang(lang) {
     renderFloodAction(state.payload);
     renderHydroGauges(state.payload);
     renderForecastRail(state.payload);
+    renderNewsIntake(state.payload.news);
+    renderNewsDigest(state.payload.news);
+    renderNewsTicker(state.payload);
   }
   // Highlight active lang button
   document.querySelectorAll(".lang-btn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
@@ -4764,7 +4788,7 @@ function renderCesiumEntities(payload) {
       },
       label: (elevated || s.waterLevelM != null) ? {
         text: `${s.name}${s.waterLevelM != null ? `\n${s.waterLevelM} m` : ""} · ${s.bandLabel || s.band || ""}`,
-        font: "11px monospace",
+        font: "14px Helvetica, Arial, sans-serif",
         fillColor: Cesium.Color.WHITE,
         outlineColor: Cesium.Color.BLACK,
         outlineWidth: 2,
@@ -4918,6 +4942,10 @@ async function boot() {
 
 // Init controls
 setupOperatorGuide(__ASSET_VER__);
+setupMppServices();
+setupUiLanguage(TRANSLATIONS);
+document.addEventListener('operator-language-request',event=>setLang(event.detail));
+try { const saved = localStorage.getItem('kch_ioc_language_v1'); if (['en','ms','zh'].includes(saved)) state.lang = saved; } catch {}
 setupExport();
 setupConnectors();
 setupKeyboardShortcuts();
@@ -4959,5 +4987,9 @@ if (state.dimension === "3d") {
     });
 }
 
+setLang(state.lang);
+translationsReady.then(()=>{
+  if (state.payload?.news) { renderNewsIntake(state.payload.news); renderNewsDigest(state.payload.news); renderNewsTicker(state.payload); }
+});
 boot();
 setInterval(boot, 60000);

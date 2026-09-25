@@ -12,6 +12,16 @@
 .operator-guide details { border-top:1px solid #516472; padding:16px 0; }
 .operator-guide summary { cursor:pointer; font-size:20px; line-height:1.5; font-weight:600; }
 .operator-guide p { margin:12px 0; }
+.news-translation-label { display:block; margin:8px 0; color:var(--soft); font-size:13px; line-height:1.5; }
+.news-original-link { display:inline-block; min-height:32px; padding:6px 0; font-size:15px; }
+.operator-tools button,.operator-tools p,.operator-guide,.operator-guide button,.operator-guide h2 { font-family:var(--font-sans,'Helvetica Neue',Helvetica,Arial,sans-serif); }
+.mpp-services { margin:0 20px 16px; border-bottom:2px solid var(--line-strong); }
+.mpp-services summary { padding:16px 0; cursor:pointer; font-size:18px; font-weight:600; line-height:1.5; letter-spacing:0; }
+.mpp-services-body { max-width:1100px; padding:0 0 20px; font-size:17px; line-height:1.6; }
+.mpp-service-links { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr)); gap:0 24px; }
+.mpp-service-links a { display:flex; flex-direction:column; padding:16px 0; border-top:1px solid var(--line); text-decoration:none; color:var(--ink); }
+.mpp-service-links span,.mpp-provenance { color:var(--soft); font-size:15px; }
+.mpp-services a:focus-visible { outline:3px solid var(--amber); outline-offset:3px; }
 .operator-guide:lang(zh),.operator-tools:lang(zh) { font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif; letter-spacing:0; line-height:1.8; }
 .operator-guide :focus-visible,.operator-tools :focus-visible,.operation-card:focus-visible,.hg-row:focus-visible { outline:3px solid #f5ba54; outline-offset:3px; }
 .operation-card .operation-detail,.operation-card .directive-context,.fa-reason,.fa-checklist,.hg-brief { font-size:16px; line-height:1.6; letter-spacing:0; }

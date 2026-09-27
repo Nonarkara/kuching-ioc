@@ -111,7 +111,7 @@ const state = {
   urbanLayerGroups: new Map(),
   drainageFeatures: null, drainageFeatureIndex: null,
   tileLayers: new Map(), activeLayerId: "dark", payload: null, hasInitialMapFit: false,
-  theme: "dark", lang: "en", mapResizeObserver: null,
+  theme: "light", lang: "en", mapResizeObserver: null,
   activeWard: null,
   activeWaterPath: null,
   scope: readStoredScope(),
@@ -209,38 +209,6 @@ function freshnessPeriodSeconds(updatedAt) {
   if (ageMin < 10) return 2.6;
   if (ageMin < 60) return 4;
   return 8;
-}
-// Compass bearing from (lat1,lon1) → (lat2,lon2) in degrees [0,360).
-function bearingFromTo(lat1, lon1, lat2, lon2) {
-  const toRad = d => d * Math.PI / 180;
-  const dLon = toRad(lon2 - lon1);
-  const y = Math.sin(dLon) * Math.cos(toRad(lat2));
-  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
-            Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
-  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-}
-
-// Functional radar sweep — every second, advance the virtual sweep angle and
-// flash any pulse-marker whose bearing-from-map-centre lies within the cone.
-// Subtle, but reads as a system that's actively scanning, not just decoration.
-function startRadarSweep() {
-  if (state.radarTimer) return;
-  let angle = 0;
-  state.radarTimer = setInterval(() => {
-    angle = (angle + 12) % 360;
-    if (!state.map || !state.pulseMarkerEls?.size) return;
-    const center = state.map.getCenter();
-    state.pulseMarkerEls.forEach(({ lat, lon, marker }) => {
-      const bearing = bearingFromTo(center.lat, center.lng, lat, lon);
-      const diff = Math.abs(((bearing - angle + 540) % 360) - 180);
-      const within = diff > 174; // within ±6° of the sweep
-      if (!within) return;
-      const el = marker.getElement?.()?.querySelector(".pulse-marker");
-      if (!el) return;
-      el.dataset.swept = "true";
-      setTimeout(() => { el.dataset.swept = "false"; }, 600);
-    });
-  }, 1000);
 }
 
 function boardModeFromBoot() {
@@ -2260,104 +2228,6 @@ function renderTelemetryStrip(payload) {
     if (st) entries.push(`<span class="tlm-entry">${glyphHTML(st, name)}</span>`);
   }
   el.innerHTML = entries.join('<span class="tlm-sep">·</span>');
-}
-
-// Connector overlay: hairline cyan curves from a hovered metric tile to its
-// related elements in the rest of the dashboard. Pointer-events: none.
-const CONNECTOR_MAP = {
-  // metric-card id (lowercased) → list of CSS selectors to draw to
-  aqi:      ['#signalCards .signal-card[style*="ff003c"], #signalCards .signal-card[style*="ff7a00"], #signalCards .signal-card[style*="ffd000"]', '.operation-card[data-severity="high"]'],
-  heat:     ['#signalCards .signal-card:first-child'],
-  rain6h:   ['#floodForecast', '#signalCards .signal-card[data-band]'],
-  airport:  ['#airportStats'],
-  pm25:     ['#signalCards .signal-card'],
-  flood:    ['#floodForecast', '#signalCards .signal-card[data-band]'],
-  trends:   ['#newsRail'],
-  headlines:['#newsRail'],
-  wards:    ['#localityList', '#councillorPanel'],
-};
-
-function setupConnectors() {
-  const canvas = $("connectorCanvas");
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
-  function resize() {
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = window.innerWidth * dpr;
-    canvas.height = window.innerHeight * dpr;
-    canvas.style.width = window.innerWidth + "px";
-    canvas.style.height = window.innerHeight + "px";
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  resize();
-  window.addEventListener("resize", resize);
-
-  let activeLines = []; // { from:{x,y}, to:{x,y}, until:ts }
-  let raf = null;
-
-  function clearAll() {
-    activeLines = [];
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  }
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const now = Date.now();
-    activeLines = activeLines.filter(l => l.until > now);
-    for (const l of activeLines) {
-      const remaining = (l.until - now) / 800;
-      ctx.strokeStyle = `rgba(0, 243, 255, ${0.15 + 0.4 * remaining})`;
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
-      ctx.lineDashOffset = -((now / 25) % 8);
-      ctx.beginPath();
-      const cpx = (l.from.x + l.to.x) / 2;
-      const cpy = (l.from.y + l.to.y) / 2 - 30;
-      ctx.moveTo(l.from.x, l.from.y);
-      ctx.quadraticCurveTo(cpx, cpy, l.to.x, l.to.y);
-      ctx.stroke();
-    }
-    if (activeLines.length) raf = requestAnimationFrame(draw);
-    else raf = null;
-  }
-
-  function rectCenter(el) {
-    const r = el.getBoundingClientRect();
-    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-  }
-
-  function showConnectors(metricId, srcEl) {
-    const selectors = CONNECTOR_MAP[metricId];
-    if (!selectors) return;
-    const from = rectCenter(srcEl);
-    const targets = selectors.flatMap(s => [...document.querySelectorAll(s)].slice(0, 3));
-    if (!targets.length) return;
-    const until = Date.now() + 1200;
-    for (const t of targets) {
-      activeLines.push({ from, to: rectCenter(t), until });
-    }
-    if (!raf) draw();
-  }
-
-  // Metric tiles render as .metric-card with a kicker that contains the id.
-  document.addEventListener("mouseover", (e) => {
-    const card = e.target.closest?.(".metric-card");
-    if (!card) return;
-    const idLabel = card.querySelector(".metric-label")?.textContent?.toLowerCase() || "";
-    let metricId = null;
-    if (idLabel.includes("aqi"))      metricId = "aqi";
-    else if (idLabel.includes("heat"))metricId = "heat";
-    else if (idLabel.includes("rain"))metricId = "rain6h";
-    else if (idLabel.includes("kch")) metricId = "airport";
-    else if (idLabel.includes("pm"))  metricId = "pm25";
-    else if (idLabel.includes("trend")) metricId = "trends";
-    else if (idLabel.includes("headline")) metricId = "headlines";
-    else if (idLabel.includes("ward")) metricId = "wards";
-    if (metricId) showConnectors(metricId, card);
-  }, { passive: true });
-  document.addEventListener("mouseout", (e) => {
-    if (!e.target.closest?.(".metric-card")) return;
-    // Lines fade naturally; nothing to do.
-  }, { passive: true });
 }
 
 // --- Pass 1.2: Directive status (queued → active → done) + age-decayed borders ---
@@ -4912,14 +4782,12 @@ async function boot() {
     if (hash && hash[1] && !state.activeWard) {
       setActiveWard(hash[1].toUpperCase());
     }
-    startRadarSweep();
   } catch (err) { console.error("IOC SYNC FAILURE", err); }
 }
 
 // Init controls
 setupOperatorGuide(__ASSET_VER__);
 setupExport();
-setupConnectors();
 setupKeyboardShortcuts();
 $("themeToggle")?.addEventListener("click", toggleTheme);
 renderTextScaleToggle();

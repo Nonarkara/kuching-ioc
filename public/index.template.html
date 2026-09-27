@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en" data-theme="dark" data-view="secretary">
+<html lang="en" data-theme="light" data-view="secretary">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=__ASSET_VERSION__" />
     <link rel="mask-icon" href="./favicon.svg?v=__ASSET_VERSION__" color="#00f3ff" />
-    <meta name="theme-color" content="#010203" />
+    <meta name="theme-color" content="#f6f5f2" />
     <title>Greater Kuching IOC</title>
     <meta name="description" content="Greater Kuching Intelligent Operation Center — a municipal command surface for Secretary Daniel Goh, MPP." />
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -126,12 +126,6 @@
           <div class="map-frame" data-dim="2d">
             <div id="mapCanvas" class="map-canvas"></div>
             <div id="map3d" class="map-3d"></div>
-            <div class="map-vignette" aria-hidden="true"></div>
-            <div class="map-scan-grid" aria-hidden="true"></div>
-            <div class="map-reticle" aria-hidden="true">
-              <span class="map-reticle-tl"></span>
-              <span class="map-reticle-br"></span>
-            </div>
             <div class="map-compass" aria-hidden="true">
               <span class="map-compass-label">N</span>
             </div>
@@ -140,7 +134,6 @@
               <input type="range" id="aeTimeSlider" min="0" max="1" step="1" value="1" />
               <div class="ae-slider-ticks" id="aeSliderTicks"></div>
             </div>
-            <div class="radar-scan"></div>
             <!-- The Catchment Story — click a gauge, get the argument, not the materials.
                  Corner overlay inside the map (never a full-width bar across it). -->
             <aside id="catchmentStory" class="catchment-story" role="dialog" aria-label="Catchment risk" hidden></aside>
@@ -333,7 +326,6 @@
         </div>
       </footer>
     </div>
-    <canvas id="connectorCanvas" class="connector-canvas" aria-hidden="true"></canvas>
     <div id="exportToast" class="export-toast" hidden></div>
     <div id="helpOverlay" class="help-overlay" hidden>
       <div class="help-overlay-card" role="dialog" aria-labelledby="helpTitle" aria-modal="true">

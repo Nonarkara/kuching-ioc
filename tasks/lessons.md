@@ -112,6 +112,15 @@ Per §13: the same mistake never happens twice.
 
 ## 2026-06-14 · uv venvs have no pip binary — use `uv pip install --python path/to/python`
 
-- **What went wrong:** `uv venv` creates venvs without a `pip` script. Running `<venv>/bin/pip install pyproj` fails with "no such file".
-- **Correct behaviour:** `uv pip install <pkg> --python <venv>/bin/python` — use uv's own pip subcommand with explicit python path.
-- **How to recognise:** `FileNotFoundError: <venv>/bin/pip` when trying to install a package into a uv-created venv.
+## 2026-09-08 · Lopburi pass — chrome is not the product
+
+- **What went wrong:** The HUD aesthetic (JetBrains Mono everywhere, glow-on-data, scan-line vignette) was loud enough to compete with the data Secretary Goh was trying to read. The masthead rendered as a paragraph; the verdict collapsed to one-word-wide fragments on phone. The banner art and the running software disagreed about what the board was.
+- **Correct behaviour:** Lopburi rule: the map and the action text lead; chrome is quiet. Helvetica + Georgia replace JetBrains Mono + Manrope. Glow stays only on key values. Vignette, scan-grid, reticle all stay but lose saturation. Five-zone Command Brief replaces the masthead-led 2-column — every zone headed by the question it answers, every renderer earns its place by what it lets the operator *decide*. The banner's CCTV wall is illustration only — the README carries the disclaimer so a fork cannot accidentally claim camera coverage.
+- **How to recognise:** A "glow" applied to non-key text, a JetBrains Mono token still on the page, or a panel whose header explains what the panel *is* instead of *what to do about it*. The board reads for a tired secretary at 06:00 SGT, not for a demo audience.
+
+## 2026-09-23 · Reading scale and recorded-vs-live are different truths
+
+- **What went wrong:** "Rivers OK · 0 gauges" when the upstream feed had no readings at all — same string as "all gauges normal". The interface said `SYS: OPERATIONAL` unconditionally. The action card accepted unescaped feed text and missed keyboard operation.
+- **Correct behaviour:** `dataHealth()` in `public/data-health.js` computes coverage from actual numeric readings and explicitly flags missing / partial / offline / unclassified / old-payload as `uncertain: true`. The interface surfaces that flag — operators check source times, do not assume a "normal" reading means conditions are normal. Action cards escape feed text and become keyboard-operable (Enter/Space cycles queued → active → done in browser-localStorage only — never a shared work-order system). Every forecast rainfall in the catchment narrative is labelled forecast rainfall, not observed. The native `<dialog>` operator guide carries EN/BM/ZH instructions for shift handover.
+- **How to recognise:** A "0 readings" status that still reads as green/normal. An interface string that says "operational" without naming a freshness source. A missing-warning item array that breaks the export. `grep -n "SYS: OPERATIONAL\|Rivers OK" public/app.js` is the canary — if the string exists, the audit has regressed.
+

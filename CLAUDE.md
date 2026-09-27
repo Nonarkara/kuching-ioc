@@ -1,225 +1,196 @@
 # Greater Kuching Intelligent Operation Center (IOC)
 
-This is Daniel Goh's municipal intelligence dashboard for Greater Kuching, Sarawak. It is a demo-grade civic tech product, not a template. Every panel must show real data or a well-sourced fallback — never placeholders. The person evaluating this is the Secretary of Padawan Municipal Council; substance over flash.
+Daniel Goh's municipal intelligence dashboard for Greater Kuching, Sarawak. Demo-grade civic software for one named secretary — every panel shows a live reading, a baked snapshot, or a sourced fallback. No placeholders, no theatre.
+
+**Live:** https://kuching.nonarkara.org · **Repo:** Nonarkara/kuching-ioc · **Stack:** Node 20+ static + Leaflet 1.9.4 (2D) + CesiumJS 1.121 (3D, ArcGIS imagery, no Ion token).
 
 ---
 
-## What This Project Is
+## Modes of operation
 
-A **map-dominant operational dashboard** showing Secretary Goh what is happening across Greater Kuching right now — weather, air quality, flights, flooding, news, satellite imagery, and directives that tell him what to do about it. It runs as:
+| Mode | URL | Source |
+|---|---|---|
+| Static snapshot (production) | `kuching.nonarkara.org` | `public/` deployed to Cloudflare Pages |
+| Live API (local) | `http://localhost:3000` | `node server.mjs` |
+| Static preview | `http://localhost:9876` | `node build.mjs` then `npx serve public` |
 
-1. **Static snapshot** on Cloudflare Pages (`kuching.nonarkara.org`) — baked JSON refreshed by CI on push (+ schedule)
-2. **Local live API** (`node server.mjs`) — used for development and by `build.mjs` to bake the snapshot
-3. **Client fallback** — browser-only mode using `data.js` constants when the snapshot fails
+Three-tier loader in `public/app.js → loadDashboardPayload()`:
+1. `fetch /api/dashboard` — same-origin live server
+2. `fetch ./api/dashboard.json` — baked snapshot (what Pages serves)
+3. `buildFallbackDashboard()` — `public/data.js` constants + CORS APIs
 
-The production URL: `https://kuching.nonarkara.org`
+**Add a field on the server → add it to `buildFallbackDashboard()` too**, or the panel silently skips on Pages when the snapshot is stale.
 
 ---
 
-## Architecture at a Glance
+## Layout (5-zone Command Brief)
 
 ```
-server.mjs          → Node HTTP server (local + CI bake), 15+ live API integrations
-build.mjs           → Boots server on port 9876, fetches payload + GIS layers, writes to public/api/
-public/
-  index.html        → HTML shell — map-dominant 2-column layout
-  app.js            → Client-side renderer (~1400 lines), 3-tier data loader
-  data.js           → Constants, fallbacks, helpers, i18n translations
-  styles.css        → Dark/light theme, HUD aesthetic, ~1000 lines
-  assets/           → Partner logos (PMUA, depa, Axiom, ReTL, Smart City Thailand, ASCN)
-  api/
-    dashboard.json  → Pre-baked server payload (committed as baseline)
-    layers/         → GeoJSON: drainage, transit, land_use, flood_risk
-.github/workflows/
-  cloudflare-pages.yml → Cloudflare Pages: build → wrangler deploy (on push)
+MASTHEAD  · title · scope toggle (Padawan / Greater Kuching) · 2D/3D · theme · lang
+TICKER    · intel rail + scrolling news
+ZONE 1    · DO I NEED TO ACT? → verdict strip + delta + metrics + 3-card brief
+ZONE 2    · WHAT'S COMING?     → rain→river cascade + 14-day forecast rail
+ZONE 3    · WHERE & WHO?       → Leaflet map (left) + situation rail (right)
+ZONE 4    · WHAT ARE PEOPLE SAYING? → ground pulse + news lanes + citizen reports
+ZONE 5    · CITY OUTRUNNING DRAINS? → satellite Δ + impervious + 525 localities
+FOOTER    · text-scale · 2D/3D hints · SHARE BRIEF
 ```
 
----
+The rail scrolls INSIDE the board row beside the map (Phuket operations-panel pattern). Map panel never falls below 480px (`clamp(520px, calc(100svh - 96px), 1040px)`).
 
-## The 3-Tier Data Loader (Critical Pattern)
-
-`app.js → loadDashboardPayload()` tries sources in order:
-
-1. `fetch("/api/dashboard")` — same-origin live server (local `node server.mjs` only)
-2. `fetch("./api/dashboard.json")` — pre-baked static snapshot (Cloudflare Pages production)
-3. `buildFallbackDashboard()` — client-only using data.js constants + live CORS APIs
-
-**If you add a new field to the server payload**, you must also add it to `buildFallbackDashboard()` in app.js with a reasonable fallback value. Otherwise the field will be `undefined` on Pages when the static snapshot is stale or missing, and any renderer that depends on it will silently skip.
+**Catchment Story** is the keystone computed view — click any gauge and one card states the chain: gauge → ground → exposed → next 72h → why → act → last time. Sits as a corner overlay inside the map, never a full-width bar.
 
 ---
 
-## Data Sources
+## Renderers in `public/app.js` (~4830 lines, ~60 render/build fns)
 
-### Live APIs (fetched by server.mjs, CORS-friendly ones also in client fallback)
+| Renderer | Target | Reads from payload |
+|---|---|---|
+| `renderVerdict` / `renderCascade` / `renderWardRisk` / `renderGrowthStory` | Zone 1/2/3/5 heads | multiple |
+| `renderMap` / `renderLayerToggle` / `renderUrbanLayerToggle` | `#mapCanvas` | `layers`, `infobanjir`, `airport`, `urbanGrowth` |
+| `renderCatchmentStory` | `#catchmentStory` | `infobanjir.stations[].affectedEstimate,lastEvent` |
+| `renderCesiumEntities` | `#map3d` | `jurisdictions`, `airport`, `infobanjir` |
+| `renderForecastRail` / `renderFloodForecast` | `#forecastRail` / `#floodForecast` | `forecast` |
+| `renderFloodAction` / `renderHydroGauges` / `renderFloodMatrix` | rail | `infobanjir` |
+| `renderBriefStrip` / `renderOperations` / `renderPosture` | directive strip | derived |
+| `renderCitizenReports` / `renderOfficialPulse` / `renderMppCouncillors` | rail | `cityReports`, `govStats`, `councillors` |
+| `renderLocalityKpis` / `renderLocalitySummary` / `renderLocalityList` | locality panel | `localities` |
+| `renderIntelPanel` / `renderGroundPulse` / `renderNewsIntake` / `renderNewsDigest` / `renderEconBand` / `renderTrendsBand` | intel panel | `news`, `exchange`, `trends` |
+| `renderAirportStats` / `renderEventsStack` / `renderTelemetryStrip` | rail + footer | `airport`, `events` |
+| `renderBypassTracker` | intel | `bypass` |
+| `renderSourceMatrix` / `renderSourceList` | source panel | `sources[]` |
+| `renderWardBrief` / `renderWardProjectsHTML` | rail | `wards`, `MPP_WARD_PROJECTS` |
+| `renderRuntimeMeta` / `renderScopeToggle` / `renderDimensionToggle` / `renderTextScaleToggle` | masthead | boot + state |
 
-| Source | What | CORS? | Cache TTL |
-|--------|------|-------|-----------|
-| Open-Meteo | Weather + forecast | Yes | Live |
-| Open-Meteo AQI | AQI, PM2.5, PM10 | Yes | Live |
-| OpenSky Network | Live aircraft ADS-B | Yes (rate-limited) | Live |
-| USGS Earthquakes | Regional seismic | Yes | 1h |
-| NASA GIBS WMS | Satellite imagery (6 layers) | Yes (image URLs) | Daily |
-| ExchangeRate API | MYR vs 8 currencies | Yes | Live |
-| NASA FIRMS | Fire hotspots (Malaysia) | No | 30min |
-| Google News RSS | Local press aggregation | No | 15min |
-| Google Trends RSS | Malaysia trending | No | 30min |
-| MBKS/MPP/DBKU | Municipal website scraping | No | 15min |
-| MetMalaysia | Official weather warnings | No | 15min |
-| Gov Stats | DOSM + Sarawak CKAN | No | 6h |
-| OSM Overpass | Drainage/transit/land use GeoJSON | No | 6h |
-
-"No CORS" sources only work via server.mjs during local/CI bake. On Cloudflare Pages, they come from the baked `dashboard.json` or from `buildFallbackDashboard()` stubs.
+Helpers: `dataHealth()` in `public/data-health.js` (UI coverage check — not a flood model or agency freshness standard). Operator guide: `public/operator-guide.js` + `public/operator-guide.css` (native `<dialog>` with EN/BM/ZH instructions, opens via `?` keyboard shortcut).
 
 ---
 
-## The Map
+## Data sources (server.mjs ≈ 4250 lines, ~31 sources)
 
-- **Library**: Leaflet 1.9.4 (loaded from CDN)
-- **Default view**: `[1.53, 110.35]` zoom 12 (Greater Kuching)
-- **Bounds locked**: `[[1.15, 109.9], [1.85, 110.7]]` — cannot scroll to Jakarta
-- **Zoom range**: 10–18
+| Source | Role | CORS | TTL |
+|---|---|---|---|
+| Open-Meteo (forecast + air quality) | weather, AQI, PM | yes | live |
+| OpenSky | KCH-area ADS-B | yes (rate-limited) | live |
+| USGS | regional quakes | yes | 1h |
+| NASA GIBS | satellite tiles | yes (image URLs) | daily |
+| ExchangeRate API | MYR FX | yes | live |
+| DID Sarawak iHYDRO | river gauges (15 MPP focus) | no | 15min |
+| NASA FIRMS | fire hotspots | no | 30min |
+| Google News / Trends RSS | press, trends | no | 15-30min |
+| MBKS / MPP / DBKU sites | municipal scrape | no | 15min |
+| MetMalaysia | warnings | no | 15min |
+| DOSM + Sarawak CKAN | census / open stats | no | 6h |
+| OSM Overpass | drainage/transit/land use | no | 6h |
+| AQICN (APIMS) | ground AQI (token improves) | no | 15min |
+| City Reporter Supabase | citizen reports (optional) | no | live |
+| TimesFM | 14-day p10/p50/p90 forecast | local-only pipeline | nightly |
+| AlphaEarth | satellite Δ 2017→latest | local-only pipeline | annual |
+
+No-CORS sources exist on Pages only as baked JSON or `buildFallbackDashboard()` stubs. `public/api/` is committed and **must not** be gitignored.
+
+Local-only pipelines (`scripts/forecast/.venv`, `scripts/alphaearth/.venv`, `scripts/alphaearth/raw/`) are gitignored — CI never runs them, only bakes their committed outputs.
+
+---
+
+## Map
+
+- **Library**: Leaflet 1.9.4 (CDN), bounds locked `[[1.15, 109.9], [1.85, 110.7]]`, zoom 10–18
+- **Default view**: `[1.53, 110.35]` zoom 12
 - **Base tiles**: CartoDB Dark (default), CartoDB Light, OSM Street, Esri Satellite
-- **Tile filter**: Dark tiles get `brightness(0.85) contrast(1.2) saturate(0.6)` for the HUD look; light/satellite tiles get lighter or no filter
-- **Overlays**: Jurisdiction boundaries (3 polygons), Sarawak River polyline, 10 local markers, airport flight markers, hydro station markers
-- **Urban layers** (toggleable): Land Use, Flood Risk, Drainage, Transit Network — loaded from `public/api/layers/*.json`
-- **Catchment routing**: When drainage layer is active, clicking a flood station highlights its upstream drainage segments
-- **Coordinate HUD**: Hovering the map shows a bottom-left overlay with live lat/lng (6 d.p.); click snaps the coord (amber border); COPY button writes `"lat, lng"` to clipboard (green flash). Designed for field ops sharing locations via WhatsApp/Telegram. Pattern documented in `03-Topics/map-coord-hud.md` in the Obsidian vault — reusable across all Leaflet dashboards.
+- **Overlays**: 3 jurisdiction polygons, Sarawak River polyline, 10 local markers, hydro + airport + citizen-report markers
+- **Urban layers** (toggleable): Land Use, Flood Risk, Drainage, Transit (GeoJSON in `public/api/layers/`)
+- **3D**: CesiumJS 1.121, ArcGIS imagery — **no Cesium Ion token** required
+- **Coordinate HUD**: hover shows lat/lng 6 d.p. bottom-left, click snaps (amber), COPY writes `"lat, lng"` to clipboard (green) — for field ops sharing via WhatsApp/Telegram
+- **Catchment routing**: drainage layer active + gauge click → highlights upstream segments
 
 ---
 
-## HTML Layout (Map-Dominant 2-Column)
+## Design system
 
-```
-┌─────────────────────────────────────────────────────────┐
-│ MASTHEAD: Title / Controls / Runtime badges / Logos      │
-├─────────────────────────────────────────────────────────┤
-│ TICKER BAR: Intel rail + scrolling news headlines        │
-├─────────────────────────────────────────────────────────┤
-│ METRIC BAND: 6-column KPI strip with sparklines          │
-├─────────────────────────────────────────────────────────┤
-│ BRIEF STRIP: ACT NOW | NEXT 6H | BLIND SPOTS            │
-├──────────────────────────────┬──────────────────────────┤
-│                              │ SITUATION RAIL            │
-│         MAP PANEL            │ • Posture block           │
-│      (2.4fr width)           │ • Directives              │
-│   Leaflet + overlays         │ • Environment signals     │
-│   Layer/focus toggles        │ • Official pulse          │
-│   Legend + watchpoints        │ • KCH airspace            │
-│                              │ • News digest             │
-├──────────────────────────────┴──────────────────────────┤
-│ LOWER GRID: Satellite deck | Qualitative intel | Sources │
-├─────────────────────────────────────────────────────────┤
-│ BOTTOM BAR: Version + COMMAND EXPORT                     │
-└─────────────────────────────────────────────────────────┘
-```
+| Token | Value |
+|---|---|
+| Background (dark) | `#010203` |
+| Background (light) | `#f5f7fa` |
+| Cyan (dark) | `#00f3ff` |
+| Cyan (light) | `#005f94` — passes 4.5:1 AA on `#f5f7fa` |
+| Severity | red `#d00036` · amber `#e67700` · green `#00875a` · cyan `#00f3ff` |
+| `--font-sans` / `--font-mono` | `"Helvetica Neue", Helvetica, Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei"` |
+| `--font-display` | `Georgia, "Times New Roman", "Noto Serif SC", "Songti SC", serif` |
+| Min text size | 8px (was 7px — fails AA on light cards) |
+| Min tap target (≤720px) | 44px |
+| Corners | 0 — control room, not SaaS |
+| Glow | key values get `text-shadow: 0 0 5px var(--cyan-glow)` |
 
-The left rail was intentionally killed. The ASEAN clocks, FX rates, and trend list are rendered into hidden `display:none` containers (still in DOM for data, just not shown in the 2-column layout).
+The Lopburi pass (Sep 2026) replaced JetBrains Mono + Manrope with Helvetica + Georgia. The map and clear action text lead; chrome is quiet.
 
----
+### Content rules
 
-## Key Renderers in app.js
+- Every number has a source — no made-up statistics
+- Fallbacks realistic Kuching conditions, not invented drama
+- News is real headlines from real publications
+- Directives are verbs — "Sweep Penrissen drains" not "consider drainage"
+- Three languages: EN / Bahasa Malaysia / Mandarin (`lang` attr on `<html>`, content lives in `data.js → TRANSLATIONS`)
+- Partner logos always visible: PMUA, depa, Axiom, ReTL, Smart City Thailand, ASCN
 
-| Function | Target Element | What It Renders |
-|----------|---------------|-----------------|
-| `renderMetrics()` | `#metricBand` | 6–12 KPI cards with sparklines |
-| `renderMap()` | `#mapCanvas` | Leaflet map with all overlays |
-| `renderBriefStrip()` | `#briefNow`, `#briefNext`, `#briefBlind` | 3-card directive summary |
-| `renderPostureBlock()` | `#postureBlock` | Operational posture (Stable/Watch/Stretched) |
-| `renderOperations()` | `#operationList` | Tactical directives |
-| `renderNewsIntake()` | `#newsIntakePanel` | 4-column news count grid (OFF/EN/BM/ZH) + items |
-| `renderOfficialPulse()` | `#officialPulse` | Census sync block (needs `payload.govStats`) |
-| `renderAirportStats()` | `#airportStats` | Flight tracker with arrival/departure breakdown |
-| `renderSatelliteDeck()` | `#satelliteGrid`, `#satelliteMeta` | 6-card NASA GIBS grid + metadata panel |
-| `renderQualitativeIntel()` | `#qualHero`, `#qualObservations`, etc. | Human observations + field checks |
-| `renderSourceMatrix()` | `#sourceMatrix`, `#sourceList` | Data provenance + status badges |
+### Hard rules — never do
+
+- Add a left sidebar (killed for map dominance)
+- Use placeholder text
+- Use Tailwind default blue `#3B82F6`
+- Round corners on panels or cards
+- Make the map smaller
+- Break the 3-tier loader
+- Gitignore `public/api/`
+- Ship the word "Loading" — use skeleton shimmer instead
+- Render an illustrative constant as if it were a measured signal — add `*_ILLUSTRATIVE` flag and badge
 
 ---
 
-## Deployment
+## Where to edit
 
-### Cloudflare Pages (production — kuching.nonarkara.org)
+| You need to… | Edit |
+|---|---|
+| Add a data source | `server.mjs` (loader + `buildDashboard`) **and** `app.js` (`buildFallbackDashboard`) |
+| Add a map layer | `server.mjs` Overpass query + `data.js` URBAN_LAYERS + `app.js` `renderUrbanLayerToggle` + `build.mjs` layer fetch |
+| Add a KPI / directive | `server.mjs` `buildMetricCards` / `buildOperations` + `app.js` fallback builders |
+| Change layout | `public/index.template.html` **never** `index.html` (it's generated) + `public/styles.css` |
+| Add a locale string | `data.js` `TRANSLATIONS` (en/ms/zh keys must match) |
+| Add a partner logo | `public/assets/` + `index.template.html` `partner-row` + `data.js` `SITE.partners` |
+| Fix an empty panel on Pages | `app.js` `buildFallbackDashboard` — add the missing field |
+
+---
+
+## Deploy — cpdt
+
 ```bash
-node build.mjs          # Boots server, fetches data, writes public/api/
-git add -A && git commit -m "..." && git push
-# CI: cloudflare-pages.yml → wrangler pages deploy public --project-name=kuching-ioc
+node build.mjs              # boots :9876, writes public/api/{dashboard,layers/*}.json
+git add public/
+git commit -m "..."
+git push                     # .github/workflows/cloudflare-pages.yml → wrangler
 ```
 
-`AQICN_TOKEN` (GitHub Actions secret) improves APIMS ground AQI in the baked snapshot.
+Optional env (unset → documented fallback, never a crash): `AQICN_TOKEN`, `CITY_REPORTER_SUPABASE_URL`, `CITY_REPORTER_SUPABASE_KEY`, `GOOGLE_SHEETS_ID`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `PAGES_PUBLIC_URL`, `LIVE_IOC_URL`. Secrets live in GitHub repo settings, never in source.
 
-### Local dev
-```bash
-node server.mjs         # Live server on http://127.0.0.1:3000
-# Or for static preview:
-node build.mjs && npx serve public
-```
+Local nightly refresh (TimesFM, AlphaEarth) is on the M5 Max only — never CI. Runbook in `tasks/todo.md`.
 
 ---
 
-## Design Rules for This Dashboard
+## People & place
 
-### The Musk-Style Filter (First Principles)
-1. **Question every requirement.** Who owns it? Why does it exist?
-2. **Delete any part or process you can.** If you're not adding back at least 10% of what you deleted, you're not deleting enough.
-3. **Simplify and optimize only after deletion.** Never optimize something that should not exist.
-
-### Visual Identity: "Liquid Glass" HUD
-- **Dark mode default**: `#010203` background, cyan (`#00f3ff`) accent, grid texture overlay
-- **Light mode**: `#f5f7fa` background, blue (`#0077b6`) accent — same layout, no grid texture
-- **Typography**: JetBrains Mono for data/labels, Manrope for headings
-- **No rounded corners**: Everything sharp — this is a control room, not a SaaS app
-- **Glow on data**: Key values get `text-shadow: 0 0 5px var(--cyan-glow)`
-- **Severity colors**: Red = danger/critical, Amber = warning/watch, Green = normal/good, Cyan = data/reference
-- **Grid texture**: `40px` repeat, `opacity: 0.15` on dark, `0.06` on light
-
-### Content Rules
-- **Every number must be sourced** — no made-up statistics
-- **Fallback data must be realistic** — based on actual Kuching conditions
-- **News items must be real** — real headlines from real publications
-- **Directives must be actionable** — "Sweep Penrissen drains" not "Consider drainage"
-- **Three languages**: English, Bahasa Malaysia, Mandarin Chinese
-- **Partner logos always visible**: PMUA, depa, Axiom, ReTL, Smart City Thailand, ASCN
-
-### What to Never Do
-- Don't add a left sidebar (it was killed intentionally for map dominance)
-- Don't use placeholder text anywhere — every label must mean something
-- Don't use the default Tailwind blue (`#3B82F6`) — the palette is cyan/amber/red/green
-- Don't add rounded corners to panels or cards
-- Don't make the map smaller — it should dominate the center
-- Don't break the 3-tier data loader pattern — always add fallbacks
-- Don't gitignore `public/api/` — the pre-built data is the baseline for Pages
+- **Daniel Goh** — Secretary of Padawan Municipal Council. The primary user.
+- **Dr Non (Arkaraprasertkul)** — Creator. Anthropologist-architect at Thailand's depa.
+- **Greater Kuching**: DBKU (369 km²) + MBKS (62 km²) + MPP (984 km²) = ~1,415 km², ~800k pop
+- **Airport**: KCH / WBGG at `[1.4847, 110.347]`
+- **River**: Sarawak divides North (DBKU) from South (MBKS); MPP wraps south and west
+- **Focus**: MPP — the growth ring where the metro story changes
 
 ---
 
-## Key Files Quick Reference
+## See also
 
-| When you need to... | Edit this file |
-|---------------------|----------------|
-| Add a new data source | `server.mjs` (loader + buildDashboard) + `app.js` (buildFallbackDashboard) |
-| Add a new map layer | `server.mjs` (Overpass query) + `data.js` (URBAN_LAYERS) + `app.js` (renderUrbanLayerToggle) + `build.mjs` (layer fetch) |
-| Add a new KPI metric | `server.mjs` (buildMetricCards) + `app.js` (buildMetrics in fallback) |
-| Add a new directive rule | `server.mjs` (buildOperations) + `app.js` (buildOperations in fallback) |
-| Change the layout | `public/index.html` (structure) + `public/styles.css` (grid) |
-| Add a new satellite layer | `data.js` (buildSatelliteCards — add GIBS layer ID) |
-| Add a new language | `data.js` (TRANSLATIONS object — add new locale key) |
-| Add a new partner logo | `public/assets/` (image) + `index.html` (img tag in partner-row) + `data.js` (SITE.partners) |
-| Fix empty panels on Pages | `app.js` (buildFallbackDashboard — add the missing field) |
-
----
-
-## People
-
-- **Daniel Goh** — Secretary of Padawan Municipal Council. The primary user. This dashboard is built for him to present to stakeholders.
-- **Dr Non (Arkaraprasertkul)** — Creator. Anthropologist-architect at Thailand's depa. Designs the system, drives all Claude Code sessions.
-- **Partners**: depa (Thailand), PMUA, Axiom, ReTL, Thailand Smart City Office, ASEAN Smart Cities Network
-
----
-
-## Geographic Context
-
-- **Greater Kuching**: 3 municipal councils — DBKU (Kuching North, 369 km²), MBKS (Kuching South, 62 km²), MPP (Padawan, 984 km²)
-- **Total area**: ~1,415 km² — Padawan alone is 69.5% of this
-- **Population**: ~800,000 across the metro area
-- **Airport**: Kuching International (KCH/WBGG), coordinates [1.4847, 110.347]
-- **Key areas**: Waterfront, Satok, Padungan, Petra Jaya, Batu Kawa, Kota Padawan, Siburan
-- **River**: Sarawak River divides North (DBKU) from South (MBKS)
-- **Focus point**: Padawan (MPP) — the growth ring, where the metro story changes
+- `README.md` — public landing, ethical-use paragraph, fork guidance
+- `context.md` — deployment cheat-sheet (URL, dev/build commands, env table)
+- `tasks/lessons.md` — corrections log, read first each session
+- `tasks/todo.md` — current work + shipped milestones (rolling)
+- `ADMIN-AUDIT.md` — 25 Sep 2026 operator audit, scope + residual limits

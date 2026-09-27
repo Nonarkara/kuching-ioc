@@ -355,13 +355,49 @@ body::before {
 .metric-value { font-size: 18px; font-weight: 700; color: var(--cyan); margin: 1px 0; text-shadow: none; }
 .metric-unit { font-size: 10px; opacity: 0.7; }
 .metric-context { font-size: 10px; color: var(--soft); opacity: 0.9; }
-.metric-card[data-tone="warn"] .metric-value { color: var(--amber); text-shadow: none; }
-.metric-card[data-tone="critical"] .metric-value { color: var(--red); }
-.metric-card[data-tone="focus"] .metric-value { color: var(--green); text-shadow: none; }
 .sparkline-shell { margin-top: 2px; }
 .sparkline { width: 100%; height: 14px; display: block; }
 
 /* === Brief Strip === */
+
+/* Insights bar — 3 cross-domain sentences, three-language */
+.insights-bar {
+  border-bottom: 1px solid var(--line);
+  margin: 8px 0;
+}
+.insights-bar-inner {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 6px 0;
+}
+.insights-bar-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--ink);
+}
+.insights-bar-text .lang-badge {
+  display: inline-block;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 1px 4px;
+  border-radius: 2px;
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+.insights-bar-en .lang-badge { background: var(--cyan); color: var(--bg); }
+.insights-bar-ms .lang-badge { background: #b45309; color: #fff; }
+.insights-bar-zh .lang-badge { background: #d2691e; color: #fff; }
+.insights-bar-label { flex-basis: 100%; }
 .brief-strip {
   display: grid;
   grid-template-columns: repeat(3, 4fr);
@@ -1986,9 +2022,9 @@ body::before {
   .controls-row { flex-wrap: wrap; }
   .runtime-badges { width: 100%; }
   .ctrl-btn, .lang-btn, .segmented-control button, .action-btn {
-    min-height: 30px;
-    padding: 5px 10px;
-    font-size: 9px;
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 11px;
   }
   .ticker-bar { height: auto; flex-wrap: wrap; }
   .section-stamp { line-height: 24px; }

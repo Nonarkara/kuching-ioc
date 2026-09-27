@@ -2037,14 +2037,9 @@ function composeTodayBrief(payload) {
     segments.push(`<span class="brief-flag" data-tone="${tone}">${airWord} · ${apims.aqi}</span>`);
   }
 
-  const highOps = (payload?.operations || []).filter(o => o.severity === "high").length;
-  if (highOps > 0) {
-    segments.push(`<span class="brief-flag" data-tone="warn">${highOps} urgent action${highOps > 1 ? "s" : ""}</span>`);
-  }
-
-  const rain6h = payload?.metrics?.find(m => m.id === "rain6h")?.value;
-  if (rain6h != null && rain6h >= 5) {
-    segments.push(`<span class="brief-flag" data-tone="warn">${rain6h} mm rain in 6h</span>`);
+  const health = dataHealth(payload, state.scope);
+  if (health.highest !== "normal") {
+    segments.push(`<span class="brief-flag" data-tone="${health.highest === "alert" ? "warn" : "alert"}">River ${health.highest}: ${health.count}/${health.total} readings</span>`);
   }
 
   return segments.join(' <span class="brief-sep">·</span> ');
@@ -4766,6 +4761,7 @@ async function boot() {
   try {
     const payload = await loadDashboardPayload();
     renderDashboard(payload);
+    renderInsights(payload);
     // In 3D mode, re-render the Cesium entities with the freshest
     // payload so hydro cylinder levels / band colours track the
     // 60-second refresh.
@@ -4791,6 +4787,7 @@ setupExport();
 setupKeyboardShortcuts();
 $("themeToggle")?.addEventListener("click", toggleTheme);
 renderTextScaleToggle();
+$("themeToggle") && ($("themeToggle").textContent = state.theme === "dark" ? "LIGHT" : "DARK");
 document.querySelectorAll(".lang-btn").forEach(btn => btn.addEventListener("click", () => setLang(btn.dataset.lang)));
 renderScopeToggle();
 renderDimensionToggle();
@@ -4827,5 +4824,86 @@ if (state.dimension === "3d") {
     });
 }
 
+
+// --- Pass 4.1: Insights engine — computed connections from the payload ---
+function buildInsights(payload) {
+  const ib = payload?.infobanjir || {};
+  const stations = (payload?.forecast?.stations || []).slice(0, 2);
+  const fa = payload?.floodAction || {};
+  const summary = payload?.summary || {};
+  const insights = [];
+
+  // 1. Rain → river arrival
+  let pastRain = 0, sName = '', amcLabel = '—', lag = 0, risk = 'normal', p90 = 0;
+  if (stations.length > 0) {
+    const s = stations[0];
+    pastRain = ib?.stations?.find(st => st.id === s.id)?.rainfallPastMm || 0;
+    sName = s.name;
+    amcLabel = { I: 'dry', II: 'moist', III: 'wet' }[s?.amc?.class] || s?.amc?.class || '—';
+    lag = s.lag_h || 0;
+    risk = s?.risk_24h?.band || 'normal';
+    p90 = payload?.forecast?.series?.cumulative_p90_mm?.day1 || 0;
+  }
+  if (pastRain > 0) {
+    insights.push({
+      key: 'rain',
+      en: `${pastRain}mm rain fell upstream of ${sName} in 24h; ${amcLabel} soil, ${lag}h lag — ${risk === 'normal' ? 'absorbs slowly' : 'watch for shedding'}. Forecast p90 ${p90}mm day1 ${risk === 'normal' ? 'keeps conditions stable' : 'may escalate'}.`,
+      ms: `${pastRain}mm hujan jatuh di hulu ${sName} dalam 24h; tanah ${amcLabel}, ${lag}h lantas — ${risk === 'normal' ? 'perlahan menyerap' : 'waspada pengeluaran'}. Ramalan p90 ${p90}mm hari1 ${risk === 'normal' ? 'kondisi stabil' : 'mungkin naik'}.`,
+      zh: `${pastRain}mm雨量落${sName}上游24小时；${amcLabel}土壤，${lag}h延迟——${risk === 'normal' ? '缓慢吸收' : '注意上涨'}。预测p90 ${p90}mm第1天${risk === 'normal' ? '状况稳定' : '可能上升'}。`
+    });
+  }
+
+  // 2. Warnings → exposed corridor
+  const worst = ib?.stations?.[0];
+  if (fa?.activeCount > 0 && worst) {
+    const corridor = worst?.affectedEstimate || worst?.name || '';
+    const vec = fa?.verbBm || fa?.verb || '—';
+    insights.push({
+      key: 'warn',
+      en: `${fa.activeCount} weather warning${fa.activeCount > 1 ? 's' : ''} active; ${corridor} is the exposure; ${vec}. ${fa.checklist?.[0] || 'Pre-position mobile crew.'}`,
+      ms: `${fa.activeCount} peringatan cuaca aktif; ${corridor} adalah eksposur; ${vec}. ${fa.checklist?.[0] || 'Tugaskan pasukan untuk menyimpan peralatan.'}`,
+      zh: `${fa.activeCount}个天气警报激活; ${corridor}是暴露点; ${vec}. ${fa.checklist?.[0] || '调派 mobile crew.'}`
+    });
+  }
+
+  // 3. Conversation vs measurement
+  if (summary?.headline) {
+    const newsCount = fa?.realityCheck?.newsCount || 0;
+    const headline = summary.headline.split('·')[0] || '—';
+    insights.push({
+      key: 'conv',
+      en: `${headline} · ${newsCount} flood-related · gauge bands ${ib.highestBand || 'normal'} — ${newsCount === 0 ? 'the conversation does not match the measurement' : 'the conversation aligns with the measurement'}; verify data freshness before acting.`,
+      ms: `${newsCount === 0 ? 'Pemaparan tidak sesuai pengukuran' : 'Pemaparan sesuai dengan pengukuran'} · ${newsCount} banjir-relevan · parau tolok ${ib.highestBand || 'normal'} — verifikasi kebenaran data sebelum bertindak.`,
+      zh: `${newsCount === 0 ? '对话不符合测量' : '对话符合测量'} · ${newsCount} 与洪水相关 · ${ib.highestBand || 'normal'} — 在行动前验证数据真实性。`
+    });
+  }
+
+  return insights.slice(0, 3);
+}
+
+function renderInsights(payload) {
+  const insights = buildInsights(payload);
+  const bar = document.querySelector(".insights-bar-inner");
+  if (!bar) return;
+  if (insights.length === 0) { bar.style.display = 'none'; return; }
+  bar.style.display = 'grid';
+  bar.innerHTML = '';
+  const lang = state.lang || 'en';
+  insights.forEach(ins => {
+    const div = document.createElement('div');
+    div.className = 'insights-bar-text';
+    const badge = document.createElement('span');
+    badge.className = `lang-badge ${lang === 'ms' ? 'insights-bar-ms' : lang === 'zh' ? 'insights-bar-zh' : 'insights-bar-en'}`;
+    badge.textContent = lang === 'ms' ? 'MS' : lang === 'zh' ? 'ZH' : 'EN';
+    const label = document.createElement('span');
+    label.className = 'insights-bar-label';
+    label.textContent = lang === 'ms' ? ins.ms : lang === 'zh' ? ins.zh : ins.en;
+    div.appendChild(badge);
+    div.appendChild(label);
+    bar.appendChild(div);
+  });
+}
+
+// In boot(), render insights after dashboard render
 boot();
 setInterval(boot, 60000);

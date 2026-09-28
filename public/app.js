@@ -16,8 +16,8 @@ const {
   MAP_WATCHPOINTS, AIRPORT_FALLBACK_ROUTES, FALLBACK_NEWS, FALLBACK_TRENDS,
   WEATHER_FALLBACK, AIR_FALLBACK, CITY_DEMOGRAPHICS, TRANSLATIONS,
   round, aqiBand, weatherCodeLabel, kmBetween, classifyAircraft,
-  sourceRecord, buildMapLayers, URBAN_LAYERS, ECONOMY_FALLBACK, RIVER_BYPASS_PROJECT, MPP_WARD_PROJECTS,
-  WARD_TENSION, WARD_TENSION_ILLUSTRATIVE, CCTV_FEEDS, MPP_OFFICIAL_SERVICES
+  sourceRecord, buildMapLayers, URBAN_LAYERS, ECONOMY_FALLBACK, RIVER_BYPASS_PROJECT, MPP_WARD_PROJECTS, MPP_WARD_PROJECTS_ILLUSTRATIVE,
+  WARD_TENSION, WARD_TENSION_ILLUSTRATIVE, MPP_OFFICIAL_SERVICES
 } = await import(__dataUrl__);
 const { dataHealth } = await import(`./data-health.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupOperatorGuide } = await import(`./operator-guide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
@@ -110,7 +110,7 @@ const state = {
   map: null, boundaryLayerGroup: null, markerLayerGroup: null, labelLayerGroup: null,
   urbanLayerGroups: new Map(),
   drainageFeatures: null, drainageFeatureIndex: null,
-  tileLayers: new Map(), activeLayerId: "dark", payload: null, hasInitialMapFit: false,
+  tileLayers: new Map(), activeLayerId: "imagery", payload: null, hasInitialMapFit: false,
   theme: "light", lang: "en", mapResizeObserver: null,
   activeWard: null,
   activeWaterPath: null,
@@ -671,12 +671,9 @@ function buildMetrics(w, a, ap, j, n, pz, tr) {
     { id:"rain6h", label:"Rain 6h", value:rain6h, unit:"mm", tone:rain6h>=6?"warn":"neutral", context:`${w.daily.rainTotalMm}mm today` },
     { id:"airport", label:"KCH Aircraft", value:ap.movements.totalTracked, unit:"ac", tone:ap.movements.totalTracked>=6?"warn":"neutral", context:`${ap.movements.arrivals} in / ${ap.movements.departures} out` },
     { id:"pm25", label:"PM2.5", value:a.current.pm25, unit:"ug", tone:a.current.pm25>25?"warn":"neutral", context:`NO2 ${a.current.no2}` },
-    { id:"pop", label:"Population", value:CITY_DEMOGRAPHICS.greaterKuchingPopulation, unit:"", tone:"neutral", context:`Growth ${CITY_DEMOGRAPHICS.populationGrowthRate}%` },
     { id:"area", label:"Metro Area", value:j.totalAreaKm2, unit:"km2", tone:"neutral", context:"DBKU+MBKS+MPP" },
-    { id:"green", label:"Green Cover", value:CITY_DEMOGRAPHICS.greenCoverPct, unit:"%", tone:"focus", context:`${CITY_DEMOGRAPHICS.parkAreaHa}ha parks` },
     { id:"pdw-share", label:"Padawan", value:pdw?.areaSharePct??0, unit:"%", tone:"focus", context:`${pdw?.areaKm2??0} km2` },
-    { id:"gdp", label:"GDP/Cap", value:CITY_DEMOGRAPHICS.gdpPerCapitaUsd, unit:"USD", tone:"neutral", context:`Unemployment ${CITY_DEMOGRAPHICS.unemploymentPct}%` },
-    { id:"birth", label:"Birth Rate", value:CITY_DEMOGRAPHICS.birthRate, unit:"/1k", tone:"neutral", context:`Median age ${CITY_DEMOGRAPHICS.medianAge}` },
+    // Unsourced demographic tiles (population growth, green cover, GDP, birth rate) removed 29 Sep 2026.
     { id:"tourism", label:"Tourism", value:round((CITY_DEMOGRAPHICS.touristArrivals2024 || CITY_DEMOGRAPHICS.touristArrivals2025)/1000000,1), unit:"M", tone:"neutral", context:"Sarawak 2024 (Immigration)" },
   ];
 }
@@ -686,9 +683,7 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
   const items = [];
   if (rain6h>=6) items.push({ severity:"high", owner:"Drainage", title:"Sweep low-lying feeder roads", detail:`${rain6h}mm projected. Prioritise Penrissen and Batu Kawa.` });
   if (air.current.aqi>=70||air.current.pm25>=25) items.push({ severity:"medium", owner:"Health", title:"Haze advisory for sensitive groups", detail:`AQI ${air.current.aqi}, PM2.5 ${air.current.pm25}` });
-  if (airport.movements.totalTracked>=6) items.push({ severity:"medium", owner:"Traffic", title:"Airport corridor watch", detail:`${airport.movements.arrivals} arrivals in envelope.` });
   if (trends.localMatches.length>0) items.push({ severity:"medium", owner:"Comms", title:"Local search pulse active", detail:trends.localMatches.slice(0,2).map(i=>i.title).join(" / ") });
-  items.push({ severity:"low", owner:"Infrastructure", title:`${CITY_DEMOGRAPHICS.drainageNetworkKm}km drainage network`, detail:`${CITY_DEMOGRAPHICS.roadNetworkKm}km road network serving ${num(CITY_DEMOGRAPHICS.greaterKuchingPopulation)} residents.` });
   items.push({ severity:"low", owner:"Planning", title:"Padawan growth ring", detail:`${jurisdictions.items.find(i=>i.id==="mpp")?.areaKm2??0} km2 across ${padawanZoning.wardCount} wards.` });
   return items.slice(0,6);
 }
@@ -1243,14 +1238,22 @@ function renderMap(payload) {
     state.boundaryLayerGroup = window.L.layerGroup().addTo(state.map);
     state.markerLayerGroup = window.L.layerGroup().addTo(state.map);
     state.labelLayerGroup = window.L.layerGroup().addTo(state.map);
-    const layers = payload.mapLayers || buildMapLayers();
+    // Baked snapshots still mark the Esri dark canvas as the default. That canvas
+    // plus the old brightness crush rendered as a black field. Satellite is the
+    // picture of the city; Dark stays a toggle.
+    const layers = (payload.mapLayers || buildMapLayers()).map(l => ({ ...l, active: l.id === "imagery" }));
+    state.activeLayerId = "imagery";
     layers.forEach(l => {
-      const tl = window.L.tileLayer(l.url, { maxZoom: 18 });
+      const tl = window.L.tileLayer(l.url, { maxZoom: l.maxZoom || 18 });
       state.tileLayers.set(l.id, tl);
       if (l.active) tl.addTo(state.map);
     });
     renderLayerToggle(layers);
     renderUrbanLayerToggle();
+    for (const id of ["drainage", "mpp_wards"]) {
+      const btn = document.querySelector(`#urbanLayerToggle button[data-id="${id}"]`);
+      if (btn && !btn.classList.contains("active")) btn.click();
+    }
     loadWardFeatures();
 
     if (window.ResizeObserver) {
@@ -1272,7 +1275,7 @@ function renderMap(payload) {
 
   visibleJurisdictions.forEach(item => {
     item.polygons.forEach(ring => {
-      window.L.polygon(ring.map(p=>[p[1],p[0]]), { color:item.accent, weight:2, fillOpacity:0.12, fillColor:item.accent }).addTo(state.boundaryLayerGroup);
+      window.L.polygon(ring.map(p=>[p[1],p[0]]), { color:item.accent, weight:2.5, fillOpacity:0.08, fillColor:item.accent }).addTo(state.boundaryLayerGroup);
     });
     const lat = item.polygons[0].reduce((s,p)=>s+p[1],0)/item.polygons[0].length;
     const lon = item.polygons[0].reduce((s,p)=>s+p[0],0)/item.polygons[0].length;
@@ -1280,7 +1283,7 @@ function renderMap(payload) {
   });
 
   if (payload.jurisdictions.river) {
-    window.L.polyline(payload.jurisdictions.river.map(p=>[p[1],p[0]]), { color:"#1e90ff", weight:2, opacity:0.5, dashArray:"6 4" }).addTo(state.boundaryLayerGroup);
+    window.L.polyline(payload.jurisdictions.river.map(p=>[p[1],p[0]]), { color:"#7ec8ff", weight:3.5, opacity:0.95 }).addTo(state.boundaryLayerGroup);
   }
 
   const catColors = { civic:"#00f3ff", market:"#ffaa00", "urban-core":"#ff003c", "north-bank":"#0d6efd", "growth-corridor":"#00ffaa", "padawan-core":"#b48a00", "southern-edge":"#9966ff", airport:"#ff6b9d", education:"#22d3ee", residential:"#a78bfa" };
@@ -1486,37 +1489,43 @@ function renderMap(payload) {
 function renderLayerToggle(layers) {
   const el = $("layerToggle");
   el.innerHTML = layers.map(l=>`<button data-id="${l.id}" class="${l.active?'active':''}">${l.label}</button>`).join("");
-  el.querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>{
+    el.querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>{
     state.tileLayers.forEach((tl,id)=>{ if(id===btn.dataset.id){if(!state.map.hasLayer(tl))tl.addTo(state.map);}else{state.map.removeLayer(tl);} });
     el.querySelectorAll("button").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
     state.activeLayerId = btn.dataset.id;
-    // Update tile filter based on selected layer
     const tp = document.querySelector(".leaflet-tile-pane");
-    if (tp) {
-      if (btn.dataset.id === "dark") tp.style.filter = "brightness(0.9) contrast(1.1) saturate(0.8) hue-rotate(180deg) invert(1) brightness(0.6) contrast(1.4)";
-      else if (btn.dataset.id === "imagery") tp.style.filter = "brightness(0.8) contrast(1.2)";
-      else tp.style.filter = state.theme === "dark" ? "brightness(0.6) contrast(1.3) invert(1) hue-rotate(180deg)" : "none";
-    }
+    if (tp) tp.style.filter = "";
     queueMapResize();
   }));
+}
+
+// Base key (councils, river, gauge bands) is always shown; active GIS layers
+// add their own entries after it instead of replacing it.
+function baseLegendHTML() {
+  const payload = state.payload;
+  const items = payload?.jurisdictions?.items || [];
+  const jurs = isPadawanScope() ? items.filter(j => j.id === "mpp") : items;
+  const hydro = (payload?.mapScene?.hydroBands || []).filter(b => b.id !== "reference");
+  const dot = (color, label) => `<span class="legend-item"><span class="legend-dot" style="background:${color}"></span>${escapeHtml(label)}</span>`;
+  return jurs.map(j => dot(j.accent, j.code)).join("") + dot("#7ec8ff", "River") + hydro.map(b => dot(b.color, b.label)).join("");
 }
 
 function renderGisLegend(activeLayerIds) {
   const el = $("mapLegend");
   if (!el) return;
-  
+
   if (!activeLayerIds || activeLayerIds.length === 0) {
-    const jurisdictions = state.payload?.jurisdictions?.items || [];
-    el.innerHTML = jurisdictions.map(j => `<span class="legend-item"><span class="legend-dot" style="background:${j.accent}"></span>${j.code}</span>`).join("") + 
-                   `<span class="legend-item"><span class="legend-dot" style="background:#1e90ff"></span>River</span>`;
+    el.innerHTML = baseLegendHTML();
     return;
   }
 
   const legendMap = {
     drainage: [
       { label: t("drainage"), color: "#60a5fa" },
-      { label: "Main River", color: "#1e90ff" },
+    ],
+    mpp_wards: [
+      { label: "MPP wards", color: "#a78bfa" },
     ],
     transit: [
       { label: "Transit", color: "#fbbf24" },
@@ -1533,7 +1542,7 @@ function renderGisLegend(activeLayerIds) {
     ]
   };
 
-  let html = "";
+  let html = baseLegendHTML();
   activeLayerIds.forEach(id => {
     const items = legendMap[id] || [];
     html += items.map(i => `<span class="legend-item"><span class="legend-dot" style="background:${i.color}"></span>${i.label}</span>`).join("");
@@ -1629,10 +1638,10 @@ function renderUrbanLayerToggle() {
           const active = state.activeWard === props.wardCode;
           return {
             color: c,
-            weight: active ? 3 : 1.6,
+            weight: active ? 3 : 2,
             opacity: 0.95,
             fillColor: c,
-            fillOpacity: active ? 0.3 : 0.12,
+            fillOpacity: active ? 0.34 : 0.22,
             dashArray: active ? null : "4 4",
           };
         }
@@ -2399,22 +2408,9 @@ function renderQualitativeLens(payload, activeSatellite) {
       </a>`).join("")
     : `<div class="qualitative-source-empty">Scene read is running on telemetry only — no field sources in this cycle.</div>`;
 
-  cctvGridEl.innerHTML = CCTV_FEEDS.map(feed => `
-    <div class="cctv-card">
-      <div class="cctv-head">
-        <span class="cctv-label">${escapeHtml(feed.label)}</span>
-        <span class="cctv-status" data-status="${feed.status}">${feed.status === 'live' ? '● LIVE' : '○ DEGRADED'}</span>
-      </div>
-      <div class="cctv-viewport">
-        <!-- Placeholder for actual stream/image -->
-        <div class="cctv-placeholder">
-          <div class="cctv-crosshair"></div>
-          <span class="cctv-timestamp">${new Date().toISOString().split('T')[1].slice(0, 8)}</span>
-        </div>
-      </div>
-      <div class="cctv-condition">${escapeHtml(feed.condition)}</div>
-    </div>
-  `).join("");
+  // No public camera stream is connected. The old cards showed "LIVE" badges
+  // and invented conditions over a placeholder; say what is true instead.
+  cctvGridEl.innerHTML = `<div class="qualitative-source-empty">No public CCTV feed is connected to this board. Coverage has not been verified; confirm conditions with field staff.</div>`;
 }
 
 function renderAirportStats(airport) {
@@ -2517,11 +2513,13 @@ function renderEconBand(exchange) {
   if (!el) return;
   const data = exchange ?? ECONOMY_FALLBACK;
   const fxPairs = (data.pairs ?? []).filter(p => ["USD","SGD","GBP","EUR"].includes(p.code));
-  const macro = [
-    { value: `${(data.macro?.gdpGrowthPct ?? ECONOMY_FALLBACK.macro.gdpGrowthPct).toFixed(1)}%`, label: "MY GDP Growth · FY2026" },
-    { value: `RM ${(data.macro?.sarawakGdpBnMyr ?? ECONOMY_FALLBACK.macro.sarawakGdpBnMyr)}B`, label: "Sarawak GDP · 2024" },
-    { value: `${(data.macro?.cpiInflationPct ?? ECONOMY_FALLBACK.macro.cpiInflationPct).toFixed(1)}%`, label: "CPI Inflation · Mar 2026" },
-  ];
+  // Macro pills only when the payload carries a sourced macro block. The old
+  // hard-coded GDP/CPI figures were shown permanently with official-looking
+  // periods and no source (audit 29 Sep 2026).
+  const macro = data.macro?.source ? [
+    { value: `${Number(data.macro.gdpGrowthPct).toFixed(1)}%`, label: `MY GDP growth · ${escapeHtml(data.macro.period || "")}` },
+    { value: `${Number(data.macro.cpiInflationPct).toFixed(1)}%`, label: `CPI inflation · ${escapeHtml(data.macro.period || "")}` },
+  ] : [];
   el.innerHTML = [
     ...fxPairs.map(p => `
       <div class="econ-pill">
@@ -2982,8 +2980,8 @@ function renderBypassTracker() {
   const p = RIVER_BYPASS_PROJECT;
   el.innerHTML = `
     <div class="bypass-head">
-      <span class="bypass-title">${p.name}</span>
-      <span class="bypass-budget">${p.budget}</span>
+      <span class="bypass-title">${escapeHtml(p.name)} <span class="ward-brief-badge ward-brief-badge-illust" title="Budget, phases and flow figures are not yet tied to a published source — see data.js RIVER_BYPASS_PROJECT">ILLUSTRATIVE</span></span>
+      <span class="bypass-budget">${escapeHtml(p.budget)}</span>
     </div>
     <div class="bypass-phases">
       ${p.phases.map(ph => `
@@ -3598,10 +3596,20 @@ function renderWardBrief(wardCode, payload) {
 }
 
 // Project ledger for the active ward — RM totals, status mix, line items.
-// Drawn from MPP_WARD_PROJECTS in data.js (hand-encoded, real Padawan tender
-// + GCAP shape). Renders as a self-contained HTML block to be injected into
-// the ward-brief.
+// Drawn from MPP_WARD_PROJECTS in data.js. That list is ILLUSTRATIVE, so the
+// rows below only render once it is replaced by MPP's published tenders.
 function renderWardProjectsHTML(wardCode) {
+  // The hand-made list is not a council record (see data.js). Never show it as
+  // one: point to MPP's own published tender page instead.
+  if (MPP_WARD_PROJECTS_ILLUSTRATIVE) {
+    return `<div class="ward-brief-section ward-projects" data-empty="true">
+      <div class="ward-projects-head">
+        <span class="ward-brief-label">Projects</span>
+        <span class="ward-projects-empty">No verified ward project list is connected yet.
+          <a href="https://mpp.sarawak.gov.my/web/subpage/webpage_view/265" target="_blank" rel="noopener noreferrer">MPP active tenders ↗</a></span>
+      </div>
+    </div>`;
+  }
   const projects = MPP_WARD_PROJECTS[wardCode] || [];
   if (!projects.length) {
     return `<div class="ward-brief-section ward-projects" data-empty="true">
@@ -4096,11 +4104,11 @@ function renderCatchmentStory(station) {
       ${row(t("csGauge"), `${level} · ${escapeHtml(station.bandLabel || band)}${alertAt}`)}
       ${row(t("csGround"), ground)}
       ${row(t("csPath"), waterPath)}
-      ${row(t("csExposed"), station.affectedEstimate ? escapeHtml(station.affectedEstimate) : `<em>exposure not yet surveyed for this gauge</em>`)}
+      ${row(t("csExposed"), station.affectedEstimate ? `${escapeHtml(station.affectedEstimate)} <span class="cs-curated">curated estimate · not an official survey</span>` : `<em>exposure not yet surveyed for this gauge</em>`)}
       ${row(t("csNext"), next)}
       ${row(t("csWhy"), why)}
       ${row(t("csAct"), act)}
-      ${station.lastEvent ? row(t("csLast"), `<em>${escapeHtml(station.lastEvent)}</em>`) : ""}
+      ${station.lastEvent ? row(t("csLast"), `<em>${escapeHtml(station.lastEvent)}</em> <span class="cs-curated">curated note · verify with DID</span>`) : ""}
       <div class="cs-src">${sources}</div>
     </div>`;
 
@@ -4299,8 +4307,7 @@ function renderDashboard(payload) {
     <div class="municipality-tag" style="border-color:${j.accent};color:${j.accent}">${j.code} // ${j.areaKm2}km2</div>`).join("");
 
   // Map legend
-  const hydroLegend = (payload.mapScene?.hydroBands || []).filter(b => b.id !== "reference").map(b => `<span class="legend-item"><span class="legend-dot" style="background:${b.color}"></span>${b.label}</span>`).join("");
-  $("mapLegend").innerHTML = visibleJurs.map(j=>`<span class="legend-item"><span class="legend-dot" style="background:${j.accent}"></span>${j.code}</span>`).join("") + `<span class="legend-item"><span class="legend-dot" style="background:#1e90ff"></span>River</span>` + hydroLegend;
+  renderGisLegend(URBAN_LAYERS.filter(l => l.active).map(l => l.id));
   $("watchpointList").innerHTML = MAP_WATCHPOINTS.map(w=>`<span>${w}</span>`).join("");
 
   // Intel panel: economy + news digest + trends + bypass tracker
@@ -4336,11 +4343,7 @@ function toggleTheme() {
   state.theme = state.theme === "dark" ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", state.theme);
   const tp = document.querySelector(".leaflet-tile-pane");
-  if (tp) {
-    if (state.activeLayerId === "dark") {
-      tp.style.filter = state.theme === "dark" ? "brightness(0.9) contrast(1.1) saturate(0.8) hue-rotate(180deg) invert(1) brightness(0.6) contrast(1.4)" : "brightness(1.1) contrast(1) saturate(0.8) invert(1) hue-rotate(180deg)";
-    }
-  }
+  if (tp) tp.style.filter = "";
   const btn = $("themeToggle");
   if (btn) btn.textContent = state.theme === "dark" ? "LIGHT" : "DARK";
 }

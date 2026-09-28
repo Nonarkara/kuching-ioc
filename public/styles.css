@@ -48,9 +48,9 @@
   --green: #57bd8f;
   --ink: #e8edf2;
   --soft: #96a3b0;
-  --line: rgba(143, 184, 214, 0.16);
-  --line-strong: rgba(143, 184, 214, 0.4);
-  --card-bg: rgba(143, 184, 214, 0.04);
+  --line: rgba(143, 184, 214, 0.32);
+  --line-strong: rgba(143, 184, 214, 0.55);
+  --card-bg: rgba(143, 184, 214, 0.09);
   --card-hover: rgba(143, 184, 214, 0.08);
   --grid-opacity: 0;
 }
@@ -785,10 +785,10 @@ body::before {
 .map-coord-hud.is-snapped .coord-copy:hover { background: var(--amber); color: #010203; }
 .map-coord-hud.is-copied .coord-copy { border-color: var(--green); color: var(--green); }
 
-.leaflet-container { background: #000 !important; }
+.leaflet-container { background: #1a242e !important; }
 [data-theme="light"] .leaflet-container { background: #e0e5ec !important; }
-.leaflet-tile-pane { filter: brightness(0.78) contrast(1.28) saturate(0.55) hue-rotate(-4deg); }
-[data-theme="light"] .leaflet-tile-pane { filter: contrast(1.05) saturate(0.85); }
+.leaflet-tile-pane { filter: none; }
+[data-theme="light"] .leaflet-tile-pane { filter: none; }
 
 .municipal-label span {
   background: rgba(1,2,3,0.85) !important; border: 1px solid var(--cyan) !important;
@@ -4662,7 +4662,7 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
   .insights-bar-text { flex-wrap: nowrap; gap: 6px; }
   .insights-bar-text .lang-badge { border-radius: 0; font-size: 11px; padding: 0 4px; margin-top: 1px; }
   .insights-bar-text .insights-bar-label { flex: 1 1 auto; flex-basis: auto; min-width: 0; }
-  .col-now .news-rail { flex: 0 0 auto; border: 0; overflow: visible; max-height: none; }
+  .col-now .news-rail { flex: 1 1 auto; min-height: 0; border: 0; overflow: auto; max-height: none; }
   .col-now .news-rail .panel-inner { overflow: visible; }
   .col-now .panel-head { padding: 8px 12px; }
   .col-now .news-rail .panel-head h2 { font-size: 13px; }
@@ -4782,4 +4782,42 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
     .map-head { padding: 3px 10px; }
     .map-footer { padding: 2px 10px; }
   }
+}
+
+/* Honesty label for hand-curated station notes in the catchment story. */
+.cs-curated { display: inline-block; margin-left: 4px; font-size: 11px; font-style: normal; color: var(--soft); border: 1px solid var(--line); padding: 0 4px; }
+
+/* Phone masthead: the first screen of a shared link was 734px of controls.
+   Scope on one row, the seven small toggles on the next, then one status line
+   and the logos — every target stays 44px tall. */
+@media (max-width: 720px) {
+  .masthead { padding: 10px 12px; gap: 8px; }
+  .summary-lead { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .status-block {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "controls" "runtime" "system" "partners";
+    gap: 6px;
+  }
+  .controls-row {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .controls-row .scope-toggle { grid-column: 1 / -1; height: 44px; }
+  .controls-row .dim-toggle { grid-column: span 2; height: 44px; }
+  .controls-row .scope-toggle button, .controls-row .dim-toggle button { flex: 1 1 0; }
+  .controls-row .lang-btn:last-child { grid-column: auto; }
+  /* Verdict before the shortcut buttons, so the first screen answers "do I act?" */
+  .dashboard-shell > .masthead { order: -2; }
+  .dashboard-shell > .ticker-bar, .dashboard-shell > .verdict-strip { order: -1; }
+  .controls-row .ctrl-btn, .controls-row .lang-btn {
+    min-width: 0; padding: 0 2px; font-size: 12px; white-space: nowrap;
+  }
+  #generatedAt { display: none; }
+  .runtime-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 6px 8px; }
+  .runtime-badge { min-height: 24px; font-size: 11px; }
+  .runtime-detail { font-size: 11px; white-space: normal; }
+  #sysStatus { min-height: 32px; font-size: 12px; justify-content: center; }
+  .partner-row { justify-content: space-between; flex-wrap: nowrap; }
+  .partner-row img { height: 26px; }
 }

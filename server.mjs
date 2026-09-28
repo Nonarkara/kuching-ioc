@@ -1109,7 +1109,7 @@ function buildMapLayers() {
       url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
       attribution: "Tiles &copy; Esri",
       maxZoom: 16,
-      active: true,
+      active: false,
     },
     {
       id: "light",
@@ -1139,7 +1139,7 @@ function buildMapLayers() {
       url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       attribution: "Tiles &copy; Esri",
       maxZoom: 18,
-      active: false,
+      active: true,
     },
   ];
 }
@@ -3166,7 +3166,7 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
           severity: peak >= 150 ? "high" : "medium",
           owner: "Health Forecast",
           title: `Air quality may degrade — p90 AQI ${Math.round(peak)} in ${step}d`,
-          detail: `TimesFM outlook: worst-case AQI reaches ${Math.round(peak)} within ${step} day(s). Stage a haze advisory for sensitive groups; watch Ward I peatland fire risk.`,
+          detail: `TimesFM outlook: worst-case AQI reaches ${Math.round(peak)} within ${step} day(s). Stage a haze advisory for sensitive groups; check NASA FIRMS hotspots for open burning.`,
           humanContext: null,
         });
       }
@@ -3184,7 +3184,7 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
         severity: "medium",
         owner: "Basin AMC Watch",
         title: `Catchment saturated — AMC Class III (${floodMatrix.basin_amc?.total_mm14d ?? "—"}mm/14d)`,
-        detail: `14-day accumulated rainfall has saturated the basin. ${amcNote} Pre-position drainage crews and review pump station readiness across all 6 hydro-station catchments.`,
+        detail: `14-day accumulated rainfall has saturated the basin. ${amcNote} Pre-position drainage crews and review pump station readiness in the affected catchments.`,
         humanContext: "AMC III means the same rainstorm that would normally cause minor flooding will cause major flooding. Act before the next band arrives.",
       });
     }
@@ -3222,7 +3222,7 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
         owner: "AlphaEarth // Drainage Stress",
         title: `${stressStations.length} catchment(s) under drainage stress`,
         detail: `AlphaEarth 2024 analysis: ${stressStations.map((s) => s.name).join(", ")} show high impervious surface fraction but elevated flood risk. New land cover may exceed existing drain capacity.`,
-        humanContext: "This is the Sg. Maong story in data: 23% residential growth since 2012, drainage not upgraded. The growth ring is now a flood amplifier.",
+        humanContext: "Hardened ground sends rain to the drains faster. Check these catchments first when rain is forecast.",
       });
     }
   }
@@ -3246,47 +3246,11 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
       owner: "Flood Command",
       title: `Pre-emptive drain clearance: ${metWarnings.forecast.text}`,
       detail: `MET Malaysia indicates ${metWarnings.forecast.text}. Projected rainfall ${rain6h}mm. Focus on Penrissen and Batu Kawa sectors.`,
-      humanContext: "Sg. Maong backs up first — Stutong/Jalan Song junction floods at 2.0m. ~12,000 residents and 200+ shops affected.",
+      humanContext: "Sg. Maong is the first urban drain to back up. Watch the Kuala Maong gauge against its 2.0 m alert level.",
     });
   }
 
   // Demographic Intelligence Directive
-  if (openDosmStats?.updatedAt) {
-    items.push({
-      severity: "medium",
-      owner: "Strategic Planning",
-      title: `Urban growth pressure: ${Number(openDosmStats.latestSarawakPop).toLocaleString("en-MY")} (Sarawak)`,
-      detail: `DOSM data shows continued migration. Padawan housing stock needs ${padawan?.properties ? round(padawan.properties * 0.02) : 1200} unit buffer for 2026.`,
-      humanContext: "Padawan absorbed 68% of Greater Kuching's new housing since 2018 but only 22% of infrastructure spending.",
-    });
-  }
-
-  if (airport.movements.totalTracked >= 8) {
-    items.push({
-      severity: "medium",
-      owner: "Traffic Command",
-      title: "KCH Access Corridor Watch",
-      detail: `${airport.movements.totalTracked} aircraft in local airspace. Expect peak traffic at Jalan Penrissen intersection.`,
-      humanContext: "KCH airport sits on the Kuching–Padawan axis. Arrivals cluster creates gridlock within 20 minutes.",
-    });
-  }
-
-  if (sarawakStats?.datasetCount > 0) {
-    items.push({
-      severity: "low",
-      owner: "Open Data Watch",
-      title: `Sarawak Data Sync: ${sarawakStats.datasetCount} datasets`,
-      detail: `Latest update: ${sarawakStats.recentDatasets[0]?.title}. Land use compliance audit pending for Ward G.`,
-    });
-  }
-
-  items.push({
-    severity: "low",
-    owner: "Urban Ecology",
-    title: "Green City Action Plan (GCAP)",
-    detail: "Verify reforestation progress near Padawan wetlands using Sentinel-2 NDVI telemetry.",
-    humanContext: "Padawan's GCAP targets 15% green cover increase by 2030. Current rate: ~2.1% since 2021.",
-  });
 
   return items.slice(0, 6);
 }

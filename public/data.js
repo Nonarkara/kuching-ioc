@@ -193,9 +193,16 @@ export const URBAN_LAYERS = [
   { id: "impervious", label: "Impervious Surface 2024 (AlphaEarth)", type: "image", color: "#f59e0b", active: false },
 ];
 
-// Per-ward operational projects — hand-encoded from public Padawan council
-// tender notices, GCAP plan items, and Sarawak DID Sungai Maong / Sg. Batu
-// Kawa mitigation programmes. Each entry has a category, RM cost, lead
+// ILLUSTRATIVE — NOT A COUNCIL RECORD. Audit 29 Sep 2026: none of these
+// entries traces to a published MPP tender, and several wards/places are
+// outside MPP (Tebedu → Serian, Siniawan → Bau). Real contractor names appear
+// against invented projects, so the ward brief does NOT render these rows
+// (see MPP_WARD_PROJECTS_ILLUSTRATIVE in app.js renderWardProjectsHTML).
+// Replace with MPP's published tender list before showing any project ledger.
+export const MPP_WARD_PROJECTS_ILLUSTRATIVE = true;
+// Original header (kept for history): "Per-ward operational projects —
+// hand-encoded from public Padawan council tender notices, GCAP plan items,
+// and Sarawak DID Sungai Maong / Sg. Batu Kawa mitigation programmes." Each entry has a category, RM cost, lead
 // contractor (where public), status, completion %, and a one-line note. The
 // status values map to glow tones used in the ward-brief renderer.
 //
@@ -565,10 +572,10 @@ export function buildMapLayers() {
   return [
     // Esri canvas tiles — no API key. CartoCDN now watermarks "API KEY REQUIRED"
     // which made the map unreadable for humans (the opposite of a map).
-    { id: "dark", label: "Dark", url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", active: true },
+    { id: "dark", label: "Dark", url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", active: false },
     { id: "light", label: "Light", url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", active: false },
     { id: "street", label: "Street", url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", active: false },
-    { id: "imagery", label: "Satellite", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", active: false },
+    { id: "imagery", label: "Satellite", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", active: true },
   ];
 }
 
@@ -633,8 +640,8 @@ export const MPP_OFFICIAL_SERVICES = [
   {
     id: "infobencana",
     category: "emergency",
-    url: "https://infobencana.jkm.gov.my/",
-    en: { title: "JKM InfoBencana (Flood Relief)", desc: "Official Sarawak disaster relief centers (PPS) and evacuee counts." },
+    url: "https://infobencanajkmv2.jkm.gov.my/",
+    en: { title: "JKM InfoBencana (Flood Relief)", desc: "Official JKM relief centres (PPS) and evacuee counts, including Sarawak." },
     ms: { title: "InfoBencana JKM (Pusat Pemindahan)", desc: "Portal rasmi pusat pemindahan sementara (PPS) dan statistik mangsa." },
     zh: { title: "福利局 InfoBencana (灾害疏散)", desc: "官方临时疏散中心 (PPS) 启用状态与灾民统计平台。" },
   },

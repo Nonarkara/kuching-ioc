@@ -17,7 +17,7 @@ const {
   WEATHER_FALLBACK, AIR_FALLBACK, CITY_DEMOGRAPHICS, TRANSLATIONS,
   round, aqiBand, weatherCodeLabel, kmBetween, classifyAircraft,
   sourceRecord, buildMapLayers, URBAN_LAYERS, ECONOMY_FALLBACK, RIVER_BYPASS_PROJECT, MPP_WARD_PROJECTS,
-  WARD_TENSION, WARD_TENSION_ILLUSTRATIVE, CCTV_FEEDS
+  WARD_TENSION, WARD_TENSION_ILLUSTRATIVE, CCTV_FEEDS, MPP_OFFICIAL_SERVICES
 } = await import(__dataUrl__);
 const { dataHealth } = await import(`./data-health.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupOperatorGuide } = await import(`./operator-guide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
@@ -3068,6 +3068,78 @@ function safeUrl(u) {
   } catch { return "#"; }
 }
 
+function renderMppServicesDirectory() {
+  const el = $("mppServicesDirectory");
+  if (!el) return;
+  const lang = state.lang || "en";
+
+  const contactHeader = {
+    en: "MPP Council Headquarters",
+    ms: "Ibu Pejabat Majlis Perbandaran Padawan",
+    zh: "巴达旺市议会总部",
+  }[lang] || "MPP Council Headquarters";
+
+  const secretaryTitle = {
+    en: "Council Secretary",
+    ms: "Setiausaha Perbandaran",
+    zh: "市议会秘书",
+  }[lang] || "Council Secretary";
+
+  const hotlineLabel = {
+    en: "HQ Hotline",
+    ms: "Talian Utama",
+    zh: "热线总机",
+  }[lang] || "HQ Hotline";
+
+  const whatsappLabel = {
+    en: "WhatsApp Complaints",
+    ms: "Aduan WhatsApp",
+    zh: "WhatsApp 投诉",
+  }[lang] || "WhatsApp Complaints";
+
+  const items = (MPP_OFFICIAL_SERVICES || []).map((s) => {
+    const loc = s[lang] || s.en || {};
+    const title = loc.title || s.id;
+    const desc = loc.desc || "";
+    const category = (s.category || "service").toUpperCase();
+    return `
+      <a class="mpp-service-item" href="${safeUrl(s.url)}" target="_blank" rel="noopener">
+        <div class="mpp-service-top">
+          <span class="mpp-service-badge">${escapeHtml(category)}</span>
+          <span class="mpp-service-arrow">↗</span>
+        </div>
+        <strong class="mpp-service-title">${escapeHtml(title)}</strong>
+        <p class="mpp-service-desc">${escapeHtml(desc)}</p>
+      </a>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="mpp-services-wrapper">
+      <div class="mpp-contact-card">
+        <div class="mpp-contact-header">
+          <strong>${escapeHtml(contactHeader)}</strong>
+          <span class="mpp-hq-badge">KOTA PADAWAN</span>
+        </div>
+        <div class="mpp-contact-row">
+          <span class="mpp-contact-label">${escapeHtml(hotlineLabel)}</span>
+          <a class="mpp-contact-link" href="tel:082615566">082-615566</a>
+        </div>
+        <div class="mpp-contact-row">
+          <span class="mpp-contact-label">${escapeHtml(whatsappLabel)}</span>
+          <a class="mpp-contact-link" href="https://wa.me/60138025566" target="_blank" rel="noopener">013-8025566</a>
+        </div>
+        <div class="mpp-contact-row mpp-contact-officer">
+          <span class="mpp-contact-label">${escapeHtml(secretaryTitle)}</span>
+          <span class="mpp-contact-val">Ir. Ts. Goh Thiam Ho (Ext. 302)</span>
+        </div>
+      </div>
+      <div class="mpp-services-grid">
+        ${items}
+      </div>
+    </div>`;
+}
+
+
 function renderCouncillorCard(person, { role, coverage, accentColor } = {}) {
   const color = accentColor || "var(--cyan)";
   const badge = role ? `<div class="councillor-role">${escapeHtml(role)}</div>` : "";
@@ -3445,9 +3517,11 @@ function renderWardBrief(wardCode, payload) {
     if (s.lat == null || s.lon == null) return false;
     return pointInRing([s.lon, s.lat], feat.geometry);
   });
+  const lang = state.lang || "en";
+  const hydroNoneText = lang === "ms" ? "tiada dalam wad" : lang === "zh" ? "选区内无监测站" : "none in ward";
   const hydroSummary = hydroNear.length
     ? hydroNear.slice(0, 2).map(s => `${escapeHtml(s.name)} ${s.waterLevelM != null ? s.waterLevelM + "m" : ""} (${s.bandLabel || s.band})`).join(" · ")
-    : `none in ward`;
+    : hydroNoneText;
 
   // Flood-zone overlap (centroid in ward polygon).
   const floodZones = state.floodZoneFeatures || [];
@@ -3456,6 +3530,26 @@ function renderWardBrief(wardCode, payload) {
     if (!c || !feat?.geometry) return false;
     return pointInRing(c, feat.geometry);
   });
+  const floodHitsText = lang === "ms"
+    ? `${floodHits.length} kawasan berisiko dalam rekod`
+    : lang === "zh"
+    ? `记录中 ${floodHits.length} 个历史水浸热点`
+    : `${floodHits.length} historical hotspot${floodHits.length === 1 ? "" : "s"} on record`;
+
+  const locWord = lang === "ms" ? "lokaliti" : lang === "zh" ? "地方" : "localities";
+  const resWord = lang === "ms" ? "kediaman" : lang === "zh" ? "住宅" : "residential";
+  const comWord = lang === "ms" ? "komersial" : lang === "zh" ? "商业" : "commercial";
+
+  const lblState = lang === "ms" ? "Kerusi DUN" : lang === "zh" ? "州议席" : "State seat";
+  const lblParl = lang === "ms" ? "Parlimen" : lang === "zh" ? "国会议席" : "Parliament";
+  const lblCouncillor = lang === "ms" ? "Ahli Majlis" : lang === "zh" ? "市议员" : "Councillor";
+  const lblHydro = lang === "ms" ? "Hidro" : lang === "zh" ? "水文" : "Hydro";
+  const lblFloods = lang === "ms" ? "Zon banjir" : lang === "zh" ? "水浸区域" : "Flood zones";
+  const lblExplore = lang === "ms"
+    ? `Lihat ${totalLoc} lokaliti dalam Peneroka ↗`
+    : lang === "zh"
+    ? `在探索器中查看 ${totalLoc} 个地方 ↗`
+    : `View ${totalLoc} localities in Explorer ↗`;
 
   // Tension Index — illustrative until a real sentiment / 311 feed is wired in.
   const tension = WARD_TENSION[wardCode] || { score: 0, topIssue: "No data", trend: "stable", tone: "muted" };
@@ -3476,21 +3570,31 @@ function renderWardBrief(wardCode, payload) {
       <button type="button" class="ward-brief-close" aria-label="Close ward brief">✕</button>
     </div>
     <div class="ward-brief-stats">
-      <div class="ward-brief-stat"><strong>${totalLoc}</strong>localities</div>
-      <div class="ward-brief-stat"><strong>${totals.residential.toLocaleString()}</strong>residential</div>
-      <div class="ward-brief-stat"><strong>${totals.commercial.toLocaleString()}</strong>commercial</div>
+      <div class="ward-brief-stat"><strong>${totalLoc}</strong>${locWord}</div>
+      <div class="ward-brief-stat"><strong>${totals.residential.toLocaleString()}</strong>${resWord}</div>
+      <div class="ward-brief-stat"><strong>${totals.commercial.toLocaleString()}</strong>${comWord}</div>
     </div>
+    <button type="button" class="ward-brief-loc-btn" id="wardBriefExploreBtn">
+      <span>${escapeHtml(lblExplore)}</span>
+    </button>
     <div class="ward-brief-row"><span class="ward-brief-label">Tension Index</span>${tensionLine}</div>
-    <div class="ward-brief-row"><span class="ward-brief-label">State seat</span>${escapeHtml(stateSeat)}</div>
-    <div class="ward-brief-row"><span class="ward-brief-label">Parliament</span>${escapeHtml(parlSeat)}</div>
-    <div class="ward-brief-row"><span class="ward-brief-label">Councillor</span>${councillorLine}</div>
+    <div class="ward-brief-row"><span class="ward-brief-label">${lblState}</span>${escapeHtml(stateSeat)}</div>
+    <div class="ward-brief-row"><span class="ward-brief-label">${lblParl}</span>${escapeHtml(parlSeat)}</div>
+    <div class="ward-brief-row"><span class="ward-brief-label">${lblCouncillor}</span>${councillorLine}</div>
     <div class="ward-brief-section">
-      <div class="ward-brief-row"><span class="ward-brief-label">Hydro</span>${hydroSummary}</div>
-      <div class="ward-brief-row"><span class="ward-brief-label">Flood zones</span>${floodHits.length} historical hotspot${floodHits.length === 1 ? "" : "s"} on record</div>
+      <div class="ward-brief-row"><span class="ward-brief-label">${lblHydro}</span>${hydroSummary}</div>
+      <div class="ward-brief-row"><span class="ward-brief-label">${lblFloods}</span>${floodHitsText}</div>
     </div>
     ${renderWardProjectsHTML(wardCode)}`;
 
   el.querySelector(".ward-brief-close")?.addEventListener("click", () => setActiveWard(null));
+  el.querySelector("#wardBriefExploreBtn")?.addEventListener("click", () => {
+    const list = $("localityList");
+    if (list) {
+      list.dispatchEvent(new Event("tray:show", { bubbles: true }));
+      list.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  });
 }
 
 // Project ledger for the active ward — RM totals, status mix, line items.
@@ -3863,36 +3967,89 @@ function renderCatchmentStory(station) {
   // WHY — the causal chain in plain language. Sealed ground shortens the lag;
   // wet soil removes the buffer. Both facts are already in the payload; the
   // sentence is the only thing that was missing.
-  const arrival = lag === 0 ? "as soon as it falls" : lag != null ? `about ${lag} h later` : "downstream";
-  const soilClause = amc
-    ? amc.class === "I" ? "Soil is dry and can still absorb the first storms."
-    : amc.class === "II" ? "Soil is partly wet — a second storm would mostly run off."
-    : "Soil is already saturated; the next rain arrives almost entirely as runoff."
-    : null;
+  const lang = state.lang || "en";
+  const arrival = {
+    en: lag === 0 ? "as soon as it falls" : lag != null ? `about ${lag} h later` : "downstream",
+    ms: lag === 0 ? "serta-merta" : lag != null ? `kira-kira ${lag} jam kemudian` : "ke hilir",
+    zh: lag === 0 ? "即时到达" : lag != null ? `约 ${lag} 小时后` : "流向下游",
+  }[lang] || (lag === 0 ? "as soon as it falls" : lag != null ? `about ${lag} h later` : "downstream");
+
+  const soilText = {
+    I: {
+      en: "Soil is dry and can still absorb the first storms.",
+      ms: "Tanah kering dan masih boleh menyerap ribut awal.",
+      zh: "土壤干燥，仍可吸收初期暴雨。"
+    },
+    II: {
+      en: "Soil is partly wet — a second storm would mostly run off.",
+      ms: "Tanah separuh lembap — ribut kedua kebanyakannya menjadi limpahan permukaan.",
+      zh: "土壤部分湿润——第二场暴雨多将形成地表径流。"
+    },
+    III: {
+      en: "Soil is already saturated; the next rain arrives almost entirely as runoff.",
+      ms: "Tanah sudah tepu air; hujan seterusnya hampir keseluruhan menjadi limpahan air.",
+      zh: "土壤已达饱和；下一轮降雨几乎全数形成地表径流。"
+    }
+  };
+  const soilClause = amc && soilText[amc.class]?.[lang] ? soilText[amc.class][lang] : null;
+
   let why;
   if (sealed != null && soilClause) {
-    why = `<span class="cs-num">${sealed}%</span> of this catchment is sealed surface, so rain reaches the gauge ${arrival}. ${soilClause}`;
+    if (lang === "ms") {
+      why = `<span class="cs-num">${sealed}%</span> daripada tadahan ini ialah permukaan kedap, jadi hujan sampai ke tolok ${arrival}. ${soilClause}`;
+    } else if (lang === "zh") {
+      why = `该集水区有 <span class="cs-num">${sealed}%</span> 为硬化地表，因此降雨${arrival}汇集至水位站。${soilClause}`;
+    } else {
+      why = `<span class="cs-num">${sealed}%</span> of this catchment is sealed surface, so rain reaches the gauge ${arrival}. ${soilClause}`;
+    }
   } else if (soilClause) {
-    why = `Rain in this catchment reaches the gauge ${arrival}. ${soilClause}`;
+    if (lang === "ms") {
+      why = `Hujan di tadahan ini sampai ke tolok ${arrival}. ${soilClause}`;
+    } else if (lang === "zh") {
+      why = `该集水区的降雨${arrival}汇集至水位站。${soilClause}`;
+    } else {
+      why = `Rain in this catchment reaches the gauge ${arrival}. ${soilClause}`;
+    }
   } else if (station.humanBrief) {
     why = escapeHtml(station.humanBrief);
   } else {
-    why = `<em>No catchment model for this gauge yet — reading is telemetry only.</em>`;
+    why = lang === "ms" ? `<em>Tiada model tadahan untuk tolok ini — bacaan adalah telemetri sahaja.</em>`
+      : lang === "zh" ? `<em>此站点暂无集水区模型——仅显示遥测读数。</em>`
+      : `<em>No catchment model for this gauge yet — reading is telemetry only.</em>`;
   }
 
   // ACT — band drives the posture; the councillor makes it a phone call.
   const contact = councillor
-    ? ` Call ${escapeHtml(councillor.title || "Cr.")} ${escapeHtml(councillor.name)}${councillor.phone ? " · " + escapeHtml(councillor.phone) : ""}.`
+    ? lang === "ms" ? ` Hubungi ${escapeHtml(councillor.title || "Cr.")} ${escapeHtml(councillor.name)}${councillor.phone ? " · " + escapeHtml(councillor.phone) : ""}.`
+      : lang === "zh" ? ` 致电 ${escapeHtml(councillor.title || "Cr.")} ${escapeHtml(councillor.name)}${councillor.phone ? " · " + escapeHtml(councillor.phone) : ""}。`
+      : ` Call ${escapeHtml(councillor.title || "Cr.")} ${escapeHtml(councillor.name)}${councillor.phone ? " · " + escapeHtml(councillor.phone) : ""}.`
     : "";
+
   let act;
   if (band === "danger" || band === "warning") {
-    act = `Evacuate-ready posture. Open the nearest shelter and notify the ward now.${contact}`;
+    act = lang === "ms"
+      ? `Tahap sedia-pindah. Buka pusat pemindahan terdekat dan maklumkan zon sekarang.${contact}`
+      : lang === "zh"
+      ? `准备疏散态势。立即开放最近的疏散中心并通知该选区。${contact}`
+      : `Evacuate-ready posture. Open the nearest shelter and notify the ward now.${contact}`;
   } else if (band === "alert") {
-    act = `Pre-position one mobile crew and confirm the drain sweep upstream.${contact}`;
+    act = lang === "ms"
+      ? `Tempatkan satu pasukan bergerak dan sahkan sapuan longkang di hulu.${contact}`
+      : lang === "zh"
+      ? `预置一支机动队伍，确认上游排水渠清淤。${contact}`
+      : `Pre-position one mobile crew and confirm the drain sweep upstream.${contact}`;
   } else if (risk && risk.pct >= 25) {
-    act = `Sweep now, before the forecast load arrives. No pre-positioning yet.${contact}`;
+    act = lang === "ms"
+      ? `Sapu sekarang sebelum beban ramalan tiba. Belum perlu penempatan awal.${contact}`
+      : lang === "zh"
+      ? `在预测降雨到达前立即清理。暂不需提前进驻。${contact}`
+      : `Sweep now, before the forecast load arrives. No pre-positioning yet.${contact}`;
   } else {
-    act = `Routine sweep on schedule. Re-check after the next rain band.`;
+    act = lang === "ms"
+      ? `Sapuan rutin mengikut jadual. Semak semula selepas hujan seterusnya.`
+      : lang === "zh"
+      ? `按计划进行常规清扫。在下一轮降雨后复核。`
+      : `Routine sweep on schedule. Re-check after the next rain band.`;
   }
 
   const row = (label, body) => `
@@ -3906,10 +4063,12 @@ function renderCatchmentStory(station) {
     : `<em>no live reading</em>`;
   const alertAt = station.thresholds?.alert != null ? ` · Alert at ${station.thresholds.alert} m` : "";
 
+  const sealedLabel = lang === "ms" ? "permukaan kedap di hulu" : lang === "zh" ? "上游硬化地表" : "sealed upstream";
+  const soilLabel = lang === "ms" ? "tanah" : lang === "zh" ? "土壤" : "soil";
   const ground = sealed != null
-    ? `<span class="cs-num">${sealed}%</span> sealed upstream${amc ? ` · soil ${escapeHtml(amc.label)} (${amc.class})` : ""}`
-    : amc ? `soil ${escapeHtml(amc.label)} (${amc.class}) · <em>no impervious survey here</em>`
-    : `<em>no catchment model for this gauge</em>`;
+    ? `<span class="cs-num">${sealed}%</span> ${sealedLabel}${amc ? ` · ${soilLabel} ${escapeHtml(amc.label)} (${amc.class})` : ""}`
+    : amc ? `${soilLabel} ${escapeHtml(amc.label)} (${amc.class})`
+    : `<em>${lang === "ms" ? "tiada model tadahan untuk tolok ini" : lang === "zh" ? "暂无集水区模型" : "no catchment model for this gauge"}</em>`;
 
   const next = fc
     ? `rain p90 <span class="cs-num">${fc.cumulative_p90_mm?.day4 ?? "—"} mm</span>/4d · risk ${(risk?.band || "—").toUpperCase()} ${risk?.pct ?? "—"}%${lag === 0 ? " · arrives now" : lag != null ? ` · lag +${lag}h` : ""}`
@@ -3936,7 +4095,7 @@ function renderCatchmentStory(station) {
     <div class="cs-rows">
       ${row(t("csGauge"), `${level} · ${escapeHtml(station.bandLabel || band)}${alertAt}`)}
       ${row(t("csGround"), ground)}
-      ${row("Path", waterPath)}
+      ${row(t("csPath"), waterPath)}
       ${row(t("csExposed"), station.affectedEstimate ? escapeHtml(station.affectedEstimate) : `<em>exposure not yet surveyed for this gauge</em>`)}
       ${row(t("csNext"), next)}
       ${row(t("csWhy"), why)}
@@ -4047,6 +4206,7 @@ function renderDashboard(payload) {
   renderAirportStats(payload.airport);
   renderNewsIntake(payload.news);
   renderOfficialPulse(payload);
+  renderMppServicesDirectory();
   renderMppCouncillors(payload);
   renderMppLocalities(payload);
 
@@ -4235,6 +4395,10 @@ function setLang(lang) {
     renderHydroGauges(state.payload);
     renderForecastRail(state.payload);
     renderInsights(state.payload);
+    renderMppServicesDirectory();
+    if (state.activeWard) {
+      renderWardBrief(state.activeWard, state.payload);
+    }
   }
   // Highlight active lang button
   document.querySelectorAll(".lang-btn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));

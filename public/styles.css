@@ -913,6 +913,116 @@ body::before {
   margin-top: 2px;
 }
 
+/* === MPP Council Services Directory === */
+.mpp-services-directory {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px 10px;
+}
+.mpp-contact-card {
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(135deg, rgba(0, 243, 255, 0.06) 0%, transparent 100%);
+  position: relative;
+}
+.mpp-contact-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; width: 2px; height: 100%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan-glow);
+}
+.mpp-contact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  margin-bottom: 6px;
+  color: var(--ink);
+}
+.mpp-hq-badge {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  padding: 1px 4px;
+  border: 1px solid var(--line);
+  color: var(--cyan);
+}
+.mpp-contact-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  line-height: 1.5;
+  font-family: var(--font-mono);
+}
+.mpp-contact-label {
+  color: var(--soft);
+}
+.mpp-contact-link {
+  color: var(--cyan);
+  text-decoration: none;
+  font-weight: 700;
+}
+.mpp-contact-link:hover {
+  text-decoration: underline;
+}
+.mpp-contact-val {
+  color: var(--ink);
+  font-size: 9px;
+}
+.mpp-contact-officer {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--line);
+}
+.mpp-services-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.mpp-service-item {
+  display: block;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  background: var(--card-bg);
+  text-decoration: none;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.mpp-service-item:hover {
+  border-color: var(--cyan);
+  background: rgba(0, 243, 255, 0.03);
+}
+.mpp-service-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+.mpp-service-badge {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--soft);
+  text-transform: uppercase;
+}
+.mpp-service-arrow {
+  font-size: 9px;
+  color: var(--cyan);
+}
+.mpp-service-title {
+  display: block;
+  font-size: 11px;
+  color: var(--ink);
+  line-height: 1.3;
+}
+.mpp-service-desc {
+  margin: 2px 0 0;
+  font-size: 9.5px;
+  color: var(--soft);
+  line-height: 1.35;
+}
 
 /* === Sidebar Components === */
 .signal-card { padding: 8px; border: 1px solid var(--line); margin-bottom: 3px; background: var(--card-bg); }
@@ -2670,6 +2780,27 @@ button, .operation-card, .metric-card, .locality-row, .locality-ward-header, .si
   text-shadow: none;
   letter-spacing: 0.04em;
   margin-bottom: 1px;
+}
+.ward-brief-loc-btn {
+  width: 100%;
+  margin: 4px 0 6px;
+  padding: 5px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  background: rgba(0, 243, 255, 0.05);
+  border: 1px solid var(--line-strong);
+  color: var(--cyan);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 2px;
+}
+.ward-brief-loc-btn:hover {
+  background: rgba(0, 243, 255, 0.12);
+  border-color: var(--cyan);
 }
 .ward-brief-row {
   font-family: var(--font-mono);

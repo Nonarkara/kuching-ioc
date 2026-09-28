@@ -520,6 +520,8 @@ async function fetchOptionalJson(url, ms = 5000) {
 
 // --- i18n ---
 function t(key) { return (TRANSLATIONS[state.lang] ?? TRANSLATIONS.en)[key] ?? key; }
+// Translation with an explicit fallback for payload-driven labels.
+function tOr(key, fallback) { return (TRANSLATIONS[state.lang] ?? TRANSLATIONS.en)[key] ?? fallback; }
 
 // --- Data Loaders ---
 async function loadWeather() {
@@ -1078,6 +1080,7 @@ const METRIC_SOURCES = {
 };
 
 function renderMetrics(metrics) {
+  state.lastMetrics = metrics;
   $("metricBand").innerHTML = metrics.slice(0,12).map(m => {
     const prov = METRIC_SOURCES[m.id];
     const provHtml = prov
@@ -1085,7 +1088,7 @@ function renderMetrics(metrics) {
       : "";
     return `
     <article class="metric-card" data-tone="${m.tone||'neutral'}" data-metric-id="${m.id}">
-      <div class="metric-label">${m.label}</div>
+      <div class="metric-label">${escapeHtml(tOr(`m_${m.id}`, m.label))}</div>
       <div class="metric-value">${num(m.value,m.value%1===0?0:1)}<span class="metric-unit">${m.unit||''}</span></div>
       <div class="metric-context">${m.context||''}</div>
       <div class="sparkline-shell">${m.history?sparkline(m.history,m.tone):''}</div>
@@ -3007,7 +3010,7 @@ function renderPosture(payload) {
   };
   el.dataset.posture = posture;
   el.innerHTML = `
-    <div class="posture-title">${labels[posture] || posture}</div>
+    <div class="posture-title">${escapeHtml(tOr(`posture_${posture}`, labels[posture] || posture))}</div>
     <div class="posture-detail">${headline}</div>`;
 }
 
@@ -4398,6 +4401,9 @@ function setLang(lang) {
     renderHydroGauges(state.payload);
     renderForecastRail(state.payload);
     renderInsights(state.payload);
+    renderPosture(state.payload);
+    if (state.lastMetrics) renderMetrics(state.lastMetrics);
+    renderMppLocalities(state.payload);
     renderMppServicesDirectory();
     if (state.activeWard) {
       renderWardBrief(state.activeWard, state.payload);

@@ -59,6 +59,7 @@ export function setupOperatorGuide(version = '') {
       const target = document.getElementById(id);
       if (!target) return;
       if (id === 'sourceMatrix') target.closest('.source-panel')?.classList.add('operator-revealed');
+      target.dispatchEvent(new Event('tray:show', { bubbles: true }));
       for (let parent = target.parentElement; parent; parent = parent.parentElement) {
         if (parent.tagName === 'DETAILS') parent.open = true;
       }
@@ -91,6 +92,7 @@ export function setupOperatorGuide(version = '') {
     buttons.forEach((button, i) => { button.textContent = copy.nav[i]; });
     opener.textContent = `${copy.manual} · EN / BM / 中文`;
     note.textContent = copy.note;
+    note.title = copy.note;
     // Content is authored here, never interpolated from a feed.
     dialog.innerHTML = `<header><h2 id="operatorGuideTitle">${copy.title}</h2><button type="button" data-close>${copy.close}</button></header><nav aria-label="Guide language">${[['en','English'],['ms','Bahasa Melayu'],['zh','简体中文']].map(([key,label]) => `<button type="button" data-guide-lang="${key}" lang="${key === 'zh' ? 'zh-Hans' : key}" aria-pressed="${key === language}">${label}</button>`).join('')}</nav><p>${copy.note}</p>${copy.sections.map(([title,body], i) => `<details ${i === 0 ? 'open' : ''}><summary>${title}</summary><p>${body}</p></details>`).join('')}`;
     dialog.querySelector('[data-close]').addEventListener('click', () => dialog.close());

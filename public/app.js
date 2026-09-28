@@ -2459,7 +2459,7 @@ function renderSourceMatrix(payload) {
 
   const degraded = sources.filter((source) => ["fallback", "offline", "reference", "curated"].includes(source.status)).slice(0, 4);
   const degradedMarkup = degraded.length
-    ? degraded.map((source) => `<span class="source-chip" data-status="${source.status}">${source.name} · ${SOURCE_STATUS_LABEL[source.status] || source.status}</span>`).join("")
+    ? degraded.map((source) => `<span class="source-chip" data-status="${escapeHtml(source.status)}">${escapeHtml(source.name)} · ${escapeHtml(SOURCE_STATUS_LABEL[source.status] || source.status)}</span>`).join("")
     : `<span class="source-chip" data-status="live">No critical feed gaps</span>`;
 
   el.innerHTML = `
@@ -4153,21 +4153,20 @@ function renderDashboard(payload) {
   renderEventsStack(payload);
   renderTelemetryStrip(payload);
 
-  // Sources — hidden in Padawan scope (panel CSS-gated; renderer skipped to save work)
-  if (!isPadawanScope()) {
-    renderSourceMatrix(payload);
-    $("sourceList").innerHTML = payload.sources.map(s=>`
+  // Sources — rendered in every scope: the Sources tab and the operator
+  // guide's "Data sources" shortcut must never open an empty panel.
+  renderSourceMatrix(payload);
+  $("sourceList").innerHTML = (payload.sources || []).map(s=>`
       <div class="source-item">
         <div class="source-copy">
-          <span class="source-name">${s.name}</span>
-          <span class="source-detail">${s.detail || ""}</span>
+          <span class="source-name">${escapeHtml(s.name)}</span>
+          <span class="source-detail">${escapeHtml(s.detail || "")}</span>
         </div>
         <div class="source-meta">
-          <span class="source-status" data-status="${s.status}">${s.status}</span>
+          <span class="source-status" data-status="${escapeHtml(s.status)}">${escapeHtml(s.status)}</span>
           <span class="source-updated">${formatShortStamp(s.generatedAt || payload.generatedAt)}</span>
         </div>
       </div>`).join("");
-  }
 
   queueMapResize();
 }
@@ -4799,7 +4798,25 @@ async function boot() {
   } catch (err) { console.error("IOC SYNC FAILURE", err); }
 }
 
+// Evidence tray under the map: one pane at a time, so the board fits one screen.
+// Other code opens a pane with el.dispatchEvent(new Event("tray:show", {bubbles:true})).
+function setupDeepTray() {
+  const tray = document.querySelector(".deep-tray");
+  if (!tray) return;
+  const show = (name) => {
+    tray.querySelectorAll(".tray-tab").forEach((tab) => tab.setAttribute("aria-selected", String(tab.dataset.pane === name)));
+    tray.querySelectorAll(".tray-pane").forEach((pane) => { pane.hidden = pane.dataset.pane !== name; });
+    if (name === "sources") tray.querySelector(".source-panel")?.classList.add("operator-revealed");
+  };
+  tray.querySelectorAll(".tray-tab").forEach((tab) => tab.addEventListener("click", () => show(tab.dataset.pane)));
+  tray.addEventListener("tray:show", (event) => {
+    const pane = event.target.closest(".tray-pane");
+    if (pane) show(pane.dataset.pane);
+  });
+}
+
 // Init controls
+setupDeepTray();
 setupOperatorGuide(__ASSET_VER__);
 setupExport();
 setupKeyboardShortcuts();

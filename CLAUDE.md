@@ -23,20 +23,26 @@ Three-tier loader in `public/app.js → loadDashboardPayload()`:
 
 ---
 
-## Layout (5-zone Command Brief)
+## Layout (one-screen command board, 28 Sep 2026)
+
+Desktop (>1040px) fills exactly one viewport. The page never scrolls; each column scrolls inside itself.
 
 ```
-MASTHEAD  · title · scope toggle (Padawan / Greater Kuching) · 2D/3D · theme · lang
-TICKER    · intel rail + scrolling news
-ZONE 1    · DO I NEED TO ACT? → verdict strip + delta + metrics + 3-card brief
-ZONE 2    · WHAT'S COMING?     → rain→river cascade + 14-day forecast rail
-ZONE 3    · WHERE & WHO?       → Leaflet map (left) + situation rail (right)
-ZONE 4    · WHAT ARE PEOPLE SAYING? → ground pulse + news lanes + citizen reports
-ZONE 5    · CITY OUTRUNNING DRAINS? → satellite Δ + impervious + 525 localities
-FOOTER    · text-scale · 2D/3D hints · SHARE BRIEF
+MASTHEAD  · title + status line · scope · 2D/3D · text · theme · lang · runtime · logos   (~70px)
+TICKER    · headlines                                                                     (26px)
+VERDICT   · verb · why · chips                                                            (~40px)
+┌ .col-now ─────────┬ .col-map ─────────────────────────┬ .situation-rail ┐
+│ brief (3 blocks)  │ metric strip (6 KPIs)              │ flood action     │
+│ insights          │ MAP (takes the remaining height)   │ gauges · wards   │
+│ news rail         │ .deep-tray tabs: Outlook · Growth · │ directives …     │
+│                   │   Localities · Economy · Sources    │                  │
+└───────────────────┴────────────────────────────────────┴──────────────────┘
+FOOTER    · operator shortcuts + disclaimer · telemetry heartbeat · KEYS · SHARE BRIEF    (~30px)
 ```
 
-The rail scrolls INSIDE the board row beside the map (Phuket operations-panel pattern). Map panel never falls below 480px (`clamp(520px, calc(100svh - 96px), 1040px)`).
+- Phones/tablets (<=1040px): `.col-now` and `.col-map` are `display: contents`; grid areas restore the stacking order brief → insights → metrics → map → rail → news → tray. Keep `grid-template-columns: minmax(0,1fr)` there or a 1240px rule squeezes everything into a 260px column.
+- The tray replaced the old below-the-fold `details.deeper-brief`. Open a pane from code with `el.dispatchEvent(new Event("tray:show", {bubbles:true}))` (`setupDeepTray()` in app.js).
+- All one-screen rules live in one block at the end of `styles.css` ("ONE-SCREEN COMMAND BOARD"). Type there: 20 display / 13 body / 11 micro.
 
 **Catchment Story** is the keystone computed view — click any gauge and one card states the chain: gauge → ground → exposed → next 72h → why → act → last time. Sits as a corner overlay inside the map, never a full-width bar.
 

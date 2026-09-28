@@ -4310,3 +4310,320 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
     font-size: 15px;
   }
 }
+
+/* ============================================================
+   ONE-SCREEN COMMAND BOARD (28 Sep 2026)
+   Desktop (>1040px): the board fills exactly one viewport. Nothing scrolls
+   the page; each column scrolls inside itself.
+     head · ticker · verdict
+     [ now: brief, insights, news ] [ metrics / map / evidence tray ] [ action rail ]
+     tools · telemetry · share
+   Three type sizes on this surface: 20 display, 13 body, 11 micro.
+   Phones and tablets (<=1040px): the column wrappers dissolve
+   (display: contents) and grid areas restore the original stacking order.
+   ============================================================ */
+
+/* Evidence tray tabs — every size */
+.tray-tabs {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  background: var(--card-bg);
+  flex: 0 0 auto;
+}
+.tray-tab {
+  appearance: none;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--soft);
+  font: 600 11px/1 var(--font-sans);
+  padding: 0 14px;
+  min-height: 30px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tray-tab:hover { color: var(--ink); }
+.tray-tab[aria-selected="true"] {
+  color: var(--cyan);
+  background: var(--hud-bg);
+  box-shadow: inset 0 -2px 0 var(--cyan);
+}
+.tray-tab:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.tray-pane[hidden] { display: none !important; }
+
+@media (max-width: 1040px) {
+  .col-now, .col-map { display: contents; }
+  .board-grid.war-room {
+    /* One full-width track. A later 1240px rule left three tracks here, which
+       squeezed map, rail and news into a 260px column on a 375px phone. */
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "brief" "insights" "metrics" "center" "situation" "news" "tray";
+  }
+  .brief-strip { grid-area: brief; }
+  .insights-bar { grid-area: insights; }
+  .metric-band { grid-area: metrics; }
+  .deep-tray { grid-area: tray; border-top: 1px solid var(--line-strong); }
+  .tray-tab { min-height: 44px; font-size: 13px; }
+}
+
+@media screen and (min-width: 1041px) {
+  /* --- Frame: exactly one viewport (a floor of 640px on very short windows) --- */
+  .dashboard-shell {
+    display: grid;
+    height: max(640px, 100vh);
+    height: max(640px, 100svh);
+    min-height: 0;
+    overflow: hidden;
+    grid-template-columns: auto minmax(120px, 1fr) auto;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "head head head"
+      "ticker ticker ticker"
+      "verdict verdict verdict"
+      "board board board"
+      "tools tele foot";
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .masthead { grid-area: head; }
+  .ticker-bar { grid-area: ticker; }
+  .verdict-strip { grid-area: verdict; }
+  .board-grid { grid-area: board; }
+  .operator-tools { grid-area: tools; }
+  .telemetry-strip { grid-area: tele; }
+  .bottom-bar { grid-area: foot; }
+
+  /* --- Masthead: title left, controls + logos right, two thin rows --- */
+  .masthead {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 6px 14px;
+    column-gap: 16px;
+    border-bottom-width: 1px;
+  }
+  .title-block {
+    padding-right: 16px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "eyebrow eyebrow" "title lead";
+    column-gap: 12px;
+    align-items: baseline;
+  }
+  .title-block .eyebrow { grid-area: eyebrow; }
+  .title-block h1 { grid-area: title; }
+  .title-block .summary-lead { grid-area: lead; }
+  .eyebrow { font-size: 11px; letter-spacing: 0.04em; margin-bottom: 2px; gap: 8px; }
+  .scope-pill { font-size: 11px; padding: 1px 6px; }
+  .title-block h1 { font-size: 20px; line-height: 1.15; letter-spacing: 0.01em; white-space: nowrap; }
+  .summary-lead {
+    font-size: 11px; margin-top: 2px; line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: clamp(160px, 22vw, 440px);
+  }
+  .status-block {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "controls . partners"
+      "runtime runtime system";
+    gap: 4px 10px;
+    align-items: center;
+  }
+  /* Payload time already reads inside the runtime line; the badge was a duplicate. */
+  #generatedAt { display: none; }
+  .controls-row { gap: 4px; flex-wrap: nowrap; }
+  .ctrl-btn, .lang-btn, .scope-btn, .dim-btn,
+  .segmented-control button, .action-btn {
+    min-height: 24px; font-size: 11px; letter-spacing: 0.02em;
+  }
+  .ctrl-btn, .lang-btn, .action-btn { padding: 0 9px; white-space: nowrap; }
+  .runtime-badge, .status-pill, .scope-btn, .dim-btn { white-space: nowrap; }
+  .scope-toggle, .dim-toggle { height: 24px; font-size: 11px; }
+  .scope-btn, .dim-btn { padding: 0 9px; }
+  .runtime-meta {
+    display: flex; align-items: center; gap: 6px;
+    max-width: none; padding: 0; border: 0; background: none; min-width: 0;
+  }
+  .runtime-badges { flex-wrap: nowrap; }
+  .runtime-badge { min-height: 20px; padding: 0 6px; font-size: 11px; }
+  .runtime-detail { font-size: 11px; min-width: 0; }
+  .status-pill { min-height: 20px; padding: 0 8px; font-size: 11px; }
+  .partner-row { gap: 6px; }
+  .partner-row img { height: 24px; padding: 2px 4px; border-radius: 0; }
+
+  /* --- Ticker + verdict: one line each --- */
+  .ticker-bar { height: 26px; min-height: 26px; }
+  .section-stamp { font-size: 11px; line-height: 26px; }
+  .ticker-summary, .ticker-item { font-size: 12px; }
+  .verdict-strip {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: 20px;
+    padding: 6px 14px;
+  }
+  .verdict-verb { font-size: 20px; line-height: 1.2; white-space: nowrap; }
+  .verdict-why {
+    font-size: 12px; line-height: 1.35;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  }
+  .verdict-chip { font-size: 11px; padding: 2px 8px; }
+
+  /* --- Board: three columns that scroll inside themselves --- */
+  .board-grid.war-room {
+    height: auto;
+    min-height: 0;
+    grid-template-columns: clamp(270px, 19vw, 380px) minmax(0, 1fr) clamp(320px, 22vw, 440px);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "now map situation";
+    border-top: 1px solid var(--line-strong);
+  }
+  .col-now {
+    grid-area: now;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--line-strong);
+    background: var(--hud-bg);
+  }
+  .col-map {
+    grid-area: map;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .situation-rail { grid-area: situation; min-height: 0; border-left: 1px solid var(--line-strong); }
+
+  /* Left column: brief → insights → news, each a hairline-separated block */
+  .col-now .brief-strip {
+    grid-template-columns: 1fr;
+    gap: 0;
+    background: none;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .col-now .brief-card {
+    min-height: 0;
+    padding: 8px 12px 9px 15px;
+    gap: 5px;
+    border-bottom: 1px solid var(--line);
+  }
+  .col-now .brief-card:last-child { border-bottom: 0; }
+  .brief-kicker { font-size: 11px; letter-spacing: 0.06em; }
+  .brief-list { gap: 4px; }
+  .brief-item { grid-template-columns: 20px minmax(0, 1fr); gap: 6px; font-size: 12px; line-height: 1.4; }
+  .col-now .insights-bar { margin: 0; border-bottom: 1px solid var(--line-strong); }
+  .col-now .insights-bar-inner { grid-template-columns: 1fr; gap: 6px; padding: 8px 12px; }
+  .insights-bar-text { font-size: 12px; line-height: 1.4; padding: 6px 8px; }
+  .insights-bar-text { flex-wrap: nowrap; gap: 6px; }
+  .insights-bar-text .lang-badge { border-radius: 0; font-size: 11px; padding: 0 4px; margin-top: 1px; }
+  .insights-bar-text .insights-bar-label { flex: 1 1 auto; flex-basis: auto; min-width: 0; }
+  .col-now .news-rail { flex: 0 0 auto; border: 0; overflow: visible; max-height: none; }
+  .col-now .news-rail .panel-inner { overflow: visible; }
+  .col-now .panel-head { padding: 8px 12px; }
+  .col-now .news-rail .panel-head h2 { font-size: 13px; }
+
+  /* Centre column: KPI strip, map (takes what is left), evidence tray */
+  .col-map .metric-band { flex: 0 0 auto; border-bottom: 1px solid var(--line-strong); }
+  .metric-card {
+    padding: 6px 10px 5px; min-height: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "label label" "value spark" "context context";
+    column-gap: 10px; align-items: end;
+  }
+  .metric-card .metric-label { grid-area: label; }
+  .metric-card .metric-value { grid-area: value; }
+  .metric-card .sparkline-shell { grid-area: spark; margin: 0 0 3px; min-width: 0; }
+  .metric-card .metric-context { grid-area: context; }
+  .metric-label { font-size: 11px; letter-spacing: 0.03em; }
+  .metric-value { font-size: 20px; line-height: 1.1; margin: 2px 0 1px; }
+  .metric-unit { font-size: 11px; }
+  .metric-context { font-size: 11px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sparkline { height: 14px; }
+  /* Source line overlays the card on hover instead of growing it, so the map never jumps. */
+  .metric-card .metric-source {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    margin: 0; padding: 3px 10px; font-size: 11px; background: var(--hud-bg);
+  }
+  .col-map .map-panel { flex: 1 1 auto; min-height: 260px; border: 0; }
+  /* Two thin rows: title + live summary, then every layer switch on one line. */
+  .map-head { display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 4px; padding: 5px 10px; }
+  .map-head .title-wrap { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+  .map-head .kicker { font-size: 11px; white-space: nowrap; }
+  .map-summary { font-size: 12px; line-height: 1.35; margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .map-controls { flex-direction: row; flex-wrap: nowrap; gap: 8px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .map-controls .segmented-control { flex-wrap: nowrap; flex: 0 0 auto; }
+  .map-controls .segmented-control button { min-height: 22px; font-size: 11px; padding: 0 6px; white-space: nowrap; }
+  .map-footer { padding: 3px 10px; font-size: 11px; gap: 10px; flex-wrap: nowrap; }
+  .map-legend { flex: 0 0 auto; }
+  .watchpoint-list { flex-wrap: nowrap; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .watchpoint-list span { font-size: 11px; white-space: nowrap; }
+  .deep-tray {
+    flex: 0 0 clamp(150px, 21vh, 250px);
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--line-strong);
+    background: var(--hud-bg);
+  }
+  .tray-pane { flex: 1 1 auto; min-height: 0; overflow: auto; }
+  .tray-pane > .zone-head, .tray-pane .panel-head { display: none; } /* the tab already names it */
+  .tray-pane .panel { border: 0; }
+  .tray-pane .outlook-grid { min-height: 100%; }
+  .tray-pane .lower-grid { height: auto; max-height: none; flex: none; border-top: 0; }
+  .tray-pane .intel-panel, .tray-pane .qualitative-panel, .tray-pane .source-panel { height: auto; max-height: none; overflow: visible; }
+  .tray-pane .locality-panel { max-height: none; }
+  .tray-pane .locality-list { max-height: none; overflow: visible; }
+
+  /* Right rail: same content, meeting-safe but not poster-sized */
+  .posture-block { padding: 8px 12px; }
+  .posture-title { font-size: 20px; line-height: 1.15; }
+  .posture-detail { font-size: 12px; line-height: 1.4; margin-top: 4px; }
+  .section-label, .kicker { font-size: 11px; }
+  .section-label { padding: 8px 12px 4px; }
+  .rail-disclosure-summary { min-height: 34px; padding: 6px 12px; font-size: 12px; }
+  .rail-disclosure-summary > span:last-child { font-size: 11px; }
+  .rail-more-summary { min-height: 34px; padding: 6px 12px; font-size: 12px; }
+  .dashboard-shell .operation-card strong { font-size: 13px; line-height: 1.35; }
+  .dashboard-shell .operation-card .operation-detail,
+  .dashboard-shell .operation-card .directive-context,
+  .dashboard-shell .fa-reason, .dashboard-shell .fa-checklist, .dashboard-shell .hg-brief {
+    font-size: 12px; line-height: 1.45;
+  }
+  .news-item, .news-card, .news-digest-item, .source-item, .source-detail, .source-name,
+  .ground-pulse, .gp-title, .gp-meta, .signal-card strong, .signal-card .meta,
+  .trend-item strong, .trend-item .meta, .operation-detail, .flight-type,
+  .source-updated, .source-status { font-size: 12px; line-height: 1.4; }
+  .signal-card .val, .airport-stat .stat-val { font-size: 20px; }
+
+  /* --- Bottom command bar: shortcuts + disclaimer · heartbeat · share --- */
+  .dashboard-shell .operator-tools {
+    display: flex; flex-wrap: nowrap; align-items: center; gap: 4px;
+    padding: 3px 10px; min-width: 0; max-width: 62vw;
+    border-top: 1px solid var(--line-strong); border-bottom: 0;
+    background: var(--hud-bg);
+  }
+  .dashboard-shell .operator-tools button {
+    min-height: 24px; padding: 0 10px; font: 600 11px/1 var(--font-sans); white-space: nowrap;
+  }
+  .dashboard-shell .operator-tools .operator-manual-button { margin-left: 4px; }
+  .dashboard-shell .operator-tools p {
+    flex: 0 1 auto; flex-basis: auto; min-width: 0; margin: 0 0 0 8px;
+    font-size: 11px; line-height: 1.3; color: var(--soft);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .telemetry-strip {
+    height: auto; min-width: 0; align-self: stretch;
+    border-top: 1px solid var(--line-strong); border-left: 1px solid var(--line);
+    font-size: 11px;
+  }
+  .bottom-bar {
+    gap: 10px; padding: 3px 12px; font-size: 11px;
+    border-top: 1px solid var(--line-strong); border-left: 1px solid var(--line);
+  }
+
+  /* The status line under the title repeats the verdict row; drop it before it crowds the controls. */
+  @media (max-width: 1500px) {
+    .title-block .summary-lead { display: none; }
+  }
+}

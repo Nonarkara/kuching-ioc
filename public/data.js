@@ -172,7 +172,10 @@ export const CITY_DEMOGRAPHICS = {
   literacyRate: 96.2,
   gdpPerCapitaUsd: 14200,
   unemploymentPct: 3.2,
-  touristArrivals2025: 2100000,
+  // Immigration Dept Malaysia (Sarawak) via data.sarawak.gov.my, "Sarawak Visitor Arrivals (2024)".
+  // Sarawak-wide entry-point arrivals (2,962,820 international + 1,868,830 Malaysian). Annual; refresh each March.
+  touristArrivals2024: 4831650,
+  touristArrivals2025: 4831650,
   dailyWaterConsumptionMld: 580, // megalitres per day
   solidWasteTpd: 1200, // tonnes per day
   drainageNetworkKm: 485,

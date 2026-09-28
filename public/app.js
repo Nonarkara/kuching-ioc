@@ -677,7 +677,7 @@ function buildMetrics(w, a, ap, j, n, pz, tr) {
     { id:"pdw-share", label:"Padawan", value:pdw?.areaSharePct??0, unit:"%", tone:"focus", context:`${pdw?.areaKm2??0} km2` },
     { id:"gdp", label:"GDP/Cap", value:CITY_DEMOGRAPHICS.gdpPerCapitaUsd, unit:"USD", tone:"neutral", context:`Unemployment ${CITY_DEMOGRAPHICS.unemploymentPct}%` },
     { id:"birth", label:"Birth Rate", value:CITY_DEMOGRAPHICS.birthRate, unit:"/1k", tone:"neutral", context:`Median age ${CITY_DEMOGRAPHICS.medianAge}` },
-    { id:"tourism", label:"Tourism", value:round(CITY_DEMOGRAPHICS.touristArrivals2025/1000000,1), unit:"M", tone:"neutral", context:"Annual arrivals" },
+    { id:"tourism", label:"Tourism", value:round((CITY_DEMOGRAPHICS.touristArrivals2024 || CITY_DEMOGRAPHICS.touristArrivals2025)/1000000,1), unit:"M", tone:"neutral", context:"Sarawak 2024 (Immigration)" },
   ];
 }
 
@@ -998,7 +998,7 @@ async function buildFallbackDashboard() {
       ],
       hotlines: [
         { id: "999", label: "Emergency", number: "999" },
-        { id: "mpp", label: "Majlis Perbandaran Padawan", number: "082-615991", url: "https://mpp.sarawak.gov.my/" },
+        { id: "mpp", label: "Majlis Perbandaran Padawan", number: "082-615566", url: "https://mpp.sarawak.gov.my/" },
         { id: "ihydro", label: "DID Sarawak iHYDRO", number: null, url: "https://ihydro.sarawak.gov.my/" },
       ],
       source: "DID Sarawak iHYDRO",
@@ -2636,7 +2636,7 @@ function renderGroundPulse(groundPulse) {
       const stamp = formatShortStamp(h.publishedAt) || "";
       const badge = h.isOfficial ? "OFFICIAL" : (h.languageBadge || (h.language || "EN").toUpperCase());
       const safeTitle = escapeHtml(h.title || "").slice(0, 140);
-      const href = h.url ? `href="${escapeHtml(h.url)}" target="_blank" rel="noopener"` : "";
+      const href = h.url ? `href="${safeUrl(h.url)}" target="_blank" rel="noopener"` : "";
       return `
         <li class="gp-item">
           <span class="gp-badge">${escapeHtml(badge)}</span>
@@ -2702,16 +2702,16 @@ function renderFloodAction(payload) {
   const reality = fa.realityCheck || {};
   const headlines = (reality.headlines || []).slice(0, 2).map((h) =>
     h.url
-      ? `<a href="${escapeHtml(h.url)}" target="_blank" rel="noopener">${escapeHtml(h.title)}</a>`
+      ? `<a href="${safeUrl(h.url)}" target="_blank" rel="noopener">${escapeHtml(h.title)}</a>`
       : escapeHtml(h.title),
   ).join(" · ");
   const hotlines = (fa.hotlines || []).slice(0, 4).map((h) => {
-    const href = h.number ? `tel:${String(h.number).replace(/[^0-9+]/g, "")}` : (h.url || "#");
+    const href = h.number ? `tel:${String(h.number).replace(/[^0-9+]/g, "")}` : safeUrl(h.url);
     const right = h.number || "OPEN";
-    return `<a class="fa-hotline" href="${escapeHtml(href)}" ${h.url && !h.number ? 'target="_blank" rel="noopener"' : ""}><span><strong>${escapeHtml(h.label)}</strong></span><span>${escapeHtml(right)}</span></a>`;
+    return `<a class="fa-hotline" href="${href}" ${h.url && !h.number ? 'target="_blank" rel="noopener"' : ""}><span><strong>${escapeHtml(h.label)}</strong></span><span>${escapeHtml(right)}</span></a>`;
   }).join("");
   const shelters = (fa.shelters || []).slice(0, 3).map((s) =>
-    `<a class="fa-shelter" href="${escapeHtml(s.maps || "#")}" target="_blank" rel="noopener"><span><strong>${escapeHtml(s.name)}</strong><br>${escapeHtml(s.area)} · ${escapeHtml(s.status)}</span><span>MAP</span></a>`,
+    `<a class="fa-shelter" href="${safeUrl(s.maps || "#")}" target="_blank" rel="noopener"><span><strong>${escapeHtml(s.name)}</strong><br>${escapeHtml(s.area)} · ${escapeHtml(s.status)}</span><span>MAP</span></a>`,
   ).join("");
   const stations = payload?.infobanjir?.stations || [];
   const pathStation = (fa.worstStation && stations.find((station) => station.id === fa.worstStation.id))
@@ -2754,7 +2754,7 @@ function renderFloodAction(payload) {
       <div class="fa-kicker fa-subsection">Shelters / PPS</div>
       <div class="fa-shelters">${shelters}</div>
     </details>
-    <div class="fa-source">Source: <a href="${escapeHtml(fa.sourceUrl || "https://ihydro.sarawak.gov.my/")}" target="_blank" rel="noopener">${escapeHtml(fa.source || "DID Sarawak iHYDRO")}</a></div>`;
+    <div class="fa-source">Source: <a href="${safeUrl(fa.sourceUrl || "https://ihydro.sarawak.gov.my/")}" target="_blank" rel="noopener">${escapeHtml(fa.source || "DID Sarawak iHYDRO")}</a></div>`;
 
   el.querySelector(".fa-path-button")?.addEventListener("click", () => {
     const station = stations.find((item) => item.id === pathStation?.id);
@@ -4906,9 +4906,10 @@ function buildInsights(payload) {
       ? `预测p90 ${p90}mm第1天${absorb ? "状况稳定" : "可能上升"}。` : "";
     insights.push({
       key: "rain",
+      tag: { en: "RAIN", ms: "HUJAN", zh: "雨量" },
       en: `${hasRain ? `${past}mm rain fell upstream of ${s.name} in 24h` : `No upstream rain measured at ${s.name} in 24h`}; ${amcEn} soil, ${lag}h lag — ${absorb ? "absorbs slowly" : "watch for shedding"}.${p90En}`,
-      ms: `${hasRain ? `${past}mm hujan jatuh di hulu ${s.name} dalam 24h` : `Tiada hujan hulu direkod di ${s.name} dalam 24h`}; tanah ${amcMs}, ${lag}h lantas — ${absorb ? "perlahan menyerap" : "waspada pengeluaran"}.${p90Ms}`,
-      zh: `${hasRain ? `${s.name}上游24小时实测${past}mm雨量` : `未在${s.name}上游测得24小时雨量`}；${amcZh}土壤，${lag}h延迟——${absorb ? "缓慢吸收" : "注意上涨"}。${p90Zh}`
+      ms: `${hasRain ? `${past}mm hujan turun di hulu ${s.name} dalam 24j` : `Tiada hujan hulu direkod di ${s.name} dalam 24j`}; tanah ${amcMs}, selang masa ${lag}j — ${absorb ? "penyerapan perlahan" : "waspada limpahan permukaan"}.${p90Ms}`,
+      zh: `${hasRain ? `${s.name}上游24小时实测${past}mm雨量` : `未在${s.name}上游测得24小时雨量`}；${amcZh}土壤，${lag}小时延迟——${absorb ? "缓慢吸收" : "注意上涨"}。${p90Zh}`
     });
   }
 
@@ -4921,8 +4922,9 @@ function buildInsights(payload) {
     const corridor = worst?.affectedEstimate || worst?.name || "";
     insights.push({
       key: "warn",
+      tag: { en: "MET", ms: "MET", zh: "气象" },
       en: `${warnCount} MET weather warning${warnCount > 1 ? "s" : ""} active; ${corridor} is the exposure; ${fa.verb || "Keep watching"}. ${fa.checklist?.[0] || "Pre-position mobile crew."}`,
-      ms: `${warnCount} amaran cuaca MET aktif; ${corridor} ialah eksposur; ${fa.verbBm || "Terus pantau"}.`,
+      ms: `${warnCount} amaran cuaca MET aktif; ${corridor} ialah kawasan terdedah; ${fa.verbBm || "Terus pantau"}.`,
       zh: `${warnCount}个气象警报生效；${corridor}是暴露点；${fa.verbZh || "持续关注"}。`
     });
   }
@@ -4934,11 +4936,23 @@ function buildInsights(payload) {
     // First sentence only — the full headline is a paragraph.
     const firstStop = raw.indexOf('. ');
     const headline = (firstStop > 20 ? raw.slice(0, firstStop + 1) : raw.slice(0, 140)) || '—';
+    const BAND_LABEL = {
+      normal: { en: "normal", ms: "normal", zh: "正常" },
+      alert: { en: "alert", ms: "waspada", zh: "警戒" },
+      warning: { en: "warning", ms: "amaran", zh: "警告" },
+      danger: { en: "danger", ms: "bahaya", zh: "危险" },
+      reference: { en: "reference", ms: "rujukan", zh: "参考" },
+    };
+    const bandKey = ib.highestBand || "normal";
+    const bandEn = BAND_LABEL[bandKey]?.en || bandKey;
+    const bandMs = BAND_LABEL[bandKey]?.ms || bandKey;
+    const bandZh = BAND_LABEL[bandKey]?.zh || bandKey;
     insights.push({
       key: 'conv',
-      en: `${headline} · ${newsCount} flood-related · gauge bands ${ib.highestBand || 'normal'} — ${newsCount === 0 ? 'the conversation does not match the measurement' : 'the conversation aligns with the measurement'}; verify data freshness before acting.`,
-      ms: `${newsCount === 0 ? 'Liputan berita tidak selari dengan ukuran' : 'Liputan berita selari dengan ukuran'} · ${newsCount} berita banjir · bacaan tolok ${ib.highestBand || 'normal'} — sahkan kesegaran data sebelum bertindak.`,
-      zh: `${newsCount === 0 ? '新闻报道与实测不符' : '新闻报道与实测一致'} · ${newsCount} 条洪水相关 · 水位站读数 ${ib.highestBand || 'normal'} — 行动前先核对数据时效。`
+      tag: { en: "INTEL", ms: "BERITA", zh: "舆情" },
+      en: `${headline} · ${newsCount} flood-related · gauge bands ${bandEn} — ${newsCount === 0 ? 'the conversation does not match the measurement' : 'the conversation aligns with the measurement'}; verify data freshness before acting.`,
+      ms: `${newsCount === 0 ? 'Liputan berita tidak selari dengan ukuran' : 'Liputan berita selari dengan ukuran'} · ${newsCount} berita banjir · bacaan tolok ${bandMs} — sahkan kesegaran data sebelum bertindak.`,
+      zh: `${newsCount === 0 ? '新闻报道与实测不符' : '新闻报道与实测一致'} · ${newsCount} 条洪水相关 · 水位站读数 ${bandZh} — 行动前先核对数据时效。`
     });
   }
 
@@ -4965,7 +4979,7 @@ function renderInsights(payload) {
     div.className = 'insights-bar-text';
     const badge = document.createElement('span');
     badge.className = `lang-badge ${lang === 'ms' ? 'insights-bar-ms' : lang === 'zh' ? 'insights-bar-zh' : 'insights-bar-en'}`;
-    badge.textContent = lang === 'ms' ? 'MS' : lang === 'zh' ? 'ZH' : 'EN';
+    badge.textContent = ins.tag?.[lang] || (lang === 'ms' ? 'MS' : lang === 'zh' ? 'ZH' : 'EN');
     const label = document.createElement('span');
     label.className = 'insights-bar-label';
     label.textContent = lang === 'ms' ? ins.ms : lang === 'zh' ? ins.zh : ins.en;

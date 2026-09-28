@@ -1840,7 +1840,7 @@ const FLOOD_HOTLINES = [
   { id: "999", label: "Emergency (Police / Fire / Ambulance)", number: "999" },
   { id: "jpam", label: "Civil Defence (JPAM Sarawak)", number: "082-441144", note: "Confirm via directory if engaged" },
   { id: "did", label: "DID Sarawak (iHYDRO operations)", number: "082-440666", url: "https://ihydro.sarawak.gov.my/" },
-  { id: "mpp", label: "Majlis Perbandaran Padawan", number: "082-615991", url: "https://mpp.sarawak.gov.my/" },
+  { id: "mpp", label: "Majlis Perbandaran Padawan", number: "082-615566", url: "https://mpp.sarawak.gov.my/" },
   { id: "infobanjir", label: "JPS Public Infobanjir", number: null, url: "https://publicinfobanjir.water.gov.my/?lang=en" },
 ];
 

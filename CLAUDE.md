@@ -48,27 +48,28 @@ FOOTER    · operator shortcuts + disclaimer · telemetry heartbeat · KEYS · S
 
 ---
 
-## Renderers in `public/app.js` (~4830 lines, ~60 render/build fns)
+## Renderers in `public/app.js` (~4980 lines, ~60 render/build fns)
 
 | Renderer | Target | Reads from payload |
 |---|---|---|
-| `renderVerdict` / `renderCascade` / `renderWardRisk` / `renderGrowthStory` | Zone 1/2/3/5 heads | multiple |
+| `renderVerdict` / `renderInsights` | `#verdictStrip` / `.insights-bar` | `summary`, derived cross-domain insights |
 | `renderMap` / `renderLayerToggle` / `renderUrbanLayerToggle` | `#mapCanvas` | `layers`, `infobanjir`, `airport`, `urbanGrowth` |
 | `renderCatchmentStory` | `#catchmentStory` | `infobanjir.stations[].affectedEstimate,lastEvent` |
 | `renderCesiumEntities` | `#map3d` | `jurisdictions`, `airport`, `infobanjir` |
-| `renderForecastRail` / `renderFloodForecast` | `#forecastRail` / `#floodForecast` | `forecast` |
-| `renderFloodAction` / `renderHydroGauges` / `renderFloodMatrix` | rail | `infobanjir` |
-| `renderBriefStrip` / `renderOperations` / `renderPosture` | directive strip | derived |
-| `renderCitizenReports` / `renderOfficialPulse` / `renderMppCouncillors` | rail | `cityReports`, `govStats`, `councillors` |
-| `renderLocalityKpis` / `renderLocalitySummary` / `renderLocalityList` | locality panel | `localities` |
-| `renderIntelPanel` / `renderGroundPulse` / `renderNewsIntake` / `renderNewsDigest` / `renderEconBand` / `renderTrendsBand` | intel panel | `news`, `exchange`, `trends` |
+| `renderForecastRail` / `renderFloodForecast` | `#forecastRail` / `#floodForecast` (tray: outlook) | `forecast` |
+| `renderGrowthStory` | `#growthStory` (tray: growth) | `urbanGrowth`, `alphaEarth` |
+| `renderLocalityKpis` / `renderLocalitySummary` / `renderLocalityList` | `#localityExplorer` (tray: localities) | `localities` |
+| `renderIntelPanel` / `renderGroundPulse` / `renderNewsIntake` / `renderNewsDigest` / `renderEconBand` / `renderTrendsBand` | tray: economy | `news`, `exchange`, `trends` |
+| `renderSourceMatrix` / `renderSourceList` | `#sourceMatrix` / `#sourceList` (tray: sources) | `sources[]` |
+| `renderFloodAction` / `renderHydroGauges` / `renderFloodMatrix` | `.situation-rail` | `infobanjir` |
+| `renderBriefStrip` / `renderOperations` / `renderPosture` | `.col-now` brief + rail | derived |
+| `renderCitizenReports` / `renderOfficialPulse` / `renderMppCouncillors` | `.situation-rail` | `cityReports`, `govStats`, `councillors` |
 | `renderAirportStats` / `renderEventsStack` / `renderTelemetryStrip` | rail + footer | `airport`, `events` |
 | `renderBypassTracker` | intel | `bypass` |
-| `renderSourceMatrix` / `renderSourceList` | source panel | `sources[]` |
 | `renderWardBrief` / `renderWardProjectsHTML` | rail | `wards`, `MPP_WARD_PROJECTS` |
 | `renderRuntimeMeta` / `renderScopeToggle` / `renderDimensionToggle` / `renderTextScaleToggle` | masthead | boot + state |
 
-Helpers: `dataHealth()` in `public/data-health.js` (UI coverage check — not a flood model or agency freshness standard). Operator guide: `public/operator-guide.js` + `public/operator-guide.css` (native `<dialog>` with EN/BM/ZH instructions, opens via `?` keyboard shortcut).
+Helpers: `dataHealth()` in `public/data-health.js` (UI coverage check — not a flood model or agency freshness standard). Operator guide: `public/operator-guide.js` + `public/operator-guide.css` (native `<dialog>` with EN/BM/ZH instructions, opens via the "How to use" manual button; `?` opens the `#helpOverlay` keyboard shortcuts modal).
 
 ---
 
@@ -116,10 +117,10 @@ Local-only pipelines (`scripts/forecast/.venv`, `scripts/alphaearth/.venv`, `scr
 
 | Token | Value |
 |---|---|
-| Background (dark) | `#010203` |
-| Background (light) | `#f5f7fa` |
-| Cyan (dark) | `#00f3ff` |
-| Cyan (light) | `#005f94` — passes 4.5:1 AA on `#f5f7fa` |
+| Background (light default) | `#f6f5f2` warm paper |
+| Background (dark muted) | `#0e1319` deep slate |
+| Accent (light default) | `#1f4e79` civic navy — passes 4.5:1 AA |
+| Accent (dark) | `#00f3ff` cyan / steel blue |
 | Severity | red `#d00036` · amber `#e67700` · green `#00875a` · cyan `#00f3ff` |
 | `--font-sans` / `--font-mono` | `"Helvetica Neue", Helvetica, Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei"` |
 | `--font-display` | `Georgia, "Times New Roman", "Noto Serif SC", "Songti SC", serif` |

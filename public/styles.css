@@ -2038,9 +2038,13 @@ body::before {
   .source-matrix-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .map-controls {
     width: 100%;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
   }
-  .segmented-control { flex-wrap: wrap; }
+  .segmented-control { flex-wrap: nowrap; flex: 0 0 auto; }
   .map-panel { min-height: 480px; }
   .map-frame { min-height: 360px; }
   .map-footer {
@@ -4299,15 +4303,25 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
    scale above.  This sits after the legacy 44px target safeguard so a phone
    retains the larger 48px controls and 15px labels. */
 @media (max-width: 720px) {
-  .scope-btn, .dim-btn, .ctrl-btn, .lang-btn, .segmented-control button,
-  .urban-toggle button, .coord-copy, .fa-hotline, .councillor-phone,
-  .news-digest-tab, .locality-filter, .locality-search, .locality-reset,
+  .scope-btn, .dim-btn, .ctrl-btn, .lang-btn,
+  .coord-copy, .fa-hotline, .councillor-phone,
+  .locality-filter, .locality-search, .locality-reset,
   .help-hint, .action-btn, .gp-title, .ward-risk-row, .fa-path-button {
     min-height: 48px;
   }
-  .scope-btn, .dim-btn, .ctrl-btn, .lang-btn, .segmented-control button,
-  .urban-toggle button, .news-digest-tab, .locality-filter, .help-hint, .action-btn {
+  .scope-btn, .dim-btn, .ctrl-btn, .lang-btn, .action-btn, .help-hint {
     font-size: 15px;
+  }
+  /* Layer toggle buttons are not primary controls — they pick a base tile
+     or toggle an overlay. Keep them 44px tap-targets but small enough to
+     stay on one horizontally-scrolling row with all 12 buttons visible. */
+  .segmented-control button,
+  .urban-toggle button,
+  .news-digest-tab {
+    min-height: 36px;
+    font-size: 11px;
+    padding: 0 8px;
+    white-space: nowrap;
   }
 }
 
@@ -4625,5 +4639,16 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
   /* The status line under the title repeats the verdict row; drop it before it crowds the controls. */
   @media (max-width: 1500px) {
     .title-block .summary-lead { display: none; }
+  }
+
+  /* Short viewports (1280×800 laptops): the deep-tray would otherwise eat
+     ~250px from the map. Shrink it and the footer so the map reads bigger. */
+  @media (max-height: 820px) {
+    .deep-tray { flex-basis: 130px; }
+    .tray-tab { min-height: 24px; font-size: 10px; padding: 0 10px; }
+    .masthead { padding: 4px 14px; }
+    .verdict-strip { padding: 4px 14px; }
+    .map-head { padding: 3px 10px; }
+    .map-footer { padding: 2px 10px; }
   }
 }

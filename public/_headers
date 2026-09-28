@@ -1,0 +1,9 @@
+# Cloudflare Pages response headers — hardening for the public civic board.
+# CSP deliberately omitted for now: the boot JSON is an inline script whose
+# hash changes every build; adding a hash requires a build-time _headers
+# generator. Do NOT add 'unsafe-inline' script CSP — it buys false comfort.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()

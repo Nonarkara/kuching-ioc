@@ -87,7 +87,15 @@ export async function renderIndexHtml({
 } = {}) {
   const resolvedAssetVersion = compactAssetToken(assetVersion) || resolveAssetVersion({ env, builtAt: builtAt || undefined });
   const template = await fs.readFile(INDEX_TEMPLATE_PATH, "utf8");
+  // Honest version reporting: the board shows the package.json release version
+  // in the runtime detail + title tooltip. Unreadable package → "dev".
+  let appVersion = "dev";
+  try {
+    const pkg = JSON.parse(await fs.readFile(path.join(ROOT_DIR, "package.json"), "utf8"));
+    if (pkg.version) appVersion = String(pkg.version);
+  } catch { /* keep "dev" */ }
   const bootMeta = {
+    version: appVersion,
     assetVersion: resolvedAssetVersion,
     builtAt,
     deploymentMode,

@@ -276,6 +276,7 @@ function decoratePayload(payload, { mode, manifest = null, error = null } = {}) 
       boardBuiltAt: BOOT.builtAt || null,
       pagesUrl: BOOT.pagesUrl || null,
       liveUrl: BOOT.liveUrl || null,
+      appVersion: BOOT.version || null,
       assetVersion: manifest?.assetVersion || BOOT.assetVersion || null,
       snapshotBuiltAt: manifest?.builtAt || null,
       error: error ? String(error.message || error) : null,
@@ -287,6 +288,7 @@ function buildRuntimeDetail(delivery, payload) {
   // Secretary-facing: one short line, timestamps only. Asset hash + switch
   // links live in the title tooltip for debugging without eating masthead height.
   const parts = [];
+  if (delivery.appVersion) parts.push(`v${delivery.appVersion}`);
   const payloadStamp = formatBadgeStamp(payload.generatedAt || payload.timeSignal?.serverNow);
   if (payloadStamp) parts.push(`Payload ${payloadStamp}`);
   if (delivery.mode === "static-snapshot" && delivery.snapshotBuiltAt) {
@@ -300,6 +302,7 @@ function buildRuntimeDetail(delivery, payload) {
 
 function buildRuntimeTooltip(delivery) {
   const bits = [];
+  if (delivery.appVersion) bits.push(`v${delivery.appVersion}`);
   if (delivery.assetVersion) bits.push(`Asset ${delivery.assetVersion}`);
   const norm = (u) => String(u || "").replace(/\/$/, "");
   const pagesUrl = delivery.pagesUrl, liveUrl = delivery.liveUrl;
@@ -2348,10 +2351,11 @@ function renderBriefStrip(payload) {
   if (!nowEl || !nextEl || !blindEl) return;
 
   const brief = buildBoardBrief(payload);
+  // Brief items can embed press titles/trends — escape at the HTML boundary.
   const renderItems = (items) => items.map((item, index) => `
     <div class="brief-item">
       <span class="brief-index">0${index + 1}</span>
-      <span>${item}</span>
+      <span>${escapeHtml(item)}</span>
     </div>`).join("");
 
   nowEl.innerHTML = renderItems(brief.now);
@@ -2384,14 +2388,14 @@ function renderQualitativeLens(payload, activeSatellite) {
   checksEl.innerHTML = renderList(lens.checks);
   sourcesEl.innerHTML = lens.sources.length
     ? lens.sources.map((item) => `
-      <a class="qualitative-source-item" href="${item.link}" target="_blank" rel="noopener">
+      <a class="qualitative-source-item" href="${safeUrl(item.link)}" target="_blank" rel="noopener">
         <div class="qualitative-source-head">
-          <span class="qualitative-source-badge">${item.badge}</span>
+          <span class="qualitative-source-badge">${escapeHtml(item.badge)}</span>
           <span>${formatShortStamp(item.publishedAt)}</span>
         </div>
-        <strong>${item.source}</strong>
-        <span class="qualitative-source-title">${item.title}</span>
-        <span class="qualitative-source-note">${item.note}</span>
+        <strong>${escapeHtml(item.source)}</strong>
+        <span class="qualitative-source-title">${escapeHtml(item.title)}</span>
+        <span class="qualitative-source-note">${escapeHtml(item.note)}</span>
       </a>`).join("")
     : `<div class="qualitative-source-empty">Scene read is running on telemetry only — no field sources in this cycle.</div>`;
 
@@ -2487,16 +2491,16 @@ function renderNewsIntake(news) {
           <span>${lane.label}</span>
         </div>`).join("")}
     </div>
-    <div class="news-intake-note">${news.summary || news.systemLabel || "Multilingual intake active."}</div>
+    <div class="news-intake-note">${escapeHtml(news.summary || news.systemLabel || "Multilingual intake active.")}</div>
     <div class="news-intake-list">
       ${operatorItems.map((item) => `
         <article class="news-intake-item">
           <div class="news-intake-item-head">
-            <span class="news-intake-badge">${item.languageBadge || (item.isOfficial ? "OFF" : "EN")}</span>
-            <strong>${item.source}</strong>
+            <span class="news-intake-badge">${escapeHtml(item.languageBadge || (item.isOfficial ? "OFF" : "EN"))}</span>
+            <strong>${escapeHtml(item.source)}</strong>
             <span>${formatShortStamp(item.publishedAt)}</span>
           </div>
-          <div class="news-intake-title">${item.title}</div>
+          <div class="news-intake-title">${escapeHtml(item.title)}</div>
         </article>`).join("")}
     </div>`;
 }
@@ -2546,8 +2550,8 @@ function renderNewsDigest(news) {
     el.querySelector(".news-digest-list").innerHTML = items.length
       ? items.map(i => `
           <div class="news-digest-item">
-            <span class="news-digest-badge">${i.source?.slice(0, 12) ?? code.toUpperCase()}</span>
-            <span class="news-digest-title">${i.title}</span>
+            <span class="news-digest-badge">${escapeHtml(i.source?.slice(0, 12) ?? code.toUpperCase())}</span>
+            <span class="news-digest-title">${escapeHtml(i.title)}</span>
             <span class="news-digest-time">${formatShortStamp(i.publishedAt)}</span>
           </div>`).join("")
       : `<div class="news-digest-item"><span class="news-digest-title" style="color:var(--soft)">No ${code.toUpperCase()} items in this cycle.</span></div>`;
@@ -2582,8 +2586,8 @@ function renderTrendsBand(trends) {
     ${items.map((t, i) => `
       <div class="trend-row ${(t.locality?.score ?? 0) >= 2 ? "local" : ""}">
         <span class="trend-rank">${i + 1}</span>
-        <span class="trend-term">${t.title}</span>
-        <span class="trend-traffic">${t.trafficLabel ?? ""}</span>
+        <span class="trend-term">${escapeHtml(t.title)}</span>
+        <span class="trend-traffic">${escapeHtml(t.trafficLabel ?? "")}</span>
       </div>`).join("")}`;
 }
 
@@ -2926,7 +2930,7 @@ function renderCitizenReports(payload) {
     return `<div class="cr-row">
       <div class="cr-urgency-bar" data-tone="${tone}"></div>
       <div class="cr-body">
-        <div class="cr-type">${escapeHtml(r.problem_type)}<span class="cr-status" data-tone="${statusTone}">${STATUS_LABEL[r.status] || r.status.toUpperCase()}</span></div>
+        <div class="cr-type">${escapeHtml(r.problem_type)}<span class="cr-status" data-tone="${statusTone}">${escapeHtml(STATUS_LABEL[r.status] || r.status || "NEW")}</span></div>
         <div class="cr-loc">${escapeHtml(r.location_text || "—")}</div>
         <div class="cr-meta"><span class="cr-ticket">${escapeHtml(r.ticket)}</span><span class="cr-ago">${ago}</span></div>
       </div>
@@ -3052,6 +3056,16 @@ const WARD_COLOR_MAP = {
 
 function escapeHtml(str) {
   return String(str ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+}
+
+// Only http(s) or same-origin relative URLs may reach an href — blocks
+// javascript: and data: schemes from any external source record.
+function safeUrl(u) {
+  try {
+    const url = new URL(String(u ?? ""), location.href);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "#";
+    return escapeHtml(url.href);
+  } catch { return "#"; }
 }
 
 function renderCouncillorCard(person, { role, coverage, accentColor } = {}) {
@@ -4044,7 +4058,7 @@ function renderDashboard(payload) {
   const news = isPadawanScope()
     ? [...allNews.filter(i => i.isOfficial), ...allNews.filter(i => !i.isOfficial)].slice(0, 8)
     : allNews.slice(0, 8);
-  $("newsRail").innerHTML = [...news,...news].map(n=>`<span class="ticker-item"><span class="ticker-source">${n.languageBadge || (n.isOfficial ? "OFF" : n.source)}</span> ${n.title}</span>`).join("");
+  $("newsRail").innerHTML = [...news,...news].map(n=>`<span class="ticker-item"><span class="ticker-source">${escapeHtml(n.languageBadge || (n.isOfficial ? "OFF" : n.source))}</span> ${escapeHtml(n.title)}</span>`).join("");
 
   // Signals
   const signalHtml = payload.metrics.slice(0,4).map(s=>`
@@ -4221,6 +4235,7 @@ function setLang(lang) {
     renderFloodAction(state.payload);
     renderHydroGauges(state.payload);
     renderForecastRail(state.payload);
+    renderInsights(state.payload);
   }
   // Highlight active lang button
   document.querySelectorAll(".lang-btn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
@@ -4761,7 +4776,6 @@ async function boot() {
   try {
     const payload = await loadDashboardPayload();
     renderDashboard(payload);
-    renderInsights(payload);
     // In 3D mode, re-render the Cesium entities with the freshest
     // payload so hydro cylinder levels / band colours track the
     // 60-second refresh.
@@ -4778,6 +4792,10 @@ async function boot() {
     if (hash && hash[1] && !state.activeWard) {
       setActiveWard(hash[1].toUpperCase());
     }
+    // Insights render LAST: operational steps above must never depend on
+    // an optional commentary panel succeeding (and renderInsights itself
+    // catches internally).
+    renderInsights(payload);
   } catch (err) { console.error("IOC SYNC FAILURE", err); }
 }
 
@@ -4826,62 +4844,98 @@ if (state.dimension === "3d") {
 
 
 // --- Pass 4.1: Insights engine — computed connections from the payload ---
+// All fields verified against the real payload: forecast.stations is a DICT
+// keyed by station id (not an array), cumulative_p90_mm lives on each station,
+// warning count is metWarnings.activeCount (floodAction has no activeCount),
+// and ib.stations[].rainfallPastMm may be null when iHYDRO is stale.
 function buildInsights(payload) {
+  try {
   const ib = payload?.infobanjir || {};
-  const stations = (payload?.forecast?.stations || []).slice(0, 2);
   const fa = payload?.floodAction || {};
+  const met = payload?.metWarnings || {};
   const summary = payload?.summary || {};
+  const rawStations = payload?.forecast?.stations;
+  const stations = Array.isArray(rawStations)
+    ? rawStations
+    : (rawStations && typeof rawStations === "object" ? Object.values(rawStations) : []);
   const insights = [];
 
-  // 1. Rain → river arrival
-  let pastRain = 0, sName = '', amcLabel = '—', lag = 0, risk = 'normal', p90 = 0;
-  if (stations.length > 0) {
-    const s = stations[0];
-    pastRain = ib?.stations?.find(st => st.id === s.id)?.rainfallPastMm || 0;
-    sName = s.name;
-    amcLabel = { I: 'dry', II: 'moist', III: 'wet' }[s?.amc?.class] || s?.amc?.class || '—';
-    lag = s.lag_h || 0;
-    risk = s?.risk_24h?.band || 'normal';
-    p90 = payload?.forecast?.series?.cumulative_p90_mm?.day1 || 0;
-  }
-  if (pastRain > 0) {
+  // 1. Rain → river arrival: measured upstream rain (when iHYDRO reports it),
+  //    soil state, lag, 24h risk band and day-1 p90 forecast for focus gauge 1.
+  const s = stations.find(x => x && x.id) || null;
+  if (s) {
+    const past = ib?.stations?.find(x => x.id === s.id)?.rainfallPastMm;
+    const hasRain = typeof past === "number" && past > 0;
+    const amc = s.amc || {};
+    // Soil-moisture class labelled per language — never mix English words
+    // into the BM/ZH sentences.
+    const AMC = {
+      I:   { en: "dry",   ms: "kering",  zh: "干燥" },
+      II:  { en: "moist", ms: "lembap",  zh: "湿润" },
+      III: { en: "wet",   ms: "basah",   zh: "潮湿" },
+    };
+    const amcEn = AMC[amc.class]?.en || amc.class || "—";
+    const amcMs = AMC[amc.class]?.ms || amc.class || "—";
+    const amcZh = AMC[amc.class]?.zh || amc.class || "—";
+    const lag = s.lag_h ?? 0;
+    const risk = s?.risk_24h?.band || "normal";
+    const p90 = s?.cumulative_p90_mm?.day1;
+    const absorb = risk === "normal";
+    const p90En = typeof p90 === "number"
+      ? ` Forecast p90 ${p90}mm day1 ${absorb ? "keeps conditions stable" : "may escalate"}.` : "";
+    const p90Ms = typeof p90 === "number"
+      ? ` Ramalan p90 ${p90}mm hari1 ${absorb ? "kondisi stabil" : "mungkin naik"}.` : "";
+    const p90Zh = typeof p90 === "number"
+      ? `预测p90 ${p90}mm第1天${absorb ? "状况稳定" : "可能上升"}。` : "";
     insights.push({
-      key: 'rain',
-      en: `${pastRain}mm rain fell upstream of ${sName} in 24h; ${amcLabel} soil, ${lag}h lag — ${risk === 'normal' ? 'absorbs slowly' : 'watch for shedding'}. Forecast p90 ${p90}mm day1 ${risk === 'normal' ? 'keeps conditions stable' : 'may escalate'}.`,
-      ms: `${pastRain}mm hujan jatuh di hulu ${sName} dalam 24h; tanah ${amcLabel}, ${lag}h lantas — ${risk === 'normal' ? 'perlahan menyerap' : 'waspada pengeluaran'}. Ramalan p90 ${p90}mm hari1 ${risk === 'normal' ? 'kondisi stabil' : 'mungkin naik'}.`,
-      zh: `${pastRain}mm雨量落${sName}上游24小时；${amcLabel}土壤，${lag}h延迟——${risk === 'normal' ? '缓慢吸收' : '注意上涨'}。预测p90 ${p90}mm第1天${risk === 'normal' ? '状况稳定' : '可能上升'}。`
+      key: "rain",
+      en: `${hasRain ? `${past}mm rain fell upstream of ${s.name} in 24h` : `No upstream rain measured at ${s.name} in 24h`}; ${amcEn} soil, ${lag}h lag — ${absorb ? "absorbs slowly" : "watch for shedding"}.${p90En}`,
+      ms: `${hasRain ? `${past}mm hujan jatuh di hulu ${s.name} dalam 24h` : `Tiada hujan hulu direkod di ${s.name} dalam 24h`}; tanah ${amcMs}, ${lag}h lantas — ${absorb ? "perlahan menyerap" : "waspada pengeluaran"}.${p90Ms}`,
+      zh: `${hasRain ? `${s.name}上游24小时实测${past}mm雨量` : `未在${s.name}上游测得24小时雨量`}；${amcZh}土壤，${lag}h延迟——${absorb ? "缓慢吸收" : "注意上涨"}。${p90Zh}`
     });
   }
 
-  // 2. Warnings → exposed corridor
-  const worst = ib?.stations?.[0];
-  if (fa?.activeCount > 0 && worst) {
-    const corridor = worst?.affectedEstimate || worst?.name || '';
-    const vec = fa?.verbBm || fa?.verb || '—';
+  // 2. Warnings → exposed corridor: MET warning count + the gauge corridor
+  //    that carries the exposure + the flood-action verb in the UI language.
+  const ibStations = Array.isArray(ib?.stations) ? ib.stations : [];
+  const worst = ibStations.find(x => x && x.band && x.band !== "normal") || ibStations[0];
+  const warnCount = typeof met.activeCount === "number" ? met.activeCount : 0;
+  if (warnCount > 0 && worst) {
+    const corridor = worst?.affectedEstimate || worst?.name || "";
     insights.push({
-      key: 'warn',
-      en: `${fa.activeCount} weather warning${fa.activeCount > 1 ? 's' : ''} active; ${corridor} is the exposure; ${vec}. ${fa.checklist?.[0] || 'Pre-position mobile crew.'}`,
-      ms: `${fa.activeCount} peringatan cuaca aktif; ${corridor} adalah eksposur; ${vec}. ${fa.checklist?.[0] || 'Tugaskan pasukan untuk menyimpan peralatan.'}`,
-      zh: `${fa.activeCount}个天气警报激活; ${corridor}是暴露点; ${vec}. ${fa.checklist?.[0] || '调派 mobile crew.'}`
+      key: "warn",
+      en: `${warnCount} MET weather warning${warnCount > 1 ? "s" : ""} active; ${corridor} is the exposure; ${fa.verb || "Keep watching"}. ${fa.checklist?.[0] || "Pre-position mobile crew."}`,
+      ms: `${warnCount} amaran cuaca MET aktif; ${corridor} ialah eksposur; ${fa.verbBm || "Terus pantau"}.`,
+      zh: `${warnCount}个气象警报生效；${corridor}是暴露点；${fa.verbZh || "持续关注"}。`
     });
   }
 
   // 3. Conversation vs measurement
   if (summary?.headline) {
     const newsCount = fa?.realityCheck?.newsCount || 0;
-    const headline = summary.headline.split('·')[0] || '—';
+    const raw = String(summary.headline).split('·')[0].trim();
+    // First sentence only — the full headline is a paragraph.
+    const firstStop = raw.indexOf('. ');
+    const headline = (firstStop > 20 ? raw.slice(0, firstStop + 1) : raw.slice(0, 140)) || '—';
     insights.push({
       key: 'conv',
       en: `${headline} · ${newsCount} flood-related · gauge bands ${ib.highestBand || 'normal'} — ${newsCount === 0 ? 'the conversation does not match the measurement' : 'the conversation aligns with the measurement'}; verify data freshness before acting.`,
-      ms: `${newsCount === 0 ? 'Pemaparan tidak sesuai pengukuran' : 'Pemaparan sesuai dengan pengukuran'} · ${newsCount} banjir-relevan · parau tolok ${ib.highestBand || 'normal'} — verifikasi kebenaran data sebelum bertindak.`,
-      zh: `${newsCount === 0 ? '对话不符合测量' : '对话符合测量'} · ${newsCount} 与洪水相关 · ${ib.highestBand || 'normal'} — 在行动前验证数据真实性。`
+      ms: `${newsCount === 0 ? 'Liputan berita tidak selari dengan ukuran' : 'Liputan berita selari dengan ukuran'} · ${newsCount} berita banjir · bacaan tolok ${ib.highestBand || 'normal'} — sahkan kesegaran data sebelum bertindak.`,
+      zh: `${newsCount === 0 ? '新闻报道与实测不符' : '新闻报道与实测一致'} · ${newsCount} 条洪水相关 · 水位站读数 ${ib.highestBand || 'normal'} — 行动前先核对数据时效。`
     });
   }
 
   return insights.slice(0, 3);
+  } catch (err) {
+    // An insight must never take the board down — boot() depends on this
+    // call returning, not throwing.
+    console.warn("INSIGHTS SKIPPED", err);
+    return [];
+  }
 }
 
 function renderInsights(payload) {
+  try {
   const insights = buildInsights(payload);
   const bar = document.querySelector(".insights-bar-inner");
   if (!bar) return;
@@ -4902,6 +4956,9 @@ function renderInsights(payload) {
     div.appendChild(label);
     bar.appendChild(div);
   });
+  } catch (err) {
+    console.warn("INSIGHTS RENDER SKIPPED", err);
+  }
 }
 
 // In boot(), render insights after dashboard render

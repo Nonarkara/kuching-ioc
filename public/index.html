@@ -3,18 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=3c6b4cfac73b-080123" />
-    <link rel="mask-icon" href="./favicon.svg?v=3c6b4cfac73b-080123" color="#1f4e79" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=742a78094d7b-085101" />
+    <link rel="mask-icon" href="./favicon.svg?v=742a78094d7b-085101" color="#1f4e79" />
     <meta name="theme-color" content="#f6f5f2" />
     <title>Greater Kuching IOC</title>
     <meta name="description" content="Greater Kuching Intelligent Operation Center — a municipal command surface for Secretary Daniel Goh, MPP." />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-    <link rel="stylesheet" href="./styles.css?v=3c6b4cfac73b-080123" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-    <script>window.__IOC_BOOT__ = {"assetVersion":"3c6b4cfac73b-080123","builtAt":"2026-09-27T08:02:35.060Z","deploymentMode":"pages-static","boardLabel":"SNAPSHOT BOARD","pagesUrl":"https://kuching.nonarkara.org/","liveUrl":"https://kuching.nonarkara.org/"};</script>
+    <!-- Typography per 25 Sep 2026 decision: Helvetica + Georgia system stacks.
+         No Google Fonts request — no third-party font leak, tokens in styles.css. -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="" />
+    <link rel="stylesheet" href="./styles.css?v=742a78094d7b-085101" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin=""></script>
+    <script>window.__IOC_BOOT__ = {"version":"0.2.0","assetVersion":"742a78094d7b-085101","builtAt":null,"deploymentMode":"pages-static","boardLabel":"SNAPSHOT BOARD","pagesUrl":"https://kuching.nonarkara.org/","liveUrl":"https://kuching.nonarkara.org/"};</script>
   </head>
   <body>
     <div class="dashboard-shell">
@@ -92,9 +91,11 @@
       </section>
 
       <!-- INSIGHTS · what the data says (computed connections, not decoration) -->
-<section id="insightsBar" class="insights-bar" aria-label="Insights">
-  <div class="insights-bar-inner"></div>
-</section><section id="metricBand" class="metric-band"></section>
+      <section id="insightsBar" class="insights-bar" aria-label="Insights">
+        <div class="insights-bar-inner"></div>
+      </section>
+
+      <section id="metricBand" class="metric-band"></section>
 
       
 <main class="board-grid war-room">
@@ -372,23 +373,10 @@
         </footer>
       </div>
     </div>
-    <script src="./app.js?v=3c6b4cfac73b-080123" type="module"></script>
+    <script src="./app.js?v=742a78094d7b-085101" type="module"></script>
 
-  <!-- NON visitor tracker — fire-and-forget, no cookies -->
-  <script>
-  (function(){
-    if(sessionStorage.getItem('non_v'))return;
-    sessionStorage.setItem('non_v','1');
-    var SH='https://script.google.com/macros/s/AKfycbwzTwBNOseKkvkkjD-LH6B3GWrsFcwS6MTDbn7W5eb3zHxA-swtlHYuwJ3w5PAVXDhU7Q/exec';
-    var b={dashboard:'KUCHING',hostname:location.hostname,page:location.href,
-      referrer:document.referrer||'Direct',userAgent:navigator.userAgent,
-      language:navigator.language,screen:screen.width+'x'+screen.height,
-      timezone:Intl.DateTimeFormat().resolvedOptions().timeZone};
-    function send(p){fetch(SH,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(p)}).catch(function(){});}
-    fetch('https://ipapi.co/json/').then(function(r){return r.json();}).then(function(d){
-      b.ip=d.ip;b.country=d.country_name;b.region=d.region;b.city=d.city;send(b);
-    }).catch(function(){send(b);});
-  })();
-  </script>
+    <!-- Visitor beacon removed 28 Sep 2026: the Apps Script endpoint returned
+         401 (collecting nothing) while still egressing visitor IP/geo to
+         ipapi.co. Re-add only with a working endpoint + privacy note. -->
   </body>
 </html>

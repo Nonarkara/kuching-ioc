@@ -2439,6 +2439,11 @@ const APIMS_STATIONS = [
 async function loadApimsAqi() {
   return cached("apims-ground-aq", 15 * 60 * 1000, async () => {
     const token = process.env.AQICN_TOKEN || "demo";
+    const tokenMode = token === "demo" ? "demo" : "configured";
+    // The WAQI mirror is a CORS-friendly aggregator that re-publishes the
+    // DOE APIMS station feed. The demo token is rate-limited and frequently
+    // returns a generic station (Shanghai) instead of the requested city —
+    // we must detect that and refuse to label the result as ground truth.
     const results = await Promise.all(
       APIMS_STATIONS.map(async (station) => {
         try {
@@ -2450,21 +2455,29 @@ async function loadApimsAqi() {
           const d = data.data;
           const iaqi = d.iaqi || {};
           const geo = Array.isArray(d.city?.geo) ? d.city.geo : [];
+          const cityName = (d.city?.name || "").toString().toLowerCase();
+          // Reject responses that don't match the requested station — the
+          // demo token returns "Shanghai" for anything it cannot resolve,
+          // which previously surfaced as a fake Sarawak AQI.
+          const isMatch =
+            cityName.includes(station.label.toLowerCase()) ||
+            cityName.includes(station.query.toLowerCase());
           const aqi = Number.isFinite(d.aqi) ? Math.round(d.aqi) : null;
           return {
             ...station,
-            status: aqi == null ? "offline" : "live",
-            aqi,
-            band: aqi == null ? null : aqiBand(aqi),
-            pm25: iaqi.pm25?.v != null ? round(iaqi.pm25.v, 1) : null,
-            pm10: iaqi.pm10?.v != null ? round(iaqi.pm10.v, 1) : null,
-            o3: iaqi.o3?.v != null ? round(iaqi.o3.v, 1) : null,
-            no2: iaqi.no2?.v != null ? round(iaqi.no2.v, 1) : null,
-            dominant: d.dominentpol || null,
+            status: aqi == null || !isMatch ? "degraded" : "live",
+            aqi: isMatch ? aqi : null,
+            band: isMatch && aqi != null ? aqiBand(aqi) : null,
+            pm25: isMatch && iaqi.pm25?.v != null ? round(iaqi.pm25.v, 1) : null,
+            pm10: isMatch && iaqi.pm10?.v != null ? round(iaqi.pm10.v, 1) : null,
+            o3: isMatch && iaqi.o3?.v != null ? round(iaqi.o3.v, 1) : null,
+            no2: isMatch && iaqi.no2?.v != null ? round(iaqi.no2.v, 1) : null,
+            dominant: isMatch ? d.dominentpol || null : null,
             stationName: station.label,
-            lat: geo[0] ?? null,
-            lon: geo[1] ?? null,
-            observedAt: d.time?.iso || null,
+            resolvedCityName: d.city?.name || null,
+            lat: isMatch && geo.length ? geo[0] : null,
+            lon: isMatch && geo.length ? geo[1] : null,
+            observedAt: isMatch ? d.time?.iso || null : null,
           };
         } catch (error) {
           return { ...station, status: "offline", aqi: null, error: error.message };
@@ -2476,16 +2489,30 @@ async function loadApimsAqi() {
     const worst = live.reduce((acc, r) => (acc == null || (r.aqi ?? 0) > (acc.aqi ?? 0) ? r : acc), null);
 
     return {
-      status: live.length > 0 ? "live" : "offline",
+      status: live.length > 0 ? (tokenMode === "demo" ? "demo" : "live") : "offline",
       updatedAt: nowIso(),
-      source: "DOE APIMS via aqicn.org",
-      tokenMode: token === "demo" ? "demo" : "configured",
+      // Cite the authoritative DOE portal; the WAQI mirror is only an
+      // aggregator. Secretary Goh can read the live readings for any of the
+      // 65 APIMS stations (including Sarawak: Kuching, Sibu, Bintulu, Miri,
+      // Limbang, ILP Miri) at https://eqms.doe.gov.my/APIMS/main.
+      source: "DOE JAS APIMS — eqms.doe.gov.my",
+      sourceUrl: "https://eqms.doe.gov.my/APIMS/main",
+      mirror: "WAQI aqicn.org aggregator",
+      tokenMode,
+      // The APIMS network has 65 stations across Malaysia; no APIMS station
+      // sits inside MPP (Padawan) proper. Closest ground coverage is the
+      // Kuching station (covers DBKU / MBKS) and the Samarahan station
+      // (eastern neighbour). MPP-specific air quality falls back to the
+      // Open-Meteo modelled series until DOE extends the network.
+      coverageNote: "APIMS has no Padawan-located station; nearest ground coverage is Kuching (covers MBKS/DBKU) and Samarahan. See eqms.doe.gov.my/APIMS/main for the official live readings.",
       stations: results,
       worst,
       summary:
         live.length > 0
           ? `${live.length}/${results.length} ground stations reporting. Worst: ${worst?.stationName} AQI ${worst?.aqi} (${worst?.band?.label || "n/a"}).`
-          : "Ground-truth AQ feeds degraded — falling back to Open-Meteo modelled values.",
+          : tokenMode === "demo"
+            ? "DOE APIMS ground-truth feed requires an AQICN_TOKEN; falling back to Open-Meteo modelled values. Set AQICN_TOKEN in the GitHub Actions secret store to enable live Sarawak APIMS readings (eqms.doe.gov.my)."
+            : "Ground-truth AQ feeds degraded — falling back to Open-Meteo modelled values.",
     };
   });
 }
@@ -4146,10 +4173,12 @@ async function buildDashboard() {
       ),
       sourceRecord(
         "doe-apims",
-        "DOE APIMS (via aqicn.org)",
+        "DOE JAS APIMS — eqms.doe.gov.my",
         apims.status,
-        apims.summary,
-        "https://eqms.doe.gov.my",
+        apims.coverageNote
+          ? `${apims.summary} ${apims.coverageNote}`
+          : apims.summary,
+        apims.sourceUrl || "https://eqms.doe.gov.my/APIMS/main",
         apims.updatedAt || generatedAt,
       ),
       sourceRecord(

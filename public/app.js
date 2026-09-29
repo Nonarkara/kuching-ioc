@@ -785,12 +785,13 @@ async function buildFallbackDashboard() {
     exchange,
     fires, quakes,
     govStats: {
-      status: "fallback", year: 2024,
-      latestSarawakPop: "2,907,500",
-      datasetCount: 142,
+      status: "unavailable", year: null,
+      latestSarawakPop: null,
+      datasetCount: null,
       updatedAt: gen,
       districts: [],
     },
+    mppService: { status: "unavailable", source: "mpp.sarawak.gov.my" },
     metWarnings: {
       status: "fallback",
       activeCount: 0,
@@ -3027,21 +3028,46 @@ function renderOfficialPulse(payload) {
   el.innerHTML = `
     <div class="official-pulse-block">
       <div class="pulse-header">
-        <span class="pulse-label">${t("officialPulse")} · ${gov.year}</span>
+        <span class="pulse-label">${t("officialPulse")}${gov.year ? ` · ${escapeHtml(gov.year)}` : ""}</span>
         <div class="pulse-indicator"></div>
       </div>
       <div class="pulse-metagrid">
         <div class="pulse-stat">
-          <strong>${num(gov.latestSarawakPop, 0)}</strong>
-          <span>People in Sarawak</span>
+          <strong>${gov.latestSarawakPop != null ? num(gov.latestSarawakPop, 0) : "—"}</strong>
+          <span>${t("pulsePeople")}${gov.latestSarawakPop != null ? " · OpenDOSM" : ""}</span>
         </div>
         <div class="pulse-stat">
-          <strong>${gov.datasetCount || 0}</strong>
-          <span>Open datasets</span>
+          <strong>${gov.datasetCount != null ? num(gov.datasetCount, 0) : "—"}</strong>
+          <span>${t("pulseDatasets")}</span>
         </div>
       </div>
       ${districtChips}
-    </div>`;
+    </div>
+    ${renderMppLedger(payload.mppService)}`;
+}
+
+// MPP's own published service numbers. Each stat links to the page it came from;
+// a section that failed to scrape is simply absent, never zero.
+function renderMppLedger(ledger) {
+  const head = `<div class="pulse-header"><span class="pulse-label">${t("mppLedger")}</span></div>`;
+  if (!ledger || ledger.status !== "live") {
+    return `<div class="official-pulse-block">${head}<p class="pulse-note">${t("ledgerMissing")} <a href="https://mpp.sarawak.gov.my/" target="_blank" rel="noopener noreferrer">mpp.sarawak.gov.my ↗</a></p></div>`;
+  }
+  const stat = (part, value, label) => part && part.status !== "unavailable" && value != null
+    ? `<a class="pulse-stat" href="${escapeHtml(part.url)}" target="_blank" rel="noopener noreferrer"><strong>${value}</strong><span>${label}</span></a>` : "";
+  const c = ledger.charter, q = c?.quarters?.find((x) => x.label === c.latestQuarter);
+  const tn = ledger.tenders, f = ledger.food, r = ledger.refuse, pk = ledger.parks, m = ledger.markets;
+  const stats = [
+    stat(c, q?.score != null ? `${q.score}%` : null, `${t("ledgerCharter")} · ${escapeHtml(c?.latestQuarter || "")}`),
+    stat(tn, tn?.active, `${t("ledgerTenders")}${tn?.nextClosing ? ` · ${t("ledgerNextClose")} ${escapeHtml(tn.nextClosing)}` : ""}`),
+    stat(f, f?.gradeA, `${t("ledgerFood")}${f?.latestInspection ? ` · ${escapeHtml(f.latestInspection)}` : ""}`),
+    stat(r, r?.zones, `${t("ledgerRefuse")}${r?.year ? ` · ${escapeHtml(r.year)}` : ""}`),
+    stat(pk, pk?.count, `${t("ledgerParks")}${pk?.areaSqm ? ` · ${num(pk.areaSqm / 10000, 1)} ha` : ""}`),
+    stat(m, m?.items?.length || null, t("ledgerMarkets")),
+  ].join("");
+  const weak = c?.weakest?.length
+    ? `<p class="pulse-note">${t("ledgerWeakest")}: ${c.weakest.map((w) => `#${w.no} ${w.score}%`).join(" · ")}${c.updated ? ` · MPP ${escapeHtml(c.updated)}` : ""}</p>` : "";
+  return `<div class="official-pulse-block">${head}<div class="pulse-metagrid">${stats}</div>${weak}</div>`;
 }
 
 // --- MPP governance: councillor roster + locality explorer -------------------
@@ -4004,7 +4030,7 @@ function renderCatchmentStory(station) {
   };
   const soilClause = amc && soilText[amc.class]?.[lang] ? soilText[amc.class][lang] : null;
 
-  let why;
+  let why, whyIsBrief = false;
   if (sealed != null && soilClause) {
     if (lang === "ms") {
       why = `<span class="cs-num">${sealed}%</span> daripada tadahan ini ialah permukaan kedap, jadi hujan sampai ke tolok ${arrival}. ${soilClause}`;
@@ -4023,6 +4049,7 @@ function renderCatchmentStory(station) {
     }
   } else if (station.humanBrief) {
     why = escapeHtml(station.humanBrief);
+    whyIsBrief = true;
   } else {
     why = lang === "ms" ? `<em>Tiada model tadahan untuk tolok ini — bacaan adalah telemetri sahaja.</em>`
       : lang === "zh" ? `<em>此站点暂无集水区模型——仅显示遥测读数。</em>`
@@ -4069,10 +4096,32 @@ function renderCatchmentStory(station) {
       <div class="cs-row-body">${body}</div>
     </div>`;
 
+  // Every generated phrase in the card, per language. Station notes written by
+  // hand (why / exposure / last event) stay in their original English.
+  const L = {
+    en: { noReading: "no live reading", alertAt: "Alert at", bands: { normal: "Normal", alert: "Alert", warning: "Warning", danger: "Danger", reference: "Reference" },
+      rainP90: "rain p90", risk: "risk", arrivesNow: "arrives now", lag: "lag", notTimesfm: "not in the TimesFM catchment set — telemetry only",
+      forecastRain: "forecast rain / 6 h", segments: "segments", reach: "connected drainage reach → this gauge.", geomNote: "Geometry shows connection, not flow direction, flood arrival, or inundation.",
+      pathLoading: "Loading public drainage geometry for this water-path context…", pathMissing: "Public drainage geometry is unavailable for this gauge. The level remains a JPS/iHYDRO observation.",
+      notSurveyed: "exposure not yet surveyed for this gauge", curatedEst: "curated estimate · not an official survey", curatedNote: "curated note · verify with DID", originalEn: "" },
+    ms: { noReading: "tiada bacaan langsung", alertAt: "Waspada pada", bands: { normal: "Normal", alert: "Waspada", warning: "Amaran", danger: "Bahaya", reference: "Rujukan" },
+      rainP90: "hujan p90", risk: "risiko", arrivesNow: "tiba sekarang", lag: "sela", notTimesfm: "tiada dalam set tadahan TimesFM — telemetri sahaja",
+      forecastRain: "ramalan hujan / 6 jam", segments: "segmen", reach: "jangkauan saliran bersambung → tolok ini.", geomNote: "Geometri menunjukkan sambungan, bukan arah aliran, ketibaan banjir atau kawasan dinaiki air.",
+      pathLoading: "Memuatkan geometri saliran awam untuk laluan air ini…", pathMissing: "Geometri saliran awam tiada untuk tolok ini. Paras air kekal sebagai pemerhatian JPS/iHYDRO.",
+      notSurveyed: "pendedahan belum ditinjau untuk tolok ini", curatedEst: "anggaran kurasi · bukan tinjauan rasmi", curatedNote: "nota kurasi · sahkan dengan JPS", originalEn: "nota asal dalam bahasa Inggeris" },
+    zh: { noReading: "暂无实时读数", alertAt: "警戒水位", bands: { normal: "正常", alert: "警戒", warning: "警告", danger: "危险", reference: "参考" },
+      rainP90: "降雨 p90", risk: "风险", arrivesNow: "即时到达", lag: "滞后", notTimesfm: "不在 TimesFM 集水区模型内——仅遥测读数",
+      forecastRain: "预测降雨 / 6 小时", segments: "段", reach: "相连排水渠 → 本水位站。", geomNote: "几何线仅表示连接关系，不代表水流方向、洪水到达或淹水范围。",
+      pathLoading: "正在加载此水流路径的公共排水几何数据…", pathMissing: "此水位站暂无公共排水几何数据。水位仍以 JPS/iHYDRO 观测为准。",
+      notSurveyed: "此水位站尚未调查受影响范围", curatedEst: "整理估算 · 非官方调查", curatedNote: "整理记录 · 请向水利灌溉局核实", originalEn: "原始记录为英文" },
+  }[lang] || null;
+  const Lx = L || { noReading: "no live reading" };
+  const tagEn = (html) => Lx.originalEn ? `${html} <span class="cs-curated">${Lx.originalEn}</span>` : html;
   const level = station.waterLevelM != null
     ? `<span class="cs-num">${station.waterLevelM} m</span>`
-    : `<em>no live reading</em>`;
-  const alertAt = station.thresholds?.alert != null ? ` · Alert at ${station.thresholds.alert} m` : "";
+    : `<em>${Lx.noReading}</em>`;
+  const alertAt = station.thresholds?.alert != null ? ` · ${Lx.alertAt} ${station.thresholds.alert} m` : "";
+  const bandText = Lx.bands?.[band] || station.bandLabel || band;
 
   const sealedLabel = lang === "ms" ? "permukaan kedap di hulu" : lang === "zh" ? "上游硬化地表" : "sealed upstream";
   const soilLabel = lang === "ms" ? "tanah" : lang === "zh" ? "土壤" : "soil";
@@ -4082,14 +4131,14 @@ function renderCatchmentStory(station) {
     : `<em>${lang === "ms" ? "tiada model tadahan untuk tolok ini" : lang === "zh" ? "暂无集水区模型" : "no catchment model for this gauge"}</em>`;
 
   const next = fc
-    ? `rain p90 <span class="cs-num">${fc.cumulative_p90_mm?.day4 ?? "—"} mm</span>/4d · risk ${(risk?.band || "—").toUpperCase()} ${risk?.pct ?? "—"}%${lag === 0 ? " · arrives now" : lag != null ? ` · lag +${lag}h` : ""}`
-    : `<em>not in the TimesFM catchment set — telemetry only</em>`;
+    ? `${Lx.rainP90} <span class="cs-num">${fc.cumulative_p90_mm?.day4 ?? "—"} mm</span>/4d · ${Lx.risk} ${(risk?.band || "—").toUpperCase()} ${risk?.pct ?? "—"}%${lag === 0 ? ` · ${Lx.arrivesNow}` : lag != null ? ` · ${Lx.lag} +${lag}h` : ""}`
+    : `<em>${Lx.notTimesfm}</em>`;
 
   const waterPath = path?.status === "snapped"
-    ? `${observedRain?.value != null ? `<span class="cs-num">${escapeHtml(observedRain.value)} mm</span> forecast rain / 6 h → ` : ""}<span class="cs-num">${path.segmentCount} segments · ${path.totalLengthKm} km</span> connected drainage reach → this gauge. <em>Geometry shows connection, not flow direction, flood arrival, or inundation.</em>`
+    ? `${observedRain?.value != null ? `<span class="cs-num">${escapeHtml(observedRain.value)} mm</span> ${Lx.forecastRain} → ` : ""}<span class="cs-num">${path.segmentCount} ${Lx.segments} · ${path.totalLengthKm} km</span> ${Lx.reach} <em>${Lx.geomNote}</em>`
     : path?.status === "loading"
-      ? `<em>Loading public drainage geometry for this water-path context…</em>`
-      : `<em>Public drainage geometry is unavailable for this gauge. The level remains a JPS/iHYDRO observation.</em>`;
+      ? `<em>${Lx.pathLoading}</em>`
+      : `<em>${Lx.pathMissing}</em>`;
 
   const sources = ["JPS/iHYDRO", path?.status === "snapped" ? "OpenStreetMap drainage (reference geometry)" : null, observedRain ? "Open-Meteo rain" : null, zone ? "AlphaEarth" : null, fc ? "TimesFM" : null, councillor ? "MPP roster" : null]
     .filter(Boolean).join(" · ");
@@ -4104,14 +4153,14 @@ function renderCatchmentStory(station) {
       <button type="button" class="cs-close" aria-label="${t("csClose")}">✕</button>
     </div>
     <div class="cs-rows">
-      ${row(t("csGauge"), `${level} · ${escapeHtml(station.bandLabel || band)}${alertAt}`)}
+      ${row(t("csGauge"), `${level} · ${escapeHtml(bandText)}${alertAt}`)}
       ${row(t("csGround"), ground)}
       ${row(t("csPath"), waterPath)}
-      ${row(t("csExposed"), station.affectedEstimate ? `${escapeHtml(station.affectedEstimate)} <span class="cs-curated">curated estimate · not an official survey</span>` : `<em>exposure not yet surveyed for this gauge</em>`)}
+      ${row(t("csExposed"), station.affectedEstimate ? `${tagEn(escapeHtml(station.affectedEstimate))} <span class="cs-curated">${Lx.curatedEst}</span>` : `<em>${Lx.notSurveyed}</em>`)}
       ${row(t("csNext"), next)}
-      ${row(t("csWhy"), why)}
+      ${row(t("csWhy"), whyIsBrief ? tagEn(why) : why)}
       ${row(t("csAct"), act)}
-      ${station.lastEvent ? row(t("csLast"), `<em>${escapeHtml(station.lastEvent)}</em> <span class="cs-curated">curated note · verify with DID</span>`) : ""}
+      ${station.lastEvent ? row(t("csLast"), `${tagEn(`<em>${escapeHtml(station.lastEvent)}</em>`)} <span class="cs-curated">${Lx.curatedNote}</span>`) : ""}
       <div class="cs-src">${sources}</div>
     </div>`;
 
@@ -4403,6 +4452,7 @@ function setLang(lang) {
     renderInsights(state.payload);
     renderPosture(state.payload);
     if (state.lastMetrics) renderMetrics(state.lastMetrics);
+    renderOfficialPulse(state.payload);
     renderMppLocalities(state.payload);
     renderMppServicesDirectory();
     if (state.activeWard) {

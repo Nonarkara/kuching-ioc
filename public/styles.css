@@ -4821,3 +4821,25 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
   .partner-row { justify-content: space-between; flex-wrap: nowrap; }
   .partner-row img { height: 26px; }
 }
+
+/* MPP service ledger (ported from codex/mpp-trilingual-review) */
+a.pulse-stat {
+  min-height: 44px;
+  justify-content: center;
+  color: inherit;
+  text-decoration: none;
+  border-left: 1px solid var(--line);
+  padding-left: 8px;
+}
+
+a.pulse-stat:hover strong,
+a.pulse-stat:focus-visible strong {
+  color: var(--cyan);
+}
+
+.pulse-note {
+  font-size: 8px;
+  color: var(--soft);
+  margin: 6px 0 0;
+  line-height: 1.5;
+}

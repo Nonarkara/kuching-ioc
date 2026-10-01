@@ -4580,6 +4580,9 @@ function renderScopeToggle() {
   if (pill) {
     pill.dataset.scope = state.scope;
     pill.textContent = SCOPES[state.scope].pill[state.lang] || SCOPES[state.scope].pill.en;
+    pill.addEventListener("click", () => {
+      setScope(state.scope === "padawan" ? "greater_kuching" : "padawan");
+    });
   }
   document.querySelectorAll(".scope-btn").forEach(b => {
     b.classList.toggle("active", b.dataset.scope === state.scope);

@@ -3,6 +3,8 @@ node_modules
 npm-debug.log*
 .claude/
 .fly/
+.deep-research/
+.worktrees/
 sa-key.json
 
 # IOC 2.0 foundation-model pipelines — local Python venvs + raw GeoTIFFs are

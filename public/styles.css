@@ -164,6 +164,7 @@ body::before {
   background: transparent;
   transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
   white-space: nowrap;
+  cursor: pointer;
 }
 .scope-pill[data-scope="padawan"] {
   color: #b48a00;

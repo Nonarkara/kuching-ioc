@@ -1310,7 +1310,12 @@ async function loadWeather() {
     "daily",
     ["temperature_2m_max", "temperature_2m_min", "uv_index_max", "sunrise", "sunset", "precipitation_sum"].join(","),
   );
-  url.searchParams.set("forecast_hours", "12");
+  // NOTE: do NOT set forecast_hours here. It truncates hourly to only the next
+  // N hours and drops past_days, so the array no longer contains the current
+  // hour — which both emptied nextHours (rain6h read a false 0mm) and made the
+  // anchored past-24h window impossible to slice. past_days=1 + forecast_days=2
+  // yields 72 hourly points spanning yesterday 00:00 → day-after 23:00, which
+  // is exactly what the nowIdx-anchored windows below need.
   url.searchParams.set("past_days", "1");
   url.searchParams.set("forecast_days", "2");
   url.searchParams.set("timezone", "auto");
@@ -1321,37 +1326,79 @@ async function loadWeather() {
     const hourly = payload.hourly ?? {};
     const daily = payload.daily ?? {};
 
-    // Get the last 24 hours of data for history
-    const history = (hourly.temperature_2m ?? []).slice(0, 24);
+    // Audit #11: schema validation. A syntactically valid but incomplete
+    // payload must not become an apparently favourable "live" snapshot. Every
+    // field the return reads must be present and finite; windows are anchored
+    // to current.time so "next 6h" and "past 24h" are real clock hours —
+    // fixed array offsets silently went empty when upstream truncated hourly
+    // to 12 points, and the board then reported 0mm as a fact.
+    const missing = [];
+    const need = (ok, name) => { if (!ok) missing.push(name); };
+    need(Number.isFinite(current.temperature_2m), "current.temperature_2m");
+    need(Number.isFinite(current.apparent_temperature), "current.apparent_temperature");
+    need(Number.isFinite(current.relative_humidity_2m), "current.relative_humidity_2m");
+    need(Number.isFinite(current.wind_speed_10m), "current.wind_speed_10m");
+    need(Number.isFinite(current.precipitation), "current.precipitation");
+    need(Number.isFinite(current.cloud_cover), "current.cloud_cover");
+    need(Number.isFinite(current.weather_code), "current.weather_code");
+    need(Number.isFinite(current.pressure_msl), "current.pressure_msl");
+    const times = Array.isArray(hourly.time) ? hourly.time : [];
+    const nowIdx = typeof current.time === "string" ? times.indexOf(current.time) : -1;
+    need(nowIdx >= 24, "hourly.time[now-24]");
+    const nextWin = (a) => Array.isArray(a) && a.slice(nowIdx, nowIdx + 6).every(Number.isFinite);
+    const pastWin = (a) => Array.isArray(a) && a.slice(nowIdx - 24, nowIdx).every(Number.isFinite);
+    need(nowIdx + 6 <= times.length, "hourly.time[now+6]");
+    need(nextWin(hourly.temperature_2m), "hourly.temperature_2m[now+6]");
+    need(nextWin(hourly.precipitation), "hourly.precipitation[now+6]");
+    need(nextWin(hourly.precipitation_probability), "hourly.precipitation_probability[now+6]");
+    need(pastWin(hourly.temperature_2m), "hourly.temperature_2m[past24]");
+    const days = Array.isArray(daily.time) ? daily.time : [];
+    const dIdx = typeof current.time === "string" ? days.indexOf(current.time.slice(0, 10)) : -1;
+    need(dIdx >= 0, "daily.time[today]");
+    const dOk = (a) => Array.isArray(a) && Number.isFinite(a[dIdx]);
+    need(dOk(daily.temperature_2m_max), "daily.temperature_2m_max[today]");
+    need(dOk(daily.temperature_2m_min), "daily.temperature_2m_min[today]");
+    need(dOk(daily.precipitation_sum), "daily.precipitation_sum[today]");
+    need(dOk(daily.uv_index_max), "daily.uv_index_max[today]");
+    need(Array.isArray(daily.sunrise) && typeof daily.sunrise[dIdx] === "string", "daily.sunrise[today]");
+    need(Array.isArray(daily.sunset) && typeof daily.sunset[dIdx] === "string", "daily.sunset[today]");
+    if (missing.length > 0) {
+      const fb = buildWeatherFallback();
+      return { ...fb, status: "degraded", degradedFields: missing };
+    }
+
+    // True trailing 24 hours of observed hourly temperatures (for the sparkline).
+    const history = hourly.temperature_2m.slice(nowIdx - 24, nowIdx);
+    const nextHours = times.slice(nowIdx, nowIdx + 6).map((time, i) => ({
+      time: String(time).slice(11, 16),
+      precipitationMm: round(hourly.precipitation[nowIdx + i], 1),
+      rainChance: Math.round(hourly.precipitation_probability[nowIdx + i]),
+      temperatureC: round(hourly.temperature_2m[nowIdx + i], 1),
+    }));
 
     return {
       status: "live",
       updatedAt: nowIso(),
       current: {
-        temperatureC: round(current.temperature_2m ?? 0, 1),
-        apparentTemperatureC: round(current.apparent_temperature ?? 0, 1),
-        humidity: Math.round(current.relative_humidity_2m ?? 0),
-        windKph: round(current.wind_speed_10m ?? 0, 1),
-        precipitationMm: round(current.precipitation ?? 0, 1),
-        cloudCover: Math.round(current.cloud_cover ?? 0),
-        weatherLabel: weatherCodeLabel(Number(current.weather_code ?? 0)),
-        pressureHpa: round(current.pressure_msl ?? 0, 1),
+        temperatureC: round(current.temperature_2m, 1),
+        apparentTemperatureC: round(current.apparent_temperature, 1),
+        humidity: Math.round(current.relative_humidity_2m),
+        windKph: round(current.wind_speed_10m, 1),
+        precipitationMm: round(current.precipitation, 1),
+        cloudCover: Math.round(current.cloud_cover),
+        weatherLabel: weatherCodeLabel(Number(current.weather_code)),
+        pressureHpa: round(current.pressure_msl, 1),
       },
-      nextHours: (hourly.time ?? []).slice(24, 30).map((time, index) => ({
-        time: String(time).slice(11, 16),
-        precipitationMm: round(hourly.precipitation?.[index + 24] ?? 0, 1),
-        rainChance: Math.round(hourly.precipitation_probability?.[index + 24] ?? 0),
-        temperatureC: round(hourly.temperature_2m?.[index + 24] ?? 0, 1),
-      })),
+      nextHours,
       daily: {
-        maxC: round(daily.temperature_2m_max?.[1] ?? 0, 1),
-        minC: round(daily.temperature_2m_min?.[1] ?? 0, 1),
-        rainTotalMm: round(daily.precipitation_sum?.[1] ?? 0, 1),
-        uvIndexMax: round(daily.uv_index_max?.[1] ?? 0, 1),
-        sunrise: String(daily.sunrise?.[1] ?? "").slice(11, 16),
-        sunset: String(daily.sunset?.[1] ?? "").slice(11, 16),
+        maxC: round(daily.temperature_2m_max[dIdx], 1),
+        minC: round(daily.temperature_2m_min[dIdx], 1),
+        rainTotalMm: round(daily.precipitation_sum[dIdx], 1),
+        uvIndexMax: round(daily.uv_index_max[dIdx], 1),
+        sunrise: String(daily.sunrise[dIdx]).slice(11, 16),
+        sunset: String(daily.sunset[dIdx]).slice(11, 16),
       },
-      history: history.length > 0 ? history : buildWeatherFallback().history,
+      history,
     };
   } catch {
     return buildWeatherFallback();
@@ -1391,18 +1438,51 @@ async function loadAirQuality() {
     ["us_aqi", "pm2_5", "pm10", "ozone", "nitrogen_dioxide"].join(","),
   );
   url.searchParams.set("hourly", ["us_aqi", "pm2_5"].join(","));
-  url.searchParams.set("forecast_hours", "24");
+  // NOTE: do NOT set forecast_hours — it drops past_days, emptying the
+  // anchored past-24h window (and previously left nextHours permanently []).
   url.searchParams.set("past_days", "1");
   url.searchParams.set("timezone", "auto");
 
   try {
     const payload = await fetchJson(url.toString());
     const current = payload.current ?? {};
-    const aqi = Math.round(current.us_aqi ?? 0);
     const hourly = payload.hourly ?? {};
 
-    // History is the first 24 points (past 24h)
-    const history = (hourly.us_aqi ?? []).slice(0, 24).map((v) => Math.round(v));
+    // Audit #11: schema validation. Refuse to label the snapshot "live" if
+    // any required reading is missing or non-finite — fall back to the
+    // labelled stub with the failing field list so the operator sees that
+    // a quiet AQI is not a real measurement. Every field the return reads
+    // is checked; optional-looking pollutants were requested in the URL, so
+    // a missing one means the upstream response is incomplete, not "clean".
+    // Windows are anchored to current.time, mirroring loadWeather.
+    const missing = [];
+    const need = (ok, name) => { if (!ok) missing.push(name); };
+    need(Number.isFinite(current.us_aqi), "current.us_aqi");
+    need(Number.isFinite(current.pm2_5), "current.pm2_5");
+    need(Number.isFinite(current.pm10), "current.pm10");
+    need(Number.isFinite(current.ozone), "current.ozone");
+    need(Number.isFinite(current.nitrogen_dioxide), "current.nitrogen_dioxide");
+    const times = Array.isArray(hourly.time) ? hourly.time : [];
+    const nowIdx = typeof current.time === "string" ? times.indexOf(current.time) : -1;
+    need(nowIdx >= 24, "hourly.time[now-24]");
+    need(nowIdx + 6 <= times.length, "hourly.time[now+6]");
+    const nextWin = (a) => Array.isArray(a) && a.slice(nowIdx, nowIdx + 6).every(Number.isFinite);
+    const pastWin = (a) => Array.isArray(a) && a.slice(nowIdx - 24, nowIdx).every(Number.isFinite);
+    need(nextWin(hourly.us_aqi), "hourly.us_aqi[now+6]");
+    need(nextWin(hourly.pm2_5), "hourly.pm2_5[now+6]");
+    need(pastWin(hourly.us_aqi), "hourly.us_aqi[past24]");
+    if (missing.length > 0) {
+      const fb = buildAirFallback();
+      return { ...fb, status: "degraded", degradedFields: missing };
+    }
+
+    const aqi = Math.round(current.us_aqi);
+    const history = hourly.us_aqi.slice(nowIdx - 24, nowIdx).map((v) => Math.round(v));
+    const nextHours = times.slice(nowIdx, nowIdx + 6).map((time, i) => ({
+      time: String(time).slice(11, 16),
+      aqi: Math.round(hourly.us_aqi[nowIdx + i]),
+      pm25: round(hourly.pm2_5[nowIdx + i], 1),
+    }));
 
     return {
       status: "live",
@@ -1410,17 +1490,13 @@ async function loadAirQuality() {
       current: {
         aqi,
         band: aqiBand(aqi),
-        pm25: round(current.pm2_5 ?? 0, 1),
-        pm10: round(current.pm10 ?? 0, 1),
-        ozone: round(current.ozone ?? 0, 1),
-        no2: round(current.nitrogen_dioxide ?? 0, 1),
+        pm25: round(current.pm2_5, 1),
+        pm10: round(current.pm10, 1),
+        ozone: round(current.ozone, 1),
+        no2: round(current.nitrogen_dioxide, 1),
       },
-      nextHours: (hourly.time ?? []).slice(24, 30).map((time, index) => ({
-        time: String(time).slice(11, 16),
-        aqi: Math.round(hourly.us_aqi?.[index + 24] ?? 0),
-        pm25: round(hourly.pm2_5?.[index + 24] ?? 0, 1),
-      })),
-      history: history.length > 0 ? history : buildAirFallback().history,
+      nextHours,
+      history,
     };
   } catch {
     return buildAirFallback();
@@ -3296,7 +3372,13 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
   // turns the board from "what's happening" into "what's coming". Thresholds are
   // deliberately conservative — fires only when the worst-case curve escalates
   // meaningfully (Nonism §12.5: surface worst case, act on lead time, don't alarm).
-  if (forecast?.series) {
+  //
+  // Audit #8: a stale forecast (server-side marked >48h old or p90 derived from
+  // an outdated lastValue) MUST NOT generate "Do this today" directives. A STALE
+  // badge on a separate panel does not protect downstream action advice; suppress
+  // here instead of relying on the renderer to skip the item.
+  const forecastFresh = forecast && forecast.status === "live" && forecast.series;
+  if (forecastFresh) {
     const dis = forecast.series.river_discharge;
     if (Array.isArray(dis?.quantiles?.p90) && dis.quantiles.p90.length) {
       const peak = Math.max(...dis.quantiles.p90);

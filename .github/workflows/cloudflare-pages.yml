@@ -4,6 +4,18 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    # Audit #2: production serves a baked snapshot; without a refresh cadence
+    # gauges, warnings and AQI go stale between pushes — unacceptable during
+    # flood and haze season. Rebuild every 30 minutes from the default branch
+    # (off the :00/:30 marks to dodge GitHub's congested cron slots).
+    - cron: "13,43 * * * *"
+
+# Never run two builds/deploys at once — a push racing the cron would publish
+# two snapshots out of order.
+concurrency:
+  group: kuching-ioc-pages
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -18,6 +30,10 @@ jobs:
         with:
           node-version: 20
       - run: npm ci || npm install
+      # Audit #6: tests must gate the deploy — a green test suite is the
+      # minimum acceptance threshold before bytes reach the live site.
+      - name: Run tests
+        run: node --test tests/*.test.mjs
       - run: node build.mjs
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3

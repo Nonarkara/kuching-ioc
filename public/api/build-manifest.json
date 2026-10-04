@@ -1,8 +1,8 @@
 {
-  "builtAt": "2026-09-29T11:00:47.138Z",
-  "buildDurationMs": 73584,
-  "dashboardSizeKb": 323,
-  "assetVersion": "83e86bfb0ffc-105933",
+  "builtAt": "2026-10-03T06:07:33.889Z",
+  "buildDurationMs": 132401,
+  "dashboardSizeKb": 322,
+  "assetVersion": "0be913784801-060521",
   "deploymentMode": "pages-static",
   "boardLabel": "SNAPSHOT BOARD",
   "pagesUrl": "https://kuching.nonarkara.org/",
@@ -26,7 +26,7 @@
     {
       "id": "flood_risk",
       "status": "fulfilled",
-      "features": 34
+      "features": 33
     },
     {
       "id": "flood_zones",

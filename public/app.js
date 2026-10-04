@@ -531,17 +531,37 @@ async function loadWeather() {
   u.searchParams.set("current","temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,weather_code,cloud_cover,pressure_msl");
   u.searchParams.set("hourly","temperature_2m,precipitation_probability,precipitation");
   u.searchParams.set("daily","temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset,precipitation_sum");
-  u.searchParams.set("forecast_hours","12"); u.searchParams.set("past_days","1");
+  // No forecast_hours: it drops past_days and empties the anchored windows —
+  // nextHours went permanently [] and rain6h read a false 0mm (mirrors the
+  // server-side fix in server.mjs loadWeather).
+  u.searchParams.set("past_days","1");
   u.searchParams.set("forecast_days","2"); u.searchParams.set("timezone","auto");
   try {
     const p = await fetchJson(u.toString());
     const c = p.current??{}, h = p.hourly??{}, d = p.daily??{};
+    const fin = Number.isFinite;
+    const times = Array.isArray(h.time) ? h.time : [];
+    const nowIdx = typeof c.time === "string" ? times.indexOf(c.time) : -1;
+    const dIdx = typeof c.time === "string" ? (Array.isArray(d.time) ? d.time : []).indexOf(c.time.slice(0,10)) : -1;
+    const nextWin = (a) => Array.isArray(a) && a.slice(nowIdx, nowIdx+6).every(fin);
+    const pastWin = (a) => Array.isArray(a) && a.slice(nowIdx-24, nowIdx).every(fin);
+    // Audit #11 (client twin): never label an incomplete payload "live" —
+    // route to the labelled stub instead of printing zeros as measurements.
+    const ok = fin(c.temperature_2m) && fin(c.apparent_temperature) && fin(c.relative_humidity_2m)
+      && fin(c.wind_speed_10m) && fin(c.precipitation) && fin(c.cloud_cover) && fin(c.weather_code)
+      && fin(c.pressure_msl) && nowIdx >= 24 && nowIdx+6 <= times.length
+      && nextWin(h.temperature_2m) && nextWin(h.precipitation) && nextWin(h.precipitation_probability)
+      && pastWin(h.temperature_2m) && dIdx >= 0
+      && fin(d.temperature_2m_max?.[dIdx]) && fin(d.temperature_2m_min?.[dIdx])
+      && fin(d.precipitation_sum?.[dIdx]) && fin(d.uv_index_max?.[dIdx])
+      && typeof d.sunrise?.[dIdx] === "string" && typeof d.sunset?.[dIdx] === "string";
+    if (!ok) return { ...WEATHER_FALLBACK, updatedAt: nowIso(), status: "degraded" };
     return {
       status:"live", updatedAt: nowIso(),
-      current: { temperatureC:round(c.temperature_2m??0,1), apparentTemperatureC:round(c.apparent_temperature??0,1), humidity:Math.round(c.relative_humidity_2m??0), windKph:round(c.wind_speed_10m??0,1), precipitationMm:round(c.precipitation??0,1), cloudCover:Math.round(c.cloud_cover??0), weatherLabel:weatherCodeLabel(Number(c.weather_code??0)), pressureHpa:round(c.pressure_msl??0,1) },
-      nextHours: (h.time??[]).slice(24,30).map((t,i)=>({ time:String(t).slice(11,16), precipitationMm:round(h.precipitation?.[i+24]??0,1), rainChance:Math.round(h.precipitation_probability?.[i+24]??0), temperatureC:round(h.temperature_2m?.[i+24]??0,1) })),
-      daily: { maxC:round(d.temperature_2m_max?.[1]??0,1), minC:round(d.temperature_2m_min?.[1]??0,1), rainTotalMm:round(d.precipitation_sum?.[1]??0,1), uvIndexMax:round(d.uv_index_max?.[1]??0,1), sunrise:String(d.sunrise?.[1]??"").slice(11,16), sunset:String(d.sunset?.[1]??"").slice(11,16) },
-      history: (h.temperature_2m??[]).slice(0,24).length > 0 ? (h.temperature_2m??[]).slice(0,24) : WEATHER_FALLBACK.history,
+      current: { temperatureC:round(c.temperature_2m,1), apparentTemperatureC:round(c.apparent_temperature,1), humidity:Math.round(c.relative_humidity_2m), windKph:round(c.wind_speed_10m,1), precipitationMm:round(c.precipitation,1), cloudCover:Math.round(c.cloud_cover), weatherLabel:weatherCodeLabel(Number(c.weather_code)), pressureHpa:round(c.pressure_msl,1) },
+      nextHours: times.slice(nowIdx, nowIdx+6).map((tm,i)=>({ time:String(tm).slice(11,16), precipitationMm:round(h.precipitation[nowIdx+i],1), rainChance:Math.round(h.precipitation_probability[nowIdx+i]), temperatureC:round(h.temperature_2m[nowIdx+i],1) })),
+      daily: { maxC:round(d.temperature_2m_max[dIdx],1), minC:round(d.temperature_2m_min[dIdx],1), rainTotalMm:round(d.precipitation_sum[dIdx],1), uvIndexMax:round(d.uv_index_max[dIdx],1), sunrise:String(d.sunrise[dIdx]).slice(11,16), sunset:String(d.sunset[dIdx]).slice(11,16) },
+      history: h.temperature_2m.slice(nowIdx-24, nowIdx),
     };
   } catch { return { ...WEATHER_FALLBACK, updatedAt: nowIso() }; }
 }
@@ -550,18 +570,27 @@ async function loadAirQuality() {
   const u = new URL("https://air-quality-api.open-meteo.com/v1/air-quality");
   u.searchParams.set("latitude",String(SITE.focus.lat)); u.searchParams.set("longitude",String(SITE.focus.lon));
   u.searchParams.set("current","us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide");
-  u.searchParams.set("hourly","us_aqi,pm2_5"); u.searchParams.set("forecast_hours","24");
+  u.searchParams.set("hourly","us_aqi,pm2_5");
+  // No forecast_hours — same window-emptying bug as loadWeather above.
   u.searchParams.set("past_days","1"); u.searchParams.set("timezone","auto");
   try {
     const p = await fetchJson(u.toString());
     const c = p.current??{}, h = p.hourly??{};
-    const aqi = Math.round(c.us_aqi??0);
-    const hist = (h.us_aqi??[]).slice(0,24).map(v=>Math.round(v));
+    const fin = Number.isFinite;
+    const times = Array.isArray(h.time) ? h.time : [];
+    const nowIdx = typeof c.time === "string" ? times.indexOf(c.time) : -1;
+    const nextWin = (a) => Array.isArray(a) && a.slice(nowIdx, nowIdx+6).every(fin);
+    const pastWin = (a) => Array.isArray(a) && a.slice(nowIdx-24, nowIdx).every(fin);
+    const ok = fin(c.us_aqi) && fin(c.pm2_5) && fin(c.pm10) && fin(c.ozone) && fin(c.nitrogen_dioxide)
+      && nowIdx >= 24 && nowIdx+6 <= times.length
+      && nextWin(h.us_aqi) && nextWin(h.pm2_5) && pastWin(h.us_aqi);
+    if (!ok) { const f=AIR_FALLBACK; return { ...f, updatedAt: nowIso(), status: "degraded", current:{...f.current, band:aqiBand(f.current.aqi)} }; }
+    const aqi = Math.round(c.us_aqi);
     return {
       status:"live", updatedAt:nowIso(),
-      current:{ aqi, band:aqiBand(aqi), pm25:round(c.pm2_5??0,1), pm10:round(c.pm10??0,1), ozone:round(c.ozone??0,1), no2:round(c.nitrogen_dioxide??0,1) },
-      nextHours: (h.time??[]).slice(24,30).map((t,i)=>({ time:String(t).slice(11,16), aqi:Math.round(h.us_aqi?.[i+24]??0), pm25:round(h.pm2_5?.[i+24]??0,1) })),
-      history: hist.length > 0 ? hist : AIR_FALLBACK.history,
+      current:{ aqi, band:aqiBand(aqi), pm25:round(c.pm2_5,1), pm10:round(c.pm10,1), ozone:round(c.ozone,1), no2:round(c.nitrogen_dioxide,1) },
+      nextHours: times.slice(nowIdx, nowIdx+6).map((tm,i)=>({ time:String(tm).slice(11,16), aqi:Math.round(h.us_aqi[nowIdx+i]), pm25:round(h.pm2_5[nowIdx+i],1) })),
+      history: h.us_aqi.slice(nowIdx-24, nowIdx).map(v=>Math.round(v)),
     };
   } catch { const f=AIR_FALLBACK; return { ...f, updatedAt:nowIso(), current:{...f.current, band:aqiBand(f.current.aqi)} }; }
 }
@@ -1668,17 +1697,20 @@ function renderUrbanLayerToggle() {
         onEachFeature: (feat, lyr) => {
           const p = feat.properties || {};
           if (layer.id === "mpp_wards") {
-            const tooltip = `<strong>Ward ${p.wardCode}${p.wardLabel ? " // " + p.wardLabel : ""}</strong><br>${p.area || ""}<br><em>Click to filter councillors + localities</em>`;
+            // All OSM-derived properties are escaped at the HTML boundary.
+            // Audit #10: tags.name from Overpass was interpolated into the
+            // tooltip raw, leaving the surface open to a hostile tags.name.
+            const tooltip = `<strong>Ward ${escapeHtml(p.wardCode ?? "")}${p.wardLabel ? " // " + escapeHtml(p.wardLabel) : ""}</strong><br>${escapeHtml(p.area || "")}<br><em>Click to filter councillors + localities</em>`;
             lyr.bindTooltip(tooltip, { className: "marker-tooltip", sticky: true });
             lyr.on("click", () => setActiveWard(state.activeWard === p.wardCode ? null : p.wardCode));
             return;
           }
           const lines = [
-            `<strong>${p.name || `${(p.kind||'feature')} #${p.id}`}</strong>`,
-            p.kind ? `Kind: ${p.kind}` : null,
-            p.ref ? `Ref: ${p.ref}` : null,
-            p.lanes ? `Lanes: ${p.lanes}` : null,
-            p.tunnel ? `Tunnel: ${p.tunnel}` : null,
+            `<strong>${escapeHtml(p.name) || `${escapeHtml(p.kind) || "feature"} #${escapeHtml(String(p.id ?? ""))}`}</strong>`,
+            p.kind ? `Kind: ${escapeHtml(p.kind)}` : null,
+            p.ref ? `Ref: ${escapeHtml(p.ref)}` : null,
+            p.lanes ? `Lanes: ${escapeHtml(p.lanes)}` : null,
+            p.tunnel ? `Tunnel: ${escapeHtml(p.tunnel)}` : null,
             p.intermittent ? "Intermittent" : null,
           ].filter(Boolean);
           lyr.bindTooltip(lines.join("<br>"), { className: "marker-tooltip", sticky: true });

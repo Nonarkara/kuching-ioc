@@ -14,7 +14,7 @@
 // ---------------------------------------------------------------------------
 
 import { spawn } from "node:child_process";
-import { access, mkdir, stat, writeFile } from "node:fs/promises";
+import { access, mkdir, rename, stat, writeFile } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import { join } from "node:path";
 import {
@@ -119,12 +119,17 @@ async function main() {
     await fetchWithRetry(`${BASE}/api/layers/drainage`, 2, 90_000);
 
     // 2.1. Fetch the dashboard payload.
+    // Audit #13: parse and reject a non-object before any write. A malformed
+    // upstream body must not replace the committed snapshot.
     console.log("Fetching /api/dashboard...");
     const dashboard = await fetchWithRetry(`${BASE}/api/dashboard`);
+    const parsed = JSON.parse(dashboard);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("dashboard payload is not a JSON object");
+    }
     const dashboardPath = join(PUBLIC_DIR, "api", "dashboard.json");
     await mkdir(join(PUBLIC_DIR, "api"), { recursive: true });
     await writeFile(dashboardPath, dashboard);
-    const parsed = JSON.parse(dashboard);
     console.log(`  → ${dashboardPath} (${(dashboard.length / 1024).toFixed(1)} KB, ${parsed.sources?.length || "?"} sources)`);
 
     // 2.5. Enrich Ground Pulse with the rolling archive from Google Sheets.
@@ -140,7 +145,9 @@ async function main() {
         for (const lane of lanes) {
           lane.history = history[lane.label] || [];
         }
-        await writeFile(dashboardPath, JSON.stringify(parsed));
+        const dashboardTmp = `${dashboardPath}.tmp`;
+        await writeFile(dashboardTmp, JSON.stringify(parsed));
+        await rename(dashboardTmp, dashboardPath);
         console.log(
           `  → ground pulse history: ${lanes.map((l) => `${l.label}=${l.history.length}`).join(" ")}`,
         );
@@ -158,11 +165,23 @@ async function main() {
     const results = await Promise.allSettled(
       layerIds.map(async (id) => {
         const body = await fetchWithRetry(`${BASE}/api/layers/${id}`, 2, 90_000);
-        const path = join(LAYERS_DIR, `${id}.json`);
-        await writeFile(path, body);
+        // Audit #13: validate before any write. A rejected layer leaves the
+        // committed snapshot in place; the manifest records status "rejected".
         const fc = JSON.parse(body);
-        console.log(`  → ${id}: ${fc.features?.length ?? 0} features (${(body.length / 1024).toFixed(1)} KB)`);
-        return { id, features: fc.features?.length ?? 0 };
+        if (
+          !fc ||
+          fc.type !== "FeatureCollection" ||
+          !Array.isArray(fc.features) ||
+          fc.features.length === 0
+        ) {
+          throw new Error(`${id}: rejected — expected a non-empty FeatureCollection`);
+        }
+        const path = join(LAYERS_DIR, `${id}.json`);
+        const tmpPath = join(LAYERS_DIR, `${id}.json.tmp`);
+        await writeFile(tmpPath, body);
+        await rename(tmpPath, path);
+        console.log(`  → ${id}: ${fc.features.length} features (${(body.length / 1024).toFixed(1)} KB)`);
+        return { id, features: fc.features.length };
       }),
     );
     const failed = results.filter((r) => r.status === "rejected");

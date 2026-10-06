@@ -3,6 +3,8 @@ name: Deploy to Cloudflare Pages
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
   schedule:
     # Audit #2: production serves a baked snapshot; without a refresh cadence
@@ -34,8 +36,13 @@ jobs:
       # minimum acceptance threshold before bytes reach the live site.
       - name: Run tests
         run: node --test tests/*.test.mjs
-      - run: node build.mjs
+      # Pull requests prove the suite. Baking and publishing stay on main,
+      # schedule, and manual dispatch so a PR cannot replace the live snapshot.
+      - name: Build snapshot
+        if: github.event_name != 'pull_request'
+        run: node build.mjs
       - name: Deploy to Cloudflare Pages
+        if: github.event_name != 'pull_request'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

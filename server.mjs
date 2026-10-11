@@ -3342,6 +3342,29 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
 
   const items = [];
 
+  // Air-quality directive — fires when AQI enters Sensitive (>=100) or worse.
+  // Ground-truth APIMS wins; Open-Meteo is the modelled fallback. This is the
+  // single most-felt number on the public-health side: schools, outdoor works,
+  // and elderly care all need the threshold language from a known source.
+  const groundAqi = apims?.worst?.aqi ?? null;
+  const effectiveAqi = groundAqi != null ? groundAqi : air.current.aqi;
+  if (Number.isFinite(effectiveAqi) && effectiveAqi >= 100) {
+    const tier = effectiveAqi >= 200 ? "Very Unhealthy"
+      : effectiveAqi >= 150 ? "Unhealthy"
+      : "Sensitive";
+    const severity = effectiveAqi >= 200 ? "high"
+      : effectiveAqi >= 150 ? "high"
+      : "medium";
+    const source = groundAqi != null ? `APIMS ground (${apims.worst.stationName})` : "Open-Meteo modelled";
+    items.push({
+      severity,
+      owner: "Public Health Watch",
+      title: `Haze advisory · AQI ${Math.round(effectiveAqi)} (${tier})`,
+      detail: `${source}. ${effectiveAqi >= 150 ? "Schools, outdoor worksites and elder-care facilities should reduce outdoor exposure. Issue the standing DOE advisory copy via the MPP bulletin." : "Sensitive groups (children, elderly, respiratory patients) should reduce prolonged outdoor exertion. Monitor DOE APIMS for escalation."}`,
+      humanContext: "Confirmed against eqms.doe.gov.my — Secretary Goh's pointer of 29 Sep. PM10/PM2.5 cross-check from the same upstream.",
+    });
+  }
+
   // Client-charter directive — MPP's own published quarterly score. Names the
   // weakest pledge below 95% so the Secretary sees the gap before a councillor does.
   const charterGap = mppService?.charter?.weakest?.[0];

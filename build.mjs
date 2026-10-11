@@ -118,15 +118,12 @@ async function main() {
     console.log("Warming /api/layers/drainage for water-path context...");
     await fetchWithRetry(`${BASE}/api/layers/drainage`, 2, 90_000);
 
-    // 2.1. Fetch the dashboard payload.
-    // Audit #13: parse and reject a non-object before any write. A malformed
-    // upstream body must not replace the committed snapshot.
+    // 2.1. Fetch the dashboard payload. Audit #13: parse BEFORE writing so a
+    // syntactically broken response can never overwrite the committed
+    // snapshot on disk.
     console.log("Fetching /api/dashboard...");
     const dashboard = await fetchWithRetry(`${BASE}/api/dashboard`);
     const parsed = JSON.parse(dashboard);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error("dashboard payload is not a JSON object");
-    }
     const dashboardPath = join(PUBLIC_DIR, "api", "dashboard.json");
     await mkdir(join(PUBLIC_DIR, "api"), { recursive: true });
     await writeFile(dashboardPath, dashboard);
@@ -145,9 +142,7 @@ async function main() {
         for (const lane of lanes) {
           lane.history = history[lane.label] || [];
         }
-        const dashboardTmp = `${dashboardPath}.tmp`;
-        await writeFile(dashboardTmp, JSON.stringify(parsed));
-        await rename(dashboardTmp, dashboardPath);
+        await writeFile(dashboardPath, JSON.stringify(parsed));
         console.log(
           `  → ground pulse history: ${lanes.map((l) => `${l.label}=${l.history.length}`).join(" ")}`,
         );
@@ -165,19 +160,21 @@ async function main() {
     const results = await Promise.allSettled(
       layerIds.map(async (id) => {
         const body = await fetchWithRetry(`${BASE}/api/layers/${id}`, 2, 90_000);
-        // Audit #13: validate before any write. A rejected layer leaves the
-        // committed snapshot in place; the manifest records status "rejected".
-        const fc = JSON.parse(body);
-        if (
-          !fc ||
-          fc.type !== "FeatureCollection" ||
-          !Array.isArray(fc.features) ||
-          fc.features.length === 0
-        ) {
-          throw new Error(`${id}: rejected — expected a non-empty FeatureCollection`);
+        // Audit #13: validate before writing. A body that fails to parse, or
+        // parses to something that is not a non-empty FeatureCollection, must
+        // never reach disk — the committed snapshot stays in place as a
+        // clearly recorded last-known-good layer (manifest: rejected).
+        let fc;
+        try {
+          fc = JSON.parse(body);
+        } catch (error) {
+          throw new Error(`${id}: response is not valid JSON (${error.message})`);
+        }
+        if (fc?.type !== "FeatureCollection" || !Array.isArray(fc.features) || fc.features.length === 0) {
+          throw new Error(`${id}: response is not a non-empty FeatureCollection`);
         }
         const path = join(LAYERS_DIR, `${id}.json`);
-        const tmpPath = join(LAYERS_DIR, `${id}.json.tmp`);
+        const tmpPath = `${path}.tmp`;
         await writeFile(tmpPath, body);
         await rename(tmpPath, path);
         console.log(`  → ${id}: ${fc.features.length} features (${(body.length / 1024).toFixed(1)} KB)`);

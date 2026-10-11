@@ -44,6 +44,9 @@ const COPY = {
 };
 
 // This review window is a UI guardrail, not an agency flood standard.
+COPY.en.sections.push(['3D buildings and Arnis', 'Use 3D buildings to view the Kota Padawan pilot, then Focus pilot to return to it. The browser uses dated OSM/Overture footprints on flat ground; default 6 m heights are estimates. Coverage is not complete. Select a building for its source and height assumption. Arnis is a separate downloadable Java world with terrain. Its file structure was checked, but loading it in Minecraft remains untested. Neither view predicts flood depth. Return to 2D if your device struggles.']);
+COPY.ms.sections.push(['Bangunan 3D dan Arnis', 'Gunakan Bangunan 3D untuk melihat rintis Kota Padawan, kemudian Fokus rintis untuk kembali. Pelayar menggunakan tapak OSM/Overture bertarikh di atas tanah rata; ketinggian lalai 6 m ialah anggaran. Liputan tidak lengkap. Pilih bangunan untuk sumber dan andaian ketinggian. Arnis ialah dunia Java berasingan dengan rupa bumi yang boleh dimuat turun. Struktur fail diperiksa, tetapi belum diuji dalam Minecraft. Kedua-dua paparan bukan ramalan kedalaman banjir. Kembali ke 2D jika peranti perlahan.']);
+COPY.zh.sections.push(['3D建筑与Arnis', '使用3D建筑查看Kota Padawan试点，点击定位试点返回。浏览器使用有日期的OSM/Overture轮廓及平地；默认6米高度为估算，覆盖范围并不完整。选择建筑可查看来源与高度假设。Arnis是另行下载、带地形的Java世界。已检查文件结构，但尚未在Minecraft中测试。两个视图都不预测洪水深度。设备运行缓慢时，请返回2D。']);
 COPY.en.sections.splice(1, 0, ['Check observation age', 'Read the time beside each river gauge. Missing times, future times, or readings older than two hours require verification. This is a conservative dashboard review window, not a JPS standard. A new snapshot can contain old observations. Weather warnings may have incomplete validity dates; check the MET bulletin when the status needs review.']);
 COPY.ms.sections.splice(1, 0, ['Semak usia pemerhatian', 'Baca masa di sebelah setiap tolok sungai. Masa yang tiada, masa hadapan atau bacaan melebihi dua jam perlu disahkan. Ini ialah tempoh semakan konservatif papan pemuka, bukan piawaian JPS. Snapshot baharu boleh mengandungi pemerhatian lama. Tarikh sah amaran cuaca mungkin tidak lengkap; semak buletin MET apabila status memerlukan semakan.']);
 COPY.zh.sections.splice(1, 0, ['核对观测时间', '查看每个水位站旁的时间。时间缺失、时间在未来或读数超过两小时，都需要核实。这是仪表板的保守复核窗口，并非水利灌溉局标准。新快照可能包含旧观测。天气警报的有效期可能不完整；状态需复核时，请查看气象局官方公告。']);
@@ -61,7 +64,7 @@ export function setupOperatorGuide(version = '') {
     const button = document.createElement('button');
     button.type = 'button';
     button.addEventListener('click', () => {
-      const target = document.getElementById(id);
+      const target = document.getElementById(id === 'mapCanvas' && document.querySelector('.map-frame')?.dataset.dim === '3d' ? 'map3d' : id);
       if (!target) return;
       if (id === 'sourceMatrix') target.closest('.source-panel')?.classList.add('operator-revealed');
       target.dispatchEvent(new Event('tray:show', { bubbles: true }));

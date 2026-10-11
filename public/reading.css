@@ -25,6 +25,23 @@
 .dashboard-shell .verdict-why { font-size: 16px; line-height: 1.5; display: block; overflow: visible; }
 .dashboard-shell .verdict-chip { font-size: 14px; padding: 6px 8px; }
 .dashboard-shell .metric-band { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.building-tools { flex: 0 0 auto; padding: 12px; border-top: 1px solid var(--line-strong); background: var(--hud-bg); }
+.building-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.building-tools button, .building-tools .building-buttons a {
+  font: 600 14px/1.4 var(--font-sans); min-height: 44px; padding: 10px 12px;
+  color: var(--ink); background: var(--card-bg); border: 1px solid var(--line-strong);
+  cursor: pointer; text-decoration: none;
+}
+.building-tools button[aria-pressed="true"] { border-width: 2px; border-color: var(--cyan); }
+.building-tools button:disabled { opacity: .6; cursor: default; }
+.building-tools p, .building-tools summary { font-size: 14px; line-height: 1.5; margin: 8px 0; }
+.building-tools summary { cursor: pointer; min-height: 44px; padding: 10px 0; }
+.building-tools a { color: var(--cyan); font-size: 14px; margin-right: 12px; overflow-wrap: anywhere; }
+#buildingSelection { display: flex; gap: 12px; flex-wrap: wrap; border: 2px solid var(--cyan); padding: 10px; }
+#buildingSelection[hidden] { display: none; }
+.building-tools a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.dashboard-shell .map-3d .cesium-viewer-bottom,
+.dashboard-shell .map-3d .cesium-widget-credits { display: block !important; }
 .dashboard-shell #metricBand .metric-card { grid-column: auto; }
 .dashboard-shell .metric-label, .dashboard-shell .metric-context { font-size: 14px; white-space: normal; }
 .dashboard-shell .metric-value { font-size: 24px; }

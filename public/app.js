@@ -21,6 +21,7 @@ const {
 } = await import(__dataUrl__);
 const { dataHealth, observationHealth, warningHealth } = await import(`./data-health.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { morningBrief } = await import(`./morning-brief.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { setupBuildings3D } = await import(`./buildings-3d.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupOperatorGuide } = await import(`./operator-guide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 
 const BOOT = window.__IOC_BOOT__ || {};
@@ -4725,6 +4726,7 @@ async function setDimension(dim, { silent = false } = {}) {
   if (!silent) {
     showToast(`▰ DIMENSION: ${dim.toUpperCase()}`, "ok");
   }
+  buildingLayer?.dimensionChanged(dim);
 }
 
 function renderDimensionToggle() {
@@ -4772,8 +4774,7 @@ function initCesium() {
     requestRenderMode: true,   // Only render on demand (perf for static data)
     maximumRenderTimeChange: Infinity,
   });
-  // Hide the credit container — the dashboard has its own source matrix.
-  viewer._cesiumWidget && viewer._cesiumWidget.creditContainer && (viewer._cesiumWidget.creditContainer.style.display = "none");
+  // Provider credits stay visible alongside the building-layer attribution.
 
   // requestRenderMode only paints on an explicit requestRender() call. The
   // globe's tile quadtree needs many consecutive frames to walk from coarse
@@ -5266,5 +5267,9 @@ function renderInsights(payload) {
 }
 
 // In boot(), render insights after dashboard render
+const buildingLayer = setupBuildings3D({
+  getViewer: () => state.cesiumViewer, getDimension: () => state.dimension,
+  setDimension, getLang: () => state.lang, version: __ASSET_VER__,
+});
 boot();
 setInterval(boot, 60000);

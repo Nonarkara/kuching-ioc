@@ -1,0 +1,76 @@
+{
+  "id": "kota-padawan-mpp",
+  "name": "Kota Padawan · MPP office pilot",
+  "bounds": {
+    "south": 1.4225,
+    "west": 110.3205,
+    "north": 1.4325,
+    "east": 110.3305
+  },
+  "landmark": {
+    "name": "Majlis Perbandaran Padawan",
+    "lat": 1.4276737,
+    "lon": 110.325778,
+    "source": "https://www.openstreetmap.org/way/958011498"
+  },
+  "generator": "Arnis",
+  "version": "3.3.0",
+  "releaseArchiveSha256": "83f444fae81cbb1cc9adf4901f904253d29551504cd465f02182bde349c389c4",
+  "binarySha256": "ab2d0fb880296c2dbe4ae89a5ea9ba791d8ff6337b3c956c9d70cc14ead20be7",
+  "generatedAt": "2026-10-11T07:47:20.117Z",
+  "packagedAt": "2026-10-11T08:06:31.374Z",
+  "generationArgs": [
+    "--one-world",
+    "--world-name",
+    "Kota-Padawan-Pilot",
+    "--output-dir",
+    "<local-world-output>",
+    "--bbox",
+    "1.4225,110.3205,1.4325,110.3305",
+    "--scale",
+    "1",
+    "--mode",
+    "geo-terrain",
+    "--overture",
+    "true",
+    "--no-3d",
+    "--mapillary-facades",
+    "false",
+    "--spawn-lat",
+    "1.4276737",
+    "--spawn-lng",
+    "110.325778"
+  ],
+  "worldMetadata": {
+    "minMcX": -560,
+    "maxMcX": 559,
+    "minMcZ": -560,
+    "maxMcZ": 559,
+    "minGeoLat": 1.4224637934976765,
+    "maxGeoLat": 1.4325361954710027,
+    "minGeoLon": 110.32046223552672,
+    "maxGeoLon": 110.33053776447329,
+    "projection": "web_mercator",
+    "scale": 1
+  },
+  "archive": "kota-padawan-arnis.zip",
+  "bytes": 8311613,
+  "sha256": "623d8338b7bbd6e0c72419919e93d00e15c48c1faf2ec36703ed80b9581c98cb",
+  "attribution": "Arnis (Apache-2.0); OpenStreetMap contributors; Overture Maps Foundation; Microsoft ML Buildings; Google Open Buildings; Mapterhorn terrain; ESA WorldCover 2021; Meta/WRI canopy height",
+  "terrainNote": "Arnis generation used Mapterhorn parent tiles after z16 coverage was absent. Exploratory terrain interpolation, not a survey.",
+  "verification": {
+    "generated": true,
+    "structurallyVerified": true,
+    "minecraftPlayTest": false,
+    "regions": 16,
+    "populatedChunks": 4900,
+    "sampledBlockTypes": 120,
+    "dataVersion": 4189,
+    "spawn": [
+      30,
+      -1561,
+      -20
+    ]
+  },
+  "caveat": "Approximate exploratory world, not surveyed buildings or a flood simulation."
+}

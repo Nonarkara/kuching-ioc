@@ -145,6 +145,24 @@
               <div id="layerToggle" class="segmented-control"></div>
             </div>
           </div>
+          <div class="building-tools">
+            <div class="building-buttons">
+              <button id="buildingsToggle" type="button" aria-pressed="false" disabled>3D buildings · pilot</button>
+              <button id="buildingsFocus" type="button" disabled>Focus pilot</button>
+              <a id="arnisDownload" href="./data/buildings/kota-padawan-arnis.zip" download>Download Arnis world</a>
+            </div>
+            <p id="buildingsStatus" role="status" aria-live="polite"></p>
+            <details id="buildingsDetails">
+              <summary data-i18n="buildingsEvidence">Buildings · coverage &amp; sources</summary>
+              <p id="arnisWorldNote"></p>
+              <p id="buildingsDataDates"></p>
+              <p data-i18n="buildingsCoverage">Pilot only, not all Padawan. Footprints may be incomplete; default 6 m heights are estimates. No flood-depth simulation.</p>
+              <a href="./data/buildings/manifest.json" target="_blank" rel="noopener" data-i18n="buildingsManifest">Building data manifest</a>
+              <a href="./data/buildings/world-manifest.json" target="_blank" rel="noopener" data-i18n="arnisManifest">Arnis world manifest</a>
+            </details>
+            <p id="buildingSelection" hidden></p>
+            <a id="buildingsAttribution" href="https://docs.overturemaps.org/attribution/" target="_blank" rel="noopener">© OpenStreetMap contributors, Overture Maps Foundation</a>
+          </div>
           <div class="map-frame" data-dim="2d">
             <div id="mapCanvas" class="map-canvas"></div>
             <div id="map3d" class="map-3d"></div>

@@ -1,0 +1,73 @@
+{
+  "id": "kota-padawan-mpp",
+  "name": "Kota Padawan · MPP office pilot",
+  "bounds": {
+    "south": 1.4225,
+    "west": 110.3205,
+    "north": 1.4325,
+    "east": 110.3305
+  },
+  "landmark": {
+    "name": "Majlis Perbandaran Padawan",
+    "lat": 1.4276737,
+    "lon": 110.325778,
+    "source": "https://www.openstreetmap.org/way/958011498"
+  },
+  "source": "OpenStreetMap + Overture Maps",
+  "endpoint": "archived input",
+  "query": "[out:json][timeout:45];(way[\"building\"](1.4225,110.3205,1.4325,110.3305);way[\"building:part\"](1.4225,110.3205,1.4325,110.3305);relation[\"building\"](1.4225,110.3205,1.4325,110.3305););out geom;",
+  "inputSha256": "593099b19c068f5565b1cc7aa8cf23a31d8dd52ec43fbbd41a410aca13c6ffc7",
+  "osmBaseTime": "2026-10-11T07:46:21Z",
+  "fetchedAt": null,
+  "bakedAt": "2026-10-11T08:14:08.411Z",
+  "inputArchive": "scripts/arnis/inputs/source-overpass.json",
+  "crs": "EPSG:4326",
+  "precision": 6,
+  "simplification": "none; closed ring validation and duplicate/parent-solid filtering",
+  "precisionNote": "Public mapped footprints retain six decimals to preserve narrow rings; this is not surveyed positional accuracy.",
+  "featureCount": 609,
+  "heightCounts": {
+    "default-estimate": 609
+  },
+  "bytes": 297804,
+  "sha256": "661fe52b0f9adcb1fc63273ac395c8dba7c6900c37ed9d4c75e0f4972dd791cc",
+  "attribution": "© OpenStreetMap contributors, Overture Maps Foundation; Microsoft ML Buildings, Google Open Buildings",
+  "licenceUrl": "https://docs.overturemaps.org/attribution/",
+  "caveat": "Pilot only, not complete Padawan coverage. Default height 6 m; levels × 3 m are estimates. Independent geographic dataset, not extracted Minecraft blocks.",
+  "overture": {
+    "release": "2026-09-23.1",
+    "added": 556,
+    "tiles": [
+      {
+        "z": 14,
+        "x": 13212,
+        "y": 8126,
+        "sha256": "f0473409f2ca2a67384bf6412d2c6accdb10ba35c063839f767530365ed19c8c"
+      },
+      {
+        "z": 14,
+        "x": 13212,
+        "y": 8127,
+        "sha256": "81c8fd5a405374795047ec78acb3a018528dd0efd062f50f017c758a2be878a9"
+      },
+      {
+        "z": 14,
+        "x": 13213,
+        "y": 8126,
+        "sha256": "378ce71da314db071955e613156e68883d6f9fee143d91949cf2b32ef6821cdc"
+      },
+      {
+        "z": 14,
+        "x": 13213,
+        "y": 8127,
+        "sha256": "8705505ae35b766d2c8601da643ae59ac807f7d06e6d92e7b0697ab108d519a3"
+      }
+    ],
+    "datasets": [
+      "Microsoft ML Buildings",
+      "Google Open Buildings"
+    ],
+    "archiveUrl": "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-09-23.1/buildings.pmtiles",
+    "source": "Cached official release tiles fetched by Arnis; vector geometry, not Minecraft blocks"
+  }
+}

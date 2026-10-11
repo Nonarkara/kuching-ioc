@@ -19,7 +19,8 @@ const {
   sourceRecord, buildMapLayers, URBAN_LAYERS, ECONOMY_FALLBACK, RIVER_BYPASS_PROJECT, MPP_WARD_PROJECTS, MPP_WARD_PROJECTS_ILLUSTRATIVE,
   WARD_TENSION, WARD_TENSION_ILLUSTRATIVE, MPP_OFFICIAL_SERVICES
 } = await import(__dataUrl__);
-const { dataHealth } = await import(`./data-health.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { dataHealth, observationHealth, warningHealth } = await import(`./data-health.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { morningBrief } = await import(`./morning-brief.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupOperatorGuide } = await import(`./operator-guide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 
 const BOOT = window.__IOC_BOOT__ || {};
@@ -825,7 +826,7 @@ async function buildFallbackDashboard() {
       status: "fallback",
       activeCount: 0,
       items: [],
-      forecast: { label: "No active warnings.", tone: "good" },
+      forecast: { label: "Warning status unavailable.", tone: "warn" },
       generatedAt: gen
     },
     demographics: CITY_DEMOGRAPHICS,
@@ -1119,7 +1120,7 @@ function renderMetrics(metrics) {
     return `
     <article class="metric-card" data-tone="${m.tone||'neutral'}" data-metric-id="${m.id}">
       <div class="metric-label">${escapeHtml(tOr(`m_${m.id}`, m.label))}</div>
-      <div class="metric-value">${num(m.value,m.value%1===0?0:1)}<span class="metric-unit">${m.unit||''}</span></div>
+      <div class="metric-value">${m.value == null ? "—" : num(m.value,m.value%1===0?0:1)}<span class="metric-unit">${m.value == null ? "" : m.unit||''}</span></div>
       <div class="metric-context">${m.context||''}</div>
       <div class="sparkline-shell">${m.history?sparkline(m.history,m.tone):''}</div>
       ${provHtml}
@@ -2395,7 +2396,7 @@ function renderBriefStrip(payload) {
   const blindEl = $("briefBlind");
   if (!nowEl || !nextEl || !blindEl) return;
 
-  const brief = buildBoardBrief(payload);
+  const brief = morningBrief(payload, state.lang, state.scope);
   // Brief items can embed press titles/trends — escape at the HTML boundary.
   const renderItems = (items) => items.map((item, index) => `
     <div class="brief-item">
@@ -2406,6 +2407,9 @@ function renderBriefStrip(payload) {
   nowEl.innerHTML = renderItems(brief.now);
   nextEl.innerHTML = renderItems(brief.next);
   blindEl.innerHTML = renderItems(brief.blind);
+  const evidence = $("briefEvidence");
+  if (evidence) evidence.innerHTML = renderItems((payload.operations || []).slice(0, 8)
+    .map(item => item.title || item.detail || item.owner).filter(Boolean));
 }
 
 function renderQualitativeLens(payload, activeSatellite) {
@@ -2811,13 +2815,18 @@ function renderHydroGauges(payload) {
     return;
   }
   const bandHuman = {
-    normal: "OK",
-    alert: "Watch",
-    warning: "High",
-    danger: "Critical",
-    reference: "No live",
+    normal: t("gaugeNormal"),
+    alert: t("gaugeAlert"),
+    warning: t("gaugeWarning"),
+    danger: t("gaugeDanger"),
+    reference: t("observationUnknown"),
   };
   const rows = stations.map((s) => {
+    const observation = observationHealth(s);
+    const age = observation.ageMinutes === null ? t("observationUnknown")
+      : observation.status === "future" ? t("observationFuture")
+      : Math.max(0, Math.round(observation.ageMinutes)) + " " + t("minutesAgo");
+    const timeLabel = (s.observedAt || t("observationUnknown")) + " · " + age;
     const thr = s.thresholds?.alert != null ? `Alert from ${s.thresholds.alert} m` : (s.council || "");
     const level = s.waterLevelM != null ? `${s.waterLevelM} m` : "—";
     const brief = s.humanBrief
@@ -2827,6 +2836,7 @@ function renderHydroGauges(payload) {
       <div class="hg-main">
         <div class="hg-name">${escapeHtml(s.name)}<small>${escapeHtml(thr)}</small></div>
         ${brief}
+        <div class="hg-observed" data-status="${observation.status}">${escapeHtml(timeLabel)}${observation.uncertain ? " · " + t("verifyReading") : ""}</div>
       </div>
       <div class="hg-level">${level}</div>
       <div class="hg-band" data-band="${escapeHtml(s.band || "reference")}">${escapeHtml(bandHuman[s.band] || s.bandLabel || s.band || "—")}</div>
@@ -3807,22 +3817,24 @@ function renderVerdict(payload) {
   const floodPrep = fa.band === "prepare";
   const floodWatch = fa.band === "watch";
   const airBad = aqi != null && aqi > 100;
-  const band = floodAct ? "alert" : (health.uncertain || floodPrep || floodWatch || met.activeCount > 0 || airBad) ? "watch" : "normal";
+  const weatherUnknown = warningHealth(met).uncertain;
+  const band = floodAct ? "alert" : (health.uncertain || weatherUnknown || floodPrep || floodWatch || met.activeCount > 0 || airBad) ? "watch" : "normal";
   el.dataset.band = band;
 
   let verb = state.lang === "ms" ? (fa.verbBm || fa.verb) : state.lang === "zh" ? (fa.verbZh || fa.verb) : fa.verb;
   // When flood is calm but weather/air drives the amber strip, name that driver
   // in plain words — never leave a soft flood verb under a hard red chip set.
   if (!floodAct && !floodPrep && band === "watch") {
-    verb = met.activeCount > 0
+    verb = !weatherUnknown && met.activeCount > 0
       ? (state.lang === "ms" ? `Pantau — ${met.activeCount} amaran cuaca` : state.lang === "zh" ? `留意 — ${met.activeCount} 则天气警报` : `Keep watching — ${met.activeCount} weather warning${met.activeCount > 1 ? "s" : ""}`)
       : airBad ? (state.lang === "ms" ? `Pantau — udara AQI ${aqi}` : state.lang === "zh" ? `留意 — 空气 AQI ${aqi}` : `Keep watching — air AQI ${aqi}`) : verb;
   }
   const coverageWarning = state.lang === "ms" ? "Sahkan keadaan sungai — data tidak lengkap atau lama." : state.lang === "zh" ? "请核实河流情况：数据不完整或已过时。" : "Verify river conditions — data incomplete or outdated.";
-  if (health.uncertain && !floodAct && !floodPrep && !(met.activeCount > 0) && !airBad) verb = coverageWarning;
-  const chips = [];
-  chips.push(`<span class="verdict-chip" data-tone="${health.uncertain ? "warn" : health.highest === "normal" ? "ok" : "alert"}">${health.uncertain ? "Rivers: verify data" : `Gauge band: ${health.highest}`} · ${health.count}/${health.total} readings</span>`);
-  chips.push(`<span class="verdict-chip" data-tone="${met.activeCount > 0 ? "alert" : "warn"}">${met.activeCount > 0 ? `${met.activeCount} weather warning${met.activeCount > 1 ? "s" : ""} in payload` : "Weather: check official bulletin"}</span>`);
+  if (health.uncertain && !floodAct && !floodPrep && (weatherUnknown || !(met.activeCount > 0)) && !airBad) verb = coverageWarning;
+  if (weatherUnknown && !health.uncertain && !floodAct && !floodPrep && !airBad) verb = t("weatherUnknown");
+ const chips = [];
+  chips.push(`<span class="verdict-chip" data-tone="${health.uncertain ? "warn" : health.highest === "normal" ? "ok" : "alert"}">${health.uncertain ? t("verifyReading") : t("gauge" + health.highest[0].toUpperCase() + health.highest.slice(1))} · ${health.count}/${health.total}</span>`);
+  chips.push(`<span class="verdict-chip" data-tone="${!weatherUnknown && met.activeCount > 0 ? "alert" : "warn"}">${weatherUnknown ? t("weatherUnknown") : met.activeCount > 0 ? met.activeCount + " · " + t("weatherWarnings") : t("weatherChecked")}</span>`);
   if (aqi != null) chips.push(`<span class="verdict-chip" data-tone="${aqi > 150 ? "alert" : aqi > 100 ? "warn" : "ok"}">Open-Meteo AQI · ${aqi}</span>`);
   const ff = payload.floodForecast;
   if (ff?.todayCms != null && ff?.peakCms != null) {
@@ -3830,7 +3842,7 @@ function renderVerdict(payload) {
     chips.push(`<span class="verdict-chip" data-tone="${rising ? "warn" : "ok"}">River flow ${Math.round(ff.todayCms)}→${Math.round(ff.peakCms)} m³/s</span>`);
   }
 
-  const why = health.uncertain ? coverageWarning : [fa.reason, payload.summary?.headline].filter(Boolean).join(" · ");
+  const why = morningBrief(payload, state.lang, state.scope).now[0];
   el.innerHTML = `
     <span class="verdict-verb">${escapeHtml(verb || payload.summary?.posture || "—")}</span>
     <div class="verdict-why">${escapeHtml(why)}</div>
@@ -3849,6 +3861,7 @@ function renderCascade(payload) {
     return;
   }
   const rd = fc.series.river_discharge;
+  const archived = fc.status !== "live";
   const median = rd.median || [];
   const p10 = rd.quantiles?.p10 || [];
   const p90 = rd.quantiles?.p90 || [];
@@ -3871,7 +3884,7 @@ function renderCascade(payload) {
         </svg>
       </div>
       <div class="cascade-fan-caption">
-        <span>TODAY ${Math.round(median[0])} m³/s</span>
+        <span>${archived ? "ARCHIVE BASELINE" : "TODAY"} ${Math.round(median[0])} m³/s</span>
         <span>worst case (p90) peaks ${Math.round(Math.max(...p90))} m³/s · day ${p90.indexOf(Math.max(...p90)) + 1}</span>
         <span>+${n} DAYS</span>
       </div>`;
@@ -3893,6 +3906,7 @@ function renderCascade(payload) {
 
   el.innerHTML = `
     <div class="cascade-head">
+      ${archived ? '<div class="cascade-stale">' + escapeHtml(morningBrief(payload, state.lang, state.scope).blind.at(-1)) + ' · ' + escapeHtml(fc.asOf || "Unknown date") + '</div>' : ''}
       <div class="cascade-title">Rain → River Cascade · TimesFM 14-day</div>
       <div class="cascade-explain">Rain that falls in each catchment reaches its gauge after the lag shown. Dry soil (class I) absorbs the first storms; saturated soil (class III) sends them straight to the river. Risk bands are worst-case (p90) rainfall load vs catchment capacity.</div>
     </div>
@@ -4473,6 +4487,7 @@ function setLang(lang) {
   // Re-render focus toggle labels
   if (state.payload) {
     renderRuntimeMeta(state.payload);
+    renderBriefStrip(state.payload);
     renderVerdict(state.payload);
     if (state.activeStation) {
       const st = (state.payload.infobanjir?.stations || []).find(s => s.id === state.activeStation);
@@ -5129,7 +5144,7 @@ function buildInsights(payload) {
   const fa = payload?.floodAction || {};
   const met = payload?.metWarnings || {};
   const summary = payload?.summary || {};
-  const rawStations = payload?.forecast?.stations;
+  const rawStations = payload?.forecast?.status === "live" ? payload.forecast.stations : null;
   const stations = Array.isArray(rawStations)
     ? rawStations
     : (rawStations && typeof rawStations === "object" ? Object.values(rawStations) : []);

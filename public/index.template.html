@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="" />
     <link rel="stylesheet" href="./styles.css?v=__ASSET_VERSION__" />
     <link rel="stylesheet" href="./brand.css?v=__ASSET_VERSION__" />
+    <link rel="stylesheet" href="./reading.css?v=__ASSET_VERSION__" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin=""></script>
     <script>window.__IOC_BOOT__ = __IOC_BOOT_JSON__;</script>
   </head>
@@ -91,20 +92,25 @@
           <div class="brief-kicker" data-i18n="briefNow">Do this today</div>
           <div id="briefNow" class="brief-list"></div>
         </article>
-        <article class="brief-card" data-tone="watch">
-          <div class="brief-kicker" data-i18n="briefNext">Watch next 6 hours</div>
+        <details class="brief-card brief-disclosure" data-tone="watch">
+          <summary class="brief-kicker" data-i18n="briefNext">Watch next 6 hours</summary>
           <div id="briefNext" class="brief-list"></div>
-        </article>
-        <article class="brief-card" data-tone="blind">
-          <div class="brief-kicker" data-i18n="briefBlind">Gaps in the picture</div>
+        </details>
+        <details class="brief-card brief-disclosure" data-tone="blind" open>
+          <summary class="brief-kicker" data-i18n="briefBlind">Gaps in the picture</summary>
           <div id="briefBlind" class="brief-list"></div>
-        </article>
+        </details>
+        <details class="brief-card brief-disclosure">
+          <summary class="brief-kicker" data-i18n="briefEvidence">Supporting directives · original language</summary>
+          <div id="briefEvidence" class="brief-list"></div>
+        </details>
       </section>
 
       <!-- INSIGHTS · what the data says (computed connections, not decoration) -->
-      <section id="insightsBar" class="insights-bar" aria-label="Insights">
+      <details id="insightsBar" class="insights-bar">
+        <summary class="brief-kicker" data-i18n="briefInsights">Connections · supporting evidence</summary>
         <div class="insights-bar-inner"></div>
-      </section>
+      </details>
 
         <aside class="panel news-rail" aria-label="What people are saying">
           <div class="panel-head">
@@ -113,7 +119,7 @@
           </div>
           <div class="panel-inner">
             <div id="newsIntakePanel" class="sentiment-panel"></div>
-            <details class="rail-disclosure" open>
+            <details class="rail-disclosure">
               <summary class="rail-disclosure-summary"><span data-i18n="newsDigest">News digest</span><span data-i18n="newsDigestSub">headlines &amp; language lanes</span></summary>
               <div id="newsDigest" class="news-digest rail-disclosure-body"></div>
             </details>

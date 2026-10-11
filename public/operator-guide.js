@@ -43,6 +43,11 @@ const COPY = {
   }
 };
 
+// This review window is a UI guardrail, not an agency flood standard.
+COPY.en.sections.splice(1, 0, ['Check observation age', 'Read the time beside each river gauge. Missing times, future times, or readings older than two hours require verification. This is a conservative dashboard review window, not a JPS standard. A new snapshot can contain old observations. Weather warnings may have incomplete validity dates; check the MET bulletin when the status needs review.']);
+COPY.ms.sections.splice(1, 0, ['Semak usia pemerhatian', 'Baca masa di sebelah setiap tolok sungai. Masa yang tiada, masa hadapan atau bacaan melebihi dua jam perlu disahkan. Ini ialah tempoh semakan konservatif papan pemuka, bukan piawaian JPS. Snapshot baharu boleh mengandungi pemerhatian lama. Tarikh sah amaran cuaca mungkin tidak lengkap; semak buletin MET apabila status memerlukan semakan.']);
+COPY.zh.sections.splice(1, 0, ['核对观测时间', '查看每个水位站旁的时间。时间缺失、时间在未来或读数超过两小时，都需要核实。这是仪表板的保守复核窗口，并非水利灌溉局标准。新快照可能包含旧观测。天气警报的有效期可能不完整；状态需复核时，请查看气象局官方公告。']);
+
 export function setupOperatorGuide(version = '') {
   const style = document.createElement('link');
   style.rel = 'stylesheet';
@@ -51,7 +56,7 @@ export function setupOperatorGuide(version = '') {
   const bar = document.createElement('nav');
   bar.className = 'operator-tools';
   bar.setAttribute('aria-label', 'Operator shortcuts');
-  const targets = ['mapCanvas', 'hydroGaugePanel', 'operationList', 'sourceMatrix'];
+  const targets = ['mapCanvas', 'hydroGaugePanel', 'briefNow', 'sourceMatrix'];
   const buttons = targets.map(id => {
     const button = document.createElement('button');
     button.type = 'button';

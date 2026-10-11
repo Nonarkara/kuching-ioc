@@ -1,0 +1,92 @@
+/* Morning brief: reading takes precedence over squeezing a whole city into one frame.
+   Maps, HUDs, charts and tickers are retained; evidence expands in place. */
+.dashboard-shell { font-size: 16px; line-height: 1.5; }
+.dashboard-shell .brief-item { font-size: 16px; line-height: 1.55; }
+.dashboard-shell .brief-card { padding: 16px; }
+.dashboard-shell .brief-disclosure { display: block; min-height: 0; padding-top: 8px; padding-bottom: 8px; }
+.dashboard-shell .brief-kicker { font-size: 16px; line-height: 1.4; font-weight: 700; }
+.brief-disclosure > summary, #insightsBar > summary {
+  cursor: pointer; min-height: 44px; padding: 10px 0; display: list-item;
+}
+.brief-disclosure[open] > summary { margin-bottom: 10px; }
+#insightsBar > summary { padding: 12px 16px; }
+.dashboard-shell .brief-list { gap: 12px; }
+.dashboard-shell .brief-item { grid-template-columns: 24px minmax(0, 1fr); overflow-wrap: anywhere; }
+.dashboard-shell .ctrl-btn, .dashboard-shell .lang-btn,
+.dashboard-shell .scope-btn, .dashboard-shell .dim-btn,
+.dashboard-shell .segmented-control button, .dashboard-shell .action-btn,
+.dashboard-shell .tray-tab, .dashboard-shell .web-app-button {
+  min-height: 44px; font-size: 14px; padding: 8px 12px; line-height: 1.35;
+}
+.dashboard-shell .scope-toggle, .dashboard-shell .dim-toggle { height: auto; min-height: 44px; }
+.dashboard-shell .controls-row, .dashboard-shell .runtime-badges { flex-wrap: wrap; }
+.dashboard-shell .today-brief { display: none; } /* stale payload-derived duplicate; current brief is below */
+.dashboard-shell .verdict-verb { font-size: 24px; white-space: normal; }
+.dashboard-shell .verdict-why { font-size: 16px; line-height: 1.5; display: block; overflow: visible; }
+.dashboard-shell .verdict-chip { font-size: 14px; padding: 6px 8px; }
+.dashboard-shell .metric-band { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dashboard-shell #metricBand .metric-card { grid-column: auto; }
+.dashboard-shell .metric-label, .dashboard-shell .metric-context { font-size: 14px; white-space: normal; }
+.dashboard-shell .metric-value { font-size: 24px; }
+.dashboard-shell .map-summary { font-size: 14px; white-space: normal; }
+.dashboard-shell .map-controls { flex-wrap: wrap; overflow-x: auto; }
+.dashboard-shell .map-controls .segmented-control { flex-wrap: wrap; }
+.dashboard-shell .rail-disclosure-summary, .dashboard-shell .tray-tab { min-height: 44px; font-size: 14px; }
+.dashboard-shell .posture-detail, .dashboard-shell .fa-reason, .dashboard-shell .hg-name,
+.dashboard-shell .hg-brief, .dashboard-shell .insights-bar-text { font-size: 16px; line-height: 1.5; }
+.dashboard-shell .hg-name small, .dashboard-shell .hg-observed, .dashboard-shell .hg-band,
+.dashboard-shell .hg-live, .dashboard-shell .pulse-note { font-size: 14px; line-height: 1.5; }
+.hg-observed { margin-top: 6px; color: var(--soft); }
+.hg-observed:not([data-status="recent"]) { color: var(--amber); font-weight: 700; }
+.cascade-stale { padding: 12px; font-size: 16px; color: var(--amber); border: 2px solid var(--amber); }
+.dashboard-shell .hg-level { font-size: 20px; }
+.dashboard-shell summary:focus-visible, .dashboard-shell button:focus-visible {
+  outline: 2px solid var(--cyan); outline-offset: 3px;
+}
+html[data-text-scale="large"] .dashboard-shell .brief-item,
+html[data-text-scale="large"] .dashboard-shell .verdict-why,
+html[data-text-scale="large"] .dashboard-shell .hg-name,
+html[data-text-scale="large"] .dashboard-shell .hg-brief { font-size: 20px; }
+html[data-text-scale="large"] .dashboard-shell .brief-kicker,
+html[data-text-scale="large"] .dashboard-shell .hg-observed,
+html[data-text-scale="large"] .dashboard-shell .metric-context { font-size: 18px; }
+html[data-text-scale="large"] .dashboard-shell .controls-row button { font-size: 16px; min-height: 48px; }
+#briefNow:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+@media screen and (min-width: 1041px) {
+  .dashboard-shell {
+    height: auto; min-height: 100svh; overflow: visible;
+    grid-template-rows: auto auto auto auto auto;
+  }
+  .dashboard-shell .masthead { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px; }
+  .dashboard-shell .status-block { grid-template-areas: "controls controls partners" "runtime runtime system"; }
+  .dashboard-shell .verdict-strip { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 16px; gap: 12px; }
+  .dashboard-shell .verdict-chips { grid-column: 1 / -1; justify-content: flex-start; flex-wrap: wrap; }
+  .dashboard-shell .board-grid.war-room {
+    min-height: 760px; grid-template-columns: 320px minmax(0, 1fr) 360px;
+    grid-template-rows: auto; align-items: stretch;
+  }
+  .dashboard-shell .col-now { overflow-y: visible; }
+  .dashboard-shell .col-now .news-rail { flex: 0 0 auto; overflow: visible; }
+  .dashboard-shell .col-map .map-panel { min-height: 480px; }
+  .dashboard-shell .deep-tray { flex-basis: 220px; }
+  .dashboard-shell .title-block h1 { font-size: 24px; white-space: normal; }
+  .dashboard-shell .operator-tools { flex-wrap: wrap; }
+}
+@media screen and (min-width: 1041px) and (max-width: 1599px) {
+  .dashboard-shell .board-grid.war-room {
+    grid-template-columns: 320px minmax(0, 1fr);
+    grid-template-areas: "now map" "situation situation"; grid-template-rows: auto auto;
+  }
+  .dashboard-shell .situation-rail { max-height: none; height: auto; overflow: visible; border-left: 0; }
+}
+@media (max-width: 1040px) {
+  .dashboard-shell .masthead { grid-template-columns: minmax(0, 1fr); }
+  .dashboard-shell .insights-bar-inner { grid-template-columns: minmax(0, 1fr); }
+  .dashboard-shell .brief-strip { grid-template-columns: minmax(0, 1fr); }
+  .dashboard-shell .map-panel { min-width: 0; }
+}
+@media (max-width: 720px) {
+  .dashboard-shell .metric-band { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-shell .controls-row .ctrl-btn, .dashboard-shell .controls-row .lang-btn { padding: 8px 2px; }
+  .dashboard-shell .verdict-strip { padding: 16px; gap: 12px; }
+}

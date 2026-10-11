@@ -3,6 +3,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { renderIndexHtml, resolveAssetVersion } from "./site-build.mjs";
+import { normalizeMetWeather } from "./public/met-weather.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
@@ -3329,7 +3330,7 @@ function buildMetricCards(weather, air, airport, jurisdictions, news, padawanZon
     { id: "population", label: "Known population", value: totalKnownPopulation, unit: "", tone: "neutral", context: "Official profiles where disclosed" },
     { id: "headlines", label: "Local headlines", value: news.counts?.total ?? news.items.length, unit: "", tone: (news.counts?.total ?? news.items.length) >= 10 ? "neutral" : "muted", context: "official + EN/BM/ZH lanes" },
     { id: "trends", label: "MY trend matches", value: trends.localMatchCount, unit: "", tone: trends.localMatchCount > 0 ? "focus" : "muted", context: trends.summary },
-    { id: "flood-watch", label: "Flood watch", value: metWarnings?.activeCount ?? 0, unit: "alert", tone: (metWarnings?.activeCount ?? 0) > 0 ? "warn" : "neutral", context: (metWarnings?.activeCount ?? 0) > 0 ? (metWarnings.items[0]?.heading ?? "Active MET warning") : "No active MET warnings" },
+    { id: "flood-watch", label: "Flood watch", value: metWarnings?.activeCount ?? null, unit: "alert", tone: metWarnings?.status === "unavailable" || (metWarnings?.activeCount ?? 0) > 0 ? "warn" : "neutral", context: metWarnings?.status === "unavailable" ? "Warning status unavailable — check MET bulletin" : (metWarnings?.activeCount ?? 0) > 0 ? (metWarnings.items[0]?.heading ?? "Active MET warning") : "No active regional MET warnings at last check" },
   ];
 }
 
@@ -3508,46 +3509,16 @@ async function loadMetWarnings() {
     try {
       const [warningData, forecastData] = await Promise.allSettled([
         fetchJson("https://api.data.gov.my/weather/warning/", 8000),
-        fetchJson("https://api.data.gov.my/weather/forecast?state=Sarawak", 8000)
+        fetchJson("https://api.data.gov.my/weather/forecast?contains=Kuching@location__location_name", 8000)
       ]);
 
-      const items = warningData.status === "fulfilled" && Array.isArray(warningData.value) ? warningData.value : [];
-      const forecasts = forecastData.status === "fulfilled" && Array.isArray(forecastData.value) ? forecastData.value : [];
-      
-      const now = Date.now();
-      const active = items.filter((w) => {
-        const from = Date.parse(w.valid_from);
-        const to = Date.parse(w.valid_to);
-        return now >= from && now <= to;
-      });
-      
-      const sarawak = active.filter((w) =>
-        /(sarawak|kuching|padawan|batu kawa|serian|siburan|kota samarahan|sarikei)/i.test(
-          (w.heading_en || "") + (w.text_en || "") + (w.heading_bm || "") + (w.text_bm || ""),
-        ),
+      // A rejected/malformed warning request is unknown, never zero warnings.
+      return normalizeMetWeather(
+        warningData.status === "fulfilled" ? warningData.value : null,
+        forecastData.status === "fulfilled" ? forecastData.value : null,
       );
-
-      const kuchingForecast = forecasts.find(f => f.location?.name?.toLowerCase().includes("kuching"));
-
-      return {
-        status: sarawak.length > 0 ? "live" : "clear",
-        updatedAt: nowIso(),
-        activeCount: sarawak.length,
-        allActiveCount: active.length,
-        items: sarawak.slice(0, 3).map((w) => ({
-          heading: w.heading_en || w.heading_bm || "Weather Warning",
-          text: w.text_en || w.text_bm || "",
-          instruction: w.instruction_en || w.instruction_bm || "",
-          validFrom: w.valid_from,
-          validTo: w.valid_to,
-        })),
-        forecast: {
-          text: kuchingForecast?.forecast || "Monitoring",
-          hasRain: kuchingForecast?.forecast?.toLowerCase().includes("thunderstorm") || kuchingForecast?.forecast?.toLowerCase().includes("rain"),
-        }
-      };
     } catch {
-      return { status: "fallback", updatedAt: nowIso(), activeCount: 0, allActiveCount: 0, items: [], forecast: { text: "Steady", hasRain: false } };
+      return normalizeMetWeather(null, null);
     }
   });
 }
@@ -4232,9 +4203,9 @@ async function buildDashboard() {
       sourceRecord(
         "official-warnings",
         "MET Malaysia Warnings",
-        metWarnings.updatedAt ? "official" : "stable",
-        `Official weather status: ${metWarnings.forecast.text}. Warning level: ${metWarnings.status === "live" ? "ACTIVE" : "STEADY"}.`,
-        "https://api.met.gov.my",
+        metWarnings.status === "unavailable" ? "offline" : metWarnings.status === "partial" ? "partial" : "official",
+        `MET forecast: ${metWarnings.forecast.text || "unavailable"}. Warning status: ${metWarnings.status}.`,
+        "https://developer.data.gov.my/realtime-api/weather",
         metWarnings.updatedAt || generatedAt,
       ),
       sourceRecord(

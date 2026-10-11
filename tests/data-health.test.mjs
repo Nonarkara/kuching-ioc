@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { dataHealth } from '../public/data-health.js';
 const now = Date.parse('2026-09-25T00:00:00Z');
-const station = { focus:'padawan', waterLevelM:0, band:'normal' };
+const station = { focus:'padawan', waterLevelM:0, band:'normal', observedAt:'25-09-2026 08:00' };
 const payload = stations => ({ generatedAt:new Date(now).toISOString(), infobanjir:{stations} });
 test('missing or null readings are unknown, never all clear', () => {
   assert.equal(dataHealth({}, 'padawan', now).uncertain, true);

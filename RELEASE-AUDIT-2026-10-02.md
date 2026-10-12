@@ -130,9 +130,9 @@ Browser findings: BM/CN translated headings/manual content but left action bodie
 
 Saved screenshot evidence (absolute paths):
 
-- `/Users/nonarkara/.codex/visualizations/2026/09/22/01a0c73b-9f78-7901-84ae-39be01aa6a8a/audit-mobile-375.png`
-- `/Users/nonarkara/.codex/visualizations/2026/09/22/01a0c73b-9f78-7901-84ae-39be01aa6a8a/audit-tablet-768.png`
-- `/Users/nonarkara/.codex/visualizations/2026/09/22/01a0c73b-9f78-7901-84ae-39be01aa6a8a/audit-desktop-1280.png`
+- `~/.codex/visualizations/2026/09/22/01a0c73b-9f78-7901-84ae-39be01aa6a8a/audit-mobile-375.png`
+- `~/.codex/visualizations/2026/09/22/01a0c73b-9f78-7901-84ae-39be01aa6a8a/audit-tablet-768.png`
+- `~/.codex/visualizations/2026/09/22/01a0c73b-9f78-7901-84ae-39be01aa6a8a/audit-desktop-1280.png`
 
 ## Acceptance order
 

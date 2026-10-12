@@ -961,25 +961,26 @@ async function buildFallbackDashboard() {
     // render meaningfully even in pure client-fallback mode (no server, no snapshot).
     mppCouncillors: {
       status: "fallback", updatedAt: gen, term: "2025–2028",
-      chairman: { title: "Cr.", name: "Tan Kai", phone: "013-8095165", role: "Chairman", coverage: "All zones" },
-      deputy: { title: "Cr.", name: "Mahmud Bin Dato Sri Haji Ibrahim", phone: "012-8087997", role: "Deputy Chairman", coverage: "All zones" },
+      chairman: { title: "Cr.", name: "Tan Kai", phone: null, role: "Chairman", coverage: "All zones" },
+      deputy: { title: "Cr.", name: "Mahmud Bin Dato Sri Haji Ibrahim", phone: null, role: "Deputy Chairman", coverage: "All zones" },
+      contacts: "withheld",
       wards: [
         { code: "A", codeGroup: ["A"], label: "Ward 1", area: "Upper Padawan", councillorCount: 2,
-          councillors: [{ title: "Cr.", name: "Mark Kellon anak Awo", phone: "016-8922060" }] },
+          councillors: [{ title: "Cr.", name: "Mark Kellon anak Awo", phone: null }] },
         { code: "FG", codeGroup: ["F","G"], label: "Ward 4", area: "Kota Padawan, Kuap, Landeh & Batu 10-15 Kuching-Serian Road", councillorCount: 4,
-          councillors: [{ title: "Cr.", name: "Lim Lian Kee", phone: "019-8185350" }] },
+          councillors: [{ title: "Cr.", name: "Lim Lian Kee", phone: null }] },
       ],
       totals: { wards: 10, councillors: 32 },
     },
     mppLocalities: {
-      status: "fallback", updatedAt: gen,
+      status: "fallback", updatedAt: gen, propertyUsage: "withheld",
       items: [
         { no: 1, code: "A001", name: "PANGKALAN EMPAT", letter: "A", wardCode: "A",
           constituency: { raw: "N.19 Mambong under P.198 Puncak Borneo",
             parsed: [{ stateCode: "N.19", stateName: "Mambong", parliamentCode: "P.198", parliamentName: "Puncak Borneo" }], compound: false },
-          residential: 13, commercial: 0, industrial: 0, exempted: 0 },
+          residential: null, commercial: null, industrial: null, exempted: null },
       ],
-      totals: { localities: 525, residential: 77015, commercial: 5780, industrial: 1805, exempted: 1, stateConstituencies: 9, parliamentConstituencies: 5 },
+      totals: { localities: 525, residential: null, commercial: null, industrial: null, exempted: null, stateConstituencies: 9, parliamentConstituencies: 5 },
       breakdowns: { byWard: { A:20, B:16, D:17, FG:76, H:75, I:56, JL:101, K:84, M:42, NPQ:27, X:11 } },
     },
     // FloodDash-grade hydro stubs — replaced by DID iHYDRO on live/server tiers.
@@ -3161,12 +3162,6 @@ function renderMppServicesDirectory() {
     zh: "热线总机",
   }[lang] || "HQ Hotline";
 
-  const whatsappLabel = {
-    en: "WhatsApp Complaints",
-    ms: "Aduan WhatsApp",
-    zh: "WhatsApp 投诉",
-  }[lang] || "WhatsApp Complaints";
-
   const items = (MPP_OFFICIAL_SERVICES || []).map((s) => {
     const loc = s[lang] || s.en || {};
     const title = loc.title || s.id;
@@ -3194,13 +3189,9 @@ function renderMppServicesDirectory() {
           <span class="mpp-contact-label">${escapeHtml(hotlineLabel)}</span>
           <a class="mpp-contact-link" href="tel:082615566">082-615566</a>
         </div>
-        <div class="mpp-contact-row">
-          <span class="mpp-contact-label">${escapeHtml(whatsappLabel)}</span>
-          <a class="mpp-contact-link" href="https://wa.me/60138025566" target="_blank" rel="noopener">013-8025566</a>
-        </div>
         <div class="mpp-contact-row mpp-contact-officer">
           <span class="mpp-contact-label">${escapeHtml(secretaryTitle)}</span>
-          <span class="mpp-contact-val">Ir. Ts. Goh Thiam Ho (Ext. 302)</span>
+          <span class="mpp-contact-val">Ir. Ts. Goh Thiam Ho</span>
         </div>
       </div>
       <div class="mpp-services-grid">
@@ -3210,17 +3201,34 @@ function renderMppServicesDirectory() {
 }
 
 
+const PUBLIC_SWITCHBOARD = "082-615566";
+
+function propertyUsageWithheld(payload = state.payload) {
+  return payload?.mppLocalities?.propertyUsage === "withheld"
+    || payload?.mppLocalities?.totals?.residential == null;
+}
+
+function countOrDash(value) {
+  return value == null || value === "" ? "—" : num(value, 0);
+}
+
+function switchboardLink() {
+  return `<a class="councillor-phone" href="tel:082615566" title="Published council switchboard">${PUBLIC_SWITCHBOARD}</a>`;
+}
+
 function renderCouncillorCard(person, { role, coverage, accentColor } = {}) {
   const color = accentColor || "var(--cyan)";
   const badge = role ? `<div class="councillor-role">${escapeHtml(role)}</div>` : "";
   const scope = coverage ? `<div class="councillor-scope">${escapeHtml(coverage)}</div>` : "";
-  const phoneClean = (person.phone || "").replace(/[^0-9+]/g, "");
+  const phoneHtml = person?.phone
+    ? `<a class="councillor-phone" href="tel:${String(person.phone).replace(/[^0-9+]/g, "")}">${escapeHtml(person.phone)}</a>`
+    : switchboardLink();
   return `
     <article class="councillor-card" style="border-left-color:${color}">
       ${badge}
       <div class="councillor-name">${escapeHtml([person.title, person.name].filter(Boolean).join(" "))}</div>
       ${scope}
-      <a class="councillor-phone" href="tel:${phoneClean}">${escapeHtml(person.phone || "—")}</a>
+      ${phoneHtml}
     </article>`;
 }
 
@@ -3317,10 +3325,10 @@ function filterLocalities(items, f) {
       const codes = (it.constituency?.parsed || []).map(p => p.parliamentCode);
       if (!codes.includes(f.parliamentCode)) return false;
     }
-    if (f.propertyType === "residential" && !(it.residential > 0)) return false;
-    if (f.propertyType === "commercial"  && !(it.commercial  > 0)) return false;
-    if (f.propertyType === "industrial"  && !(it.industrial  > 0)) return false;
-    if (f.propertyType === "exempted"    && !(it.exempted    > 0)) return false;
+    if (!propertyUsageWithheld() && f.propertyType === "residential" && !(it.residential > 0)) return false;
+    if (!propertyUsageWithheld() && f.propertyType === "commercial"  && !(it.commercial  > 0)) return false;
+    if (!propertyUsageWithheld() && f.propertyType === "industrial"  && !(it.industrial  > 0)) return false;
+    if (!propertyUsageWithheld() && f.propertyType === "exempted"    && !(it.exempted    > 0)) return false;
     if (q) {
       const hay = `${it.code} ${it.name}`.toUpperCase();
       if (!hay.includes(q)) return false;
@@ -3336,7 +3344,7 @@ function renderLocalityKpis(totals) {
   const tile = (label, value, unit = "") => `
     <article class="metric-card" data-tone="neutral">
       <div class="metric-label">${escapeHtml(label)}</div>
-      <div class="metric-value">${num(value, 0)}<span class="metric-unit">${escapeHtml(unit)}</span></div>
+      <div class="metric-value">${countOrDash(value)}<span class="metric-unit">${value == null ? "" : escapeHtml(unit)}</span></div>
     </article>`;
   target.innerHTML = [
     tile(t("totalLocalities"), totals.localities),
@@ -3364,9 +3372,9 @@ function renderLocalitySummary(payload) {
   target.innerHTML = `
     <span><span class="locality-num">${num(totals.localities ?? 0, 0)}</span> ${t("totalLocalities").toLowerCase()}</span>
     <span><span class="locality-num">${wardCount}</span> ${(t("wards") || "wards")}</span>
-    <span><span class="locality-num">${num(totals.residential ?? 0, 0)}</span> ${t("residential").toLowerCase()}</span>
-    <span><span class="locality-num">${num(totals.commercial ?? 0, 0)}</span> ${t("commercial").toLowerCase()}</span>
-    <span><span class="locality-num">${num(totals.industrial ?? 0, 0)}</span> ${t("industrial").toLowerCase()}</span>
+    <span><span class="locality-num">${countOrDash(totals.residential)}</span> ${t("residential").toLowerCase()}</span>
+    <span><span class="locality-num">${countOrDash(totals.commercial)}</span> ${t("commercial").toLowerCase()}</span>
+    <span><span class="locality-num">${countOrDash(totals.industrial)}</span> ${t("industrial").toLowerCase()}</span>
     <span><span class="locality-num">${totals.stateConstituencies ?? 0}</span> state · <span class="locality-num">${totals.parliamentConstituencies ?? 0}</span> parl seats</span>`;
 }
 
@@ -3388,7 +3396,7 @@ function renderLocalityFilters(payload) {
     Object.entries(parlSeats).sort().map(([code, v]) =>
       `<option value="${code}" ${f.parliamentCode === code ? "selected" : ""}>${code} ${escapeHtml(v.name)} (${v.count})</option>`
     ).join("");
-  const propOpts = [
+  const propOpts = propertyUsageWithheld(payload) ? "" : [
     ["", t("allPropertyTypes")],
     ["residential", t("residential")],
     ["commercial",  t("commercial")],
@@ -3400,7 +3408,7 @@ function renderLocalityFilters(payload) {
     <select class="locality-filter" data-filter="ward">${wardOpts}</select>
     <select class="locality-filter" data-filter="stateCode">${stateOpts}</select>
     <select class="locality-filter" data-filter="parliamentCode">${parlOpts}</select>
-    <select class="locality-filter" data-filter="propertyType">${propOpts}</select>
+    ${propOpts ? `<select class="locality-filter" data-filter="propertyType">${propOpts}</select>` : ""}
     <input type="search" class="locality-search" placeholder="${t("searchLocality")}" value="${escapeHtml(f.search || "")}" data-filter="search" />
     <button type="button" class="locality-reset" data-action="reset-locality-filter">Reset</button>
   `;
@@ -3445,9 +3453,11 @@ function renderLocalityList(items) {
         <span class="locality-name">${escapeHtml(it.name)}</span>
         <span class="locality-const">${escapeHtml(localityConstituencyBadge(it))}</span>
         <span class="locality-counts">
-          <span class="c-res" title="Residential">${num(it.residential)}R</span>
+          ${propertyUsageWithheld()
+            ? `<span class="c-res" title="Property-usage counts withheld">withheld</span>`
+            : `<span class="c-res" title="Residential">${num(it.residential)}R</span>
           <span class="c-com" title="Commercial">${num(it.commercial)}C</span>
-          <span class="c-ind" title="Industrial">${num(it.industrial)}I</span>
+          <span class="c-ind" title="Industrial">${num(it.industrial)}I</span>`}
         </span>
       </article>`;
   };
@@ -3578,7 +3588,9 @@ function renderWardBrief(wardCode, payload) {
   const councillor = (payload?.mppCouncillors?.wards || []).find(w => w.code === wardCode);
   const councillorCard = councillor?.councillors?.[0];
   const councillorLine = councillorCard
-    ? `${escapeHtml(councillorCard.name || councillorCard.title || "—")} · <a class="ward-brief-phone" href="tel:${(councillorCard.phone || "").replace(/[^0-9+]/g, "")}">${escapeHtml(councillorCard.phone || "—")}</a>`
+    ? `${escapeHtml(councillorCard.name || councillorCard.title || "—")} · ${councillorCard.phone
+        ? `<a class="ward-brief-phone" href="tel:${String(councillorCard.phone).replace(/[^0-9+]/g, "")}">${escapeHtml(councillorCard.phone)}</a>`
+        : `<a class="ward-brief-phone" href="tel:082615566">${PUBLIC_SWITCHBOARD}</a>`}`
     : "—";
 
   // Hydro stations whose snapped catchment overlaps this ward (best-effort heuristic).
@@ -3641,8 +3653,8 @@ function renderWardBrief(wardCode, payload) {
     </div>
     <div class="ward-brief-stats">
       <div class="ward-brief-stat"><strong>${totalLoc}</strong>${locWord}</div>
-      <div class="ward-brief-stat"><strong>${totals.residential.toLocaleString()}</strong>${resWord}</div>
-      <div class="ward-brief-stat"><strong>${totals.commercial.toLocaleString()}</strong>${comWord}</div>
+      <div class="ward-brief-stat"><strong>${propertyUsageWithheld(payload) ? "—" : totals.residential.toLocaleString()}</strong>${resWord}</div>
+      <div class="ward-brief-stat"><strong>${propertyUsageWithheld(payload) ? "—" : totals.commercial.toLocaleString()}</strong>${comWord}</div>
     </div>
     <button type="button" class="ward-brief-loc-btn" id="wardBriefExploreBtn">
       <span>${escapeHtml(lblExplore)}</span>

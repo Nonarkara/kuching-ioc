@@ -1,19 +1,18 @@
 {
   "generatedAt": "2026-04-23T04:44:46.156292Z",
-  "source": "MPP Resident Councillors System 2025-2028",
-  "sourceFile": "MPP RESIDENT COUNCILLORS SYSTEM 2025.docx",
+  "source": "Public demo roster for the 2025-2028 term. Personal contact numbers are withheld.",
   "term": "2025-2028",
   "chairman": {
     "title": "Cr.",
     "name": "Tan Kai",
-    "phone": "013-8095165",
+    "phone": null,
     "role": "Chairman",
     "coverage": "All zones"
   },
   "deputy": {
     "title": "Cr.",
     "name": "Mahmud Bin Dato Sri Haji Ibrahim",
-    "phone": "012-8087997",
+    "phone": null,
     "role": "Deputy Chairman",
     "coverage": "All zones"
   },
@@ -30,12 +29,12 @@
         {
           "title": "Cr.",
           "name": "Mark Kellon anak Awo",
-          "phone": "016-8922060"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Stephen Jatu anak Sawet",
-          "phone": "019-4592366"
+          "phone": null
         }
       ]
     },
@@ -51,22 +50,22 @@
         {
           "title": "Cr.",
           "name": "Felix Ngui",
-          "phone": "016-8548070"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Tito Grabo anak Teyok",
-          "phone": "011-33203700"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Niput anak Ahip",
-          "phone": "019-7658166"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Roselin anak Lasek",
-          "phone": "010-9752611"
+          "phone": null
         }
       ]
     },
@@ -82,12 +81,12 @@
         {
           "title": "Cr.",
           "name": "Walter anak Suhai",
-          "phone": "010-4087717"
+          "phone": null
         },
         {
           "title": "Lt. Kol.",
           "name": "Monday anak Juhid",
-          "phone": "013-8036477"
+          "phone": null
         }
       ]
     },
@@ -104,22 +103,22 @@
         {
           "title": "Cr.",
           "name": "Lim Lian Kee",
-          "phone": "019-8185350"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Shamsudin bin Unai",
-          "phone": "013-9065805"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Norolhadi bin Dolla Sabari",
-          "phone": "019-8747445"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Wilarmy Geniron Jebron",
-          "phone": "011-29109925"
+          "phone": null
         }
       ]
     },
@@ -135,17 +134,17 @@
         {
           "title": "Cr.",
           "name": "Gerald Goh Teck Joo",
-          "phone": "019-8165368"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Alvin Chong Nyuk Fah",
-          "phone": "012-8442885"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Leng Chai anak Mendu",
-          "phone": "011-14567777"
+          "phone": null
         }
       ]
     },
@@ -161,17 +160,17 @@
         {
           "title": "Sr. Cr.",
           "name": "Chen Chee Joong",
-          "phone": "019-8130636"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Philip Liaw Kian Sin",
-          "phone": "016-8611233"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Mohamad Fauzi bin Ali",
-          "phone": "016-8565626"
+          "phone": null
         }
       ]
     },
@@ -188,22 +187,22 @@
         {
           "title": "Cr.",
           "name": "Samsudin bin Sapri",
-          "phone": "019-8916606"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Gary Yeo Shin Huat",
-          "phone": "010-7922988"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Phang Kit Lung",
-          "phone": "013-9406228"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Bassiron bin Haji Latep",
-          "phone": "011-53355255"
+          "phone": null
         }
       ]
     },
@@ -219,17 +218,17 @@
         {
           "title": "Cr.",
           "name": "Jamilah binti Rakim",
-          "phone": "016-8741442"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Madhi bin Tomi",
-          "phone": "019-9707411"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Lee Yen Huei",
-          "phone": "010-7878162"
+          "phone": null
         }
       ]
     },
@@ -245,17 +244,17 @@
         {
           "title": "Ir. Dr. Cr.",
           "name": "Jackie Sim Hui Hui",
-          "phone": "010-2227751"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Aaron Tay Kok Tung",
-          "phone": "012-8885065"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Ronnie Hii Ru Wei",
-          "phone": "012-8860505"
+          "phone": null
         }
       ]
     },
@@ -273,12 +272,12 @@
         {
           "title": "Cr.",
           "name": "Sebeki bin Jen",
-          "phone": "019-8763231"
+          "phone": null
         },
         {
           "title": "Cr.",
           "name": "Othman bin Ibrahim",
-          "phone": "010-9765149"
+          "phone": null
         }
       ]
     }
@@ -287,5 +286,6 @@
     "wards": 10,
     "councillors": 32
   },
-  "notes": "Ward codes align 1:1 with the prefixes used in the MPP Locality Listing (A, B, D, F+G, H, I, J+L, K, M, N+P+Q). Chairman and Deputy cover all zones."
+  "notes": "Ward codes align 1:1 with the prefixes used in the MPP Locality Listing (A, B, D, F+G, H, I, J+L, K, M, N+P+Q). Chairman and Deputy cover all zones.",
+  "contacts": "withheld"
 }

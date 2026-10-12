@@ -1,7 +1,6 @@
 {
   "generatedAt": "2026-04-23T04:46:47.171479Z",
-  "source": "MPP Locality Listing and Property Usage with State and Parliament Constituency",
-  "sourceFile": "Locality Listing and Property Usage with State and Parliament Constituency.xlsx",
+  "source": "Public demo locality directory. Property-usage counts are withheld.",
   "items": [
     {
       "no": 1,
@@ -21,10 +20,10 @@
         ],
         "compound": false
       },
-      "residential": 13,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 2,
@@ -44,10 +43,10 @@
         ],
         "compound": false
       },
-      "residential": 1,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 3,
@@ -67,10 +66,10 @@
         ],
         "compound": false
       },
-      "residential": 66,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 4,
@@ -90,10 +89,10 @@
         ],
         "compound": false
       },
-      "residential": 15,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 5,
@@ -113,10 +112,10 @@
         ],
         "compound": false
       },
-      "residential": 46,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 6,
@@ -136,10 +135,10 @@
         ],
         "compound": false
       },
-      "residential": 13,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 7,
@@ -159,10 +158,10 @@
         ],
         "compound": false
       },
-      "residential": 40,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 8,
@@ -182,10 +181,10 @@
         ],
         "compound": false
       },
-      "residential": 140,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 9,
@@ -205,10 +204,10 @@
         ],
         "compound": false
       },
-      "residential": 81,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 10,
@@ -228,10 +227,10 @@
         ],
         "compound": false
       },
-      "residential": 51,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 11,
@@ -251,10 +250,10 @@
         ],
         "compound": false
       },
-      "residential": 22,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 12,
@@ -274,10 +273,10 @@
         ],
         "compound": false
       },
-      "residential": 46,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 13,
@@ -297,10 +296,10 @@
         ],
         "compound": false
       },
-      "residential": 26,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 14,
@@ -320,10 +319,10 @@
         ],
         "compound": false
       },
-      "residential": 23,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 15,
@@ -343,10 +342,10 @@
         ],
         "compound": false
       },
-      "residential": 52,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 16,
@@ -366,10 +365,10 @@
         ],
         "compound": false
       },
-      "residential": 72,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 17,
@@ -389,10 +388,10 @@
         ],
         "compound": false
       },
-      "residential": 37,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 18,
@@ -412,10 +411,10 @@
         ],
         "compound": false
       },
-      "residential": 41,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 19,
@@ -435,10 +434,10 @@
         ],
         "compound": false
       },
-      "residential": 23,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 20,
@@ -458,10 +457,10 @@
         ],
         "compound": false
       },
-      "residential": 43,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 21,
@@ -481,10 +480,10 @@
         ],
         "compound": false
       },
-      "residential": 239,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 22,
@@ -504,10 +503,10 @@
         ],
         "compound": false
       },
-      "residential": 194,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 23,
@@ -527,10 +526,10 @@
         ],
         "compound": false
       },
-      "residential": 171,
-      "commercial": 3,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 24,
@@ -550,10 +549,10 @@
         ],
         "compound": false
       },
-      "residential": 73,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 25,
@@ -573,10 +572,10 @@
         ],
         "compound": false
       },
-      "residential": 148,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 26,
@@ -596,10 +595,10 @@
         ],
         "compound": false
       },
-      "residential": 196,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 27,
@@ -619,10 +618,10 @@
         ],
         "compound": false
       },
-      "residential": 75,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 28,
@@ -642,10 +641,10 @@
         ],
         "compound": false
       },
-      "residential": 88,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 29,
@@ -665,10 +664,10 @@
         ],
         "compound": false
       },
-      "residential": 36,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 30,
@@ -688,10 +687,10 @@
         ],
         "compound": false
       },
-      "residential": 49,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 31,
@@ -711,10 +710,10 @@
         ],
         "compound": false
       },
-      "residential": 31,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 32,
@@ -734,10 +733,10 @@
         ],
         "compound": false
       },
-      "residential": 59,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 33,
@@ -757,10 +756,10 @@
         ],
         "compound": false
       },
-      "residential": 31,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 34,
@@ -780,10 +779,10 @@
         ],
         "compound": false
       },
-      "residential": 36,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 35,
@@ -803,10 +802,10 @@
         ],
         "compound": false
       },
-      "residential": 41,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 36,
@@ -826,10 +825,10 @@
         ],
         "compound": false
       },
-      "residential": 67,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 37,
@@ -849,10 +848,10 @@
         ],
         "compound": false
       },
-      "residential": 308,
-      "commercial": 0,
-      "industrial": 3,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 38,
@@ -872,10 +871,10 @@
         ],
         "compound": false
       },
-      "residential": 82,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 39,
@@ -895,10 +894,10 @@
         ],
         "compound": false
       },
-      "residential": 211,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 40,
@@ -918,10 +917,10 @@
         ],
         "compound": false
       },
-      "residential": 62,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 41,
@@ -941,10 +940,10 @@
         ],
         "compound": false
       },
-      "residential": 222,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 42,
@@ -964,10 +963,10 @@
         ],
         "compound": false
       },
-      "residential": 235,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 43,
@@ -987,10 +986,10 @@
         ],
         "compound": false
       },
-      "residential": 99,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 44,
@@ -1010,10 +1009,10 @@
         ],
         "compound": false
       },
-      "residential": 85,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 45,
@@ -1033,10 +1032,10 @@
         ],
         "compound": false
       },
-      "residential": 157,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 46,
@@ -1056,10 +1055,10 @@
         ],
         "compound": false
       },
-      "residential": 319,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 47,
@@ -1079,10 +1078,10 @@
         ],
         "compound": false
       },
-      "residential": 66,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 48,
@@ -1102,10 +1101,10 @@
         ],
         "compound": false
       },
-      "residential": 47,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 49,
@@ -1125,10 +1124,10 @@
         ],
         "compound": false
       },
-      "residential": 148,
-      "commercial": 5,
-      "industrial": 2,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 50,
@@ -1148,10 +1147,10 @@
         ],
         "compound": false
       },
-      "residential": 35,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 51,
@@ -1171,10 +1170,10 @@
         ],
         "compound": false
       },
-      "residential": 352,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 52,
@@ -1194,10 +1193,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 26,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 53,
@@ -1217,10 +1216,10 @@
         ],
         "compound": false
       },
-      "residential": 197,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 54,
@@ -1240,10 +1239,10 @@
         ],
         "compound": false
       },
-      "residential": 312,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 55,
@@ -1263,10 +1262,10 @@
         ],
         "compound": false
       },
-      "residential": 14,
-      "commercial": 0,
-      "industrial": 17,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 56,
@@ -1286,10 +1285,10 @@
         ],
         "compound": false
       },
-      "residential": 457,
-      "commercial": 10,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 57,
@@ -1309,10 +1308,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 272,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 58,
@@ -1332,10 +1331,10 @@
         ],
         "compound": false
       },
-      "residential": 154,
-      "commercial": 1,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 59,
@@ -1355,10 +1354,10 @@
         ],
         "compound": false
       },
-      "residential": 176,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 60,
@@ -1378,10 +1377,10 @@
         ],
         "compound": false
       },
-      "residential": 472,
-      "commercial": 0,
-      "industrial": 2,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 61,
@@ -1401,10 +1400,10 @@
         ],
         "compound": false
       },
-      "residential": 101,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 62,
@@ -1424,10 +1423,10 @@
         ],
         "compound": false
       },
-      "residential": 221,
-      "commercial": 1,
-      "industrial": 23,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 63,
@@ -1447,10 +1446,10 @@
         ],
         "compound": false
       },
-      "residential": 133,
-      "commercial": 0,
-      "industrial": 2,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 64,
@@ -1476,10 +1475,10 @@
         ],
         "compound": true
       },
-      "residential": 107,
-      "commercial": 6,
-      "industrial": 31,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 65,
@@ -1499,10 +1498,10 @@
         ],
         "compound": false
       },
-      "residential": 330,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 66,
@@ -1522,10 +1521,10 @@
         ],
         "compound": false
       },
-      "residential": 192,
-      "commercial": 20,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 67,
@@ -1545,10 +1544,10 @@
         ],
         "compound": false
       },
-      "residential": 85,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 68,
@@ -1568,10 +1567,10 @@
         ],
         "compound": false
       },
-      "residential": 41,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 69,
@@ -1591,10 +1590,10 @@
         ],
         "compound": false
       },
-      "residential": 71,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 70,
@@ -1614,10 +1613,10 @@
         ],
         "compound": false
       },
-      "residential": 2,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 71,
@@ -1643,10 +1642,10 @@
         ],
         "compound": true
       },
-      "residential": 79,
-      "commercial": 5,
-      "industrial": 40,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 72,
@@ -1672,10 +1671,10 @@
         ],
         "compound": true
       },
-      "residential": 18,
-      "commercial": 2,
-      "industrial": 3,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 73,
@@ -1695,10 +1694,10 @@
         ],
         "compound": false
       },
-      "residential": 108,
-      "commercial": 2,
-      "industrial": 4,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 74,
@@ -1718,10 +1717,10 @@
         ],
         "compound": false
       },
-      "residential": 74,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 75,
@@ -1741,10 +1740,10 @@
         ],
         "compound": false
       },
-      "residential": 2,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 76,
@@ -1770,10 +1769,10 @@
         ],
         "compound": true
       },
-      "residential": 5,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 77,
@@ -1799,10 +1798,10 @@
         ],
         "compound": true
       },
-      "residential": 7,
-      "commercial": 3,
-      "industrial": 7,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 78,
@@ -1822,10 +1821,10 @@
         ],
         "compound": false
       },
-      "residential": 11,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 79,
@@ -1845,10 +1844,10 @@
         ],
         "compound": false
       },
-      "residential": 51,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 80,
@@ -1868,10 +1867,10 @@
         ],
         "compound": false
       },
-      "residential": 102,
-      "commercial": 5,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 81,
@@ -1891,10 +1890,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 44,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 82,
@@ -1914,10 +1913,10 @@
         ],
         "compound": false
       },
-      "residential": 37,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 83,
@@ -1937,10 +1936,10 @@
         ],
         "compound": false
       },
-      "residential": 64,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 84,
@@ -1960,10 +1959,10 @@
         ],
         "compound": false
       },
-      "residential": 274,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 85,
@@ -1983,10 +1982,10 @@
         ],
         "compound": false
       },
-      "residential": 320,
-      "commercial": 6,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 86,
@@ -2006,10 +2005,10 @@
         ],
         "compound": false
       },
-      "residential": 128,
-      "commercial": 78,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 87,
@@ -2029,10 +2028,10 @@
         ],
         "compound": false
       },
-      "residential": 1444,
-      "commercial": 57,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 88,
@@ -2052,10 +2051,10 @@
         ],
         "compound": false
       },
-      "residential": 57,
-      "commercial": 2,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 89,
@@ -2075,10 +2074,10 @@
         ],
         "compound": false
       },
-      "residential": 34,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 90,
@@ -2098,10 +2097,10 @@
         ],
         "compound": false
       },
-      "residential": 94,
-      "commercial": 10,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 91,
@@ -2121,10 +2120,10 @@
         ],
         "compound": false
       },
-      "residential": 199,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 92,
@@ -2144,10 +2143,10 @@
         ],
         "compound": false
       },
-      "residential": 720,
-      "commercial": 31,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 93,
@@ -2167,10 +2166,10 @@
         ],
         "compound": false
       },
-      "residential": 79,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 94,
@@ -2190,10 +2189,10 @@
         ],
         "compound": false
       },
-      "residential": 76,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 95,
@@ -2213,10 +2212,10 @@
         ],
         "compound": false
       },
-      "residential": 42,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 96,
@@ -2236,10 +2235,10 @@
         ],
         "compound": false
       },
-      "residential": 218,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 97,
@@ -2259,10 +2258,10 @@
         ],
         "compound": false
       },
-      "residential": 68,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 98,
@@ -2282,10 +2281,10 @@
         ],
         "compound": false
       },
-      "residential": 781,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 99,
@@ -2305,10 +2304,10 @@
         ],
         "compound": false
       },
-      "residential": 56,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 100,
@@ -2328,10 +2327,10 @@
         ],
         "compound": false
       },
-      "residential": 44,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 101,
@@ -2351,10 +2350,10 @@
         ],
         "compound": false
       },
-      "residential": 78,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 102,
@@ -2374,10 +2373,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 50,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 103,
@@ -2397,10 +2396,10 @@
         ],
         "compound": false
       },
-      "residential": 61,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 104,
@@ -2420,10 +2419,10 @@
         ],
         "compound": false
       },
-      "residential": 177,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 105,
@@ -2443,10 +2442,10 @@
         ],
         "compound": false
       },
-      "residential": 38,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 106,
@@ -2466,10 +2465,10 @@
         ],
         "compound": false
       },
-      "residential": 55,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 107,
@@ -2489,10 +2488,10 @@
         ],
         "compound": false
       },
-      "residential": 64,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 108,
@@ -2512,10 +2511,10 @@
         ],
         "compound": false
       },
-      "residential": 18,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 109,
@@ -2535,10 +2534,10 @@
         ],
         "compound": false
       },
-      "residential": 278,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 110,
@@ -2558,10 +2557,10 @@
         ],
         "compound": false
       },
-      "residential": 16,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 111,
@@ -2581,10 +2580,10 @@
         ],
         "compound": false
       },
-      "residential": 32,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 112,
@@ -2604,10 +2603,10 @@
         ],
         "compound": false
       },
-      "residential": 33,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 113,
@@ -2627,10 +2626,10 @@
         ],
         "compound": false
       },
-      "residential": 40,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 114,
@@ -2650,10 +2649,10 @@
         ],
         "compound": false
       },
-      "residential": 136,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 115,
@@ -2673,10 +2672,10 @@
         ],
         "compound": false
       },
-      "residential": 43,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 116,
@@ -2696,10 +2695,10 @@
         ],
         "compound": false
       },
-      "residential": 66,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 117,
@@ -2719,10 +2718,10 @@
         ],
         "compound": false
       },
-      "residential": 219,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 118,
@@ -2742,10 +2741,10 @@
         ],
         "compound": false
       },
-      "residential": 29,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 119,
@@ -2765,10 +2764,10 @@
         ],
         "compound": false
       },
-      "residential": 40,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 120,
@@ -2788,10 +2787,10 @@
         ],
         "compound": false
       },
-      "residential": 40,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 121,
@@ -2811,10 +2810,10 @@
         ],
         "compound": false
       },
-      "residential": 443,
-      "commercial": 2,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 122,
@@ -2834,10 +2833,10 @@
         ],
         "compound": false
       },
-      "residential": 102,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 123,
@@ -2857,10 +2856,10 @@
         ],
         "compound": false
       },
-      "residential": 558,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 124,
@@ -2869,10 +2868,10 @@
       "letter": "G",
       "wardCode": "FG",
       "constituency": null,
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 36,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 125,
@@ -2892,10 +2891,10 @@
         ],
         "compound": false
       },
-      "residential": 57,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 126,
@@ -2921,10 +2920,10 @@
         ],
         "compound": true
       },
-      "residential": 3,
-      "commercial": 8,
-      "industrial": 4,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 127,
@@ -2944,10 +2943,10 @@
         ],
         "compound": false
       },
-      "residential": 23,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 128,
@@ -2967,10 +2966,10 @@
         ],
         "compound": false
       },
-      "residential": 73,
-      "commercial": 9,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 129,
@@ -2990,10 +2989,10 @@
         ],
         "compound": false
       },
-      "residential": 42,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 130,
@@ -3013,10 +3012,10 @@
         ],
         "compound": false
       },
-      "residential": 33,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 131,
@@ -3036,10 +3035,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 53,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 132,
@@ -3059,10 +3058,10 @@
         ],
         "compound": false
       },
-      "residential": 243,
-      "commercial": 5,
-      "industrial": 13,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 133,
@@ -3082,10 +3081,10 @@
         ],
         "compound": false
       },
-      "residential": 6,
-      "commercial": 0,
-      "industrial": 42,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 134,
@@ -3105,10 +3104,10 @@
         ],
         "compound": false
       },
-      "residential": 263,
-      "commercial": 9,
-      "industrial": 2,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 135,
@@ -3128,10 +3127,10 @@
         ],
         "compound": false
       },
-      "residential": 94,
-      "commercial": 31,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 136,
@@ -3151,10 +3150,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 66,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 137,
@@ -3180,10 +3179,10 @@
         ],
         "compound": true
       },
-      "residential": 144,
-      "commercial": 4,
-      "industrial": 14,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 138,
@@ -3203,10 +3202,10 @@
         ],
         "compound": false
       },
-      "residential": 221,
-      "commercial": 16,
-      "industrial": 104,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 139,
@@ -3226,10 +3225,10 @@
         ],
         "compound": false
       },
-      "residential": 50,
-      "commercial": 2,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 140,
@@ -3249,10 +3248,10 @@
         ],
         "compound": false
       },
-      "residential": 23,
-      "commercial": 1,
-      "industrial": 20,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 141,
@@ -3272,10 +3271,10 @@
         ],
         "compound": false
       },
-      "residential": 96,
-      "commercial": 3,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 142,
@@ -3295,10 +3294,10 @@
         ],
         "compound": false
       },
-      "residential": 122,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 143,
@@ -3318,10 +3317,10 @@
         ],
         "compound": false
       },
-      "residential": 114,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 144,
@@ -3341,10 +3340,10 @@
         ],
         "compound": false
       },
-      "residential": 67,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 145,
@@ -3364,10 +3363,10 @@
         ],
         "compound": false
       },
-      "residential": 184,
-      "commercial": 3,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 146,
@@ -3387,10 +3386,10 @@
         ],
         "compound": false
       },
-      "residential": 15,
-      "commercial": 17,
-      "industrial": 9,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 147,
@@ -3410,10 +3409,10 @@
         ],
         "compound": false
       },
-      "residential": 36,
-      "commercial": 36,
-      "industrial": 17,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 148,
@@ -3433,10 +3432,10 @@
         ],
         "compound": false
       },
-      "residential": 10,
-      "commercial": 10,
-      "industrial": 21,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 149,
@@ -3456,10 +3455,10 @@
         ],
         "compound": false
       },
-      "residential": 1,
-      "commercial": 5,
-      "industrial": 6,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 150,
@@ -3479,10 +3478,10 @@
         ],
         "compound": false
       },
-      "residential": 1,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 151,
@@ -3502,10 +3501,10 @@
         ],
         "compound": false
       },
-      "residential": 35,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 152,
@@ -3525,10 +3524,10 @@
         ],
         "compound": false
       },
-      "residential": 40,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 153,
@@ -3548,10 +3547,10 @@
         ],
         "compound": false
       },
-      "residential": 7,
-      "commercial": 1,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 154,
@@ -3571,10 +3570,10 @@
         ],
         "compound": false
       },
-      "residential": 25,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 155,
@@ -3594,10 +3593,10 @@
         ],
         "compound": false
       },
-      "residential": 44,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 156,
@@ -3617,10 +3616,10 @@
         ],
         "compound": false
       },
-      "residential": 40,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 157,
@@ -3640,10 +3639,10 @@
         ],
         "compound": false
       },
-      "residential": 70,
-      "commercial": 2,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 158,
@@ -3663,10 +3662,10 @@
         ],
         "compound": false
       },
-      "residential": 11,
-      "commercial": 5,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 159,
@@ -3686,10 +3685,10 @@
         ],
         "compound": false
       },
-      "residential": 24,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 160,
@@ -3709,10 +3708,10 @@
         ],
         "compound": false
       },
-      "residential": 13,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 161,
@@ -3732,10 +3731,10 @@
         ],
         "compound": false
       },
-      "residential": 56,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 162,
@@ -3755,10 +3754,10 @@
         ],
         "compound": false
       },
-      "residential": 10,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 163,
@@ -3778,10 +3777,10 @@
         ],
         "compound": false
       },
-      "residential": 46,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 164,
@@ -3801,10 +3800,10 @@
         ],
         "compound": false
       },
-      "residential": 47,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 165,
@@ -3824,10 +3823,10 @@
         ],
         "compound": false
       },
-      "residential": 16,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 166,
@@ -3847,10 +3846,10 @@
         ],
         "compound": false
       },
-      "residential": 12,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 167,
@@ -3870,10 +3869,10 @@
         ],
         "compound": false
       },
-      "residential": 439,
-      "commercial": 11,
-      "industrial": 115,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 168,
@@ -3893,10 +3892,10 @@
         ],
         "compound": false
       },
-      "residential": 46,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 169,
@@ -3916,10 +3915,10 @@
         ],
         "compound": false
       },
-      "residential": 26,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 170,
@@ -3939,10 +3938,10 @@
         ],
         "compound": false
       },
-      "residential": 63,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 171,
@@ -3962,10 +3961,10 @@
         ],
         "compound": false
       },
-      "residential": 22,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 172,
@@ -3985,10 +3984,10 @@
         ],
         "compound": false
       },
-      "residential": 24,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 173,
@@ -4008,10 +4007,10 @@
         ],
         "compound": false
       },
-      "residential": 81,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 174,
@@ -4031,10 +4030,10 @@
         ],
         "compound": false
       },
-      "residential": 61,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 175,
@@ -4054,10 +4053,10 @@
         ],
         "compound": false
       },
-      "residential": 198,
-      "commercial": 34,
-      "industrial": 4,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 176,
@@ -4077,10 +4076,10 @@
         ],
         "compound": false
       },
-      "residential": 149,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 177,
@@ -4100,10 +4099,10 @@
         ],
         "compound": false
       },
-      "residential": 113,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 178,
@@ -4123,10 +4122,10 @@
         ],
         "compound": false
       },
-      "residential": 67,
-      "commercial": 2,
-      "industrial": 4,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 179,
@@ -4146,10 +4145,10 @@
         ],
         "compound": false
       },
-      "residential": 103,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 180,
@@ -4169,10 +4168,10 @@
         ],
         "compound": false
       },
-      "residential": 576,
-      "commercial": 6,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 181,
@@ -4192,10 +4191,10 @@
         ],
         "compound": false
       },
-      "residential": 64,
-      "commercial": 36,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 182,
@@ -4215,10 +4214,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 57,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 183,
@@ -4238,10 +4237,10 @@
         ],
         "compound": false
       },
-      "residential": 147,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 184,
@@ -4261,10 +4260,10 @@
         ],
         "compound": false
       },
-      "residential": 182,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 185,
@@ -4284,10 +4283,10 @@
         ],
         "compound": false
       },
-      "residential": 80,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 186,
@@ -4307,10 +4306,10 @@
         ],
         "compound": false
       },
-      "residential": 22,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 187,
@@ -4330,10 +4329,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 23,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 188,
@@ -4353,10 +4352,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 29,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 189,
@@ -4376,10 +4375,10 @@
         ],
         "compound": false
       },
-      "residential": 188,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 190,
@@ -4399,10 +4398,10 @@
         ],
         "compound": false
       },
-      "residential": 143,
-      "commercial": 2,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 191,
@@ -4422,10 +4421,10 @@
         ],
         "compound": false
       },
-      "residential": 65,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 192,
@@ -4445,10 +4444,10 @@
         ],
         "compound": false
       },
-      "residential": 94,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 193,
@@ -4468,10 +4467,10 @@
         ],
         "compound": false
       },
-      "residential": 66,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 194,
@@ -4491,10 +4490,10 @@
         ],
         "compound": false
       },
-      "residential": 99,
-      "commercial": 2,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 195,
@@ -4514,10 +4513,10 @@
         ],
         "compound": false
       },
-      "residential": 195,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 196,
@@ -4537,10 +4536,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 267,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 197,
@@ -4560,10 +4559,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 35,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 198,
@@ -4583,10 +4582,10 @@
         ],
         "compound": false
       },
-      "residential": 170,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 199,
@@ -4606,10 +4605,10 @@
         ],
         "compound": false
       },
-      "residential": 628,
-      "commercial": 46,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 200,
@@ -4629,10 +4628,10 @@
         ],
         "compound": false
       },
-      "residential": 312,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 201,
@@ -4652,10 +4651,10 @@
         ],
         "compound": false
       },
-      "residential": 258,
-      "commercial": 18,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 202,
@@ -4675,10 +4674,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 66,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 203,
@@ -4698,10 +4697,10 @@
         ],
         "compound": false
       },
-      "residential": 486,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 204,
@@ -4721,10 +4720,10 @@
         ],
         "compound": false
       },
-      "residential": 74,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 205,
@@ -4744,10 +4743,10 @@
         ],
         "compound": false
       },
-      "residential": 168,
-      "commercial": 6,
-      "industrial": 91,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 206,
@@ -4767,10 +4766,10 @@
         ],
         "compound": false
       },
-      "residential": 16,
-      "commercial": 4,
-      "industrial": 8,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 207,
@@ -4796,10 +4795,10 @@
         ],
         "compound": true
       },
-      "residential": 107,
-      "commercial": 6,
-      "industrial": 33,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 208,
@@ -4819,10 +4818,10 @@
         ],
         "compound": false
       },
-      "residential": 160,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 209,
@@ -4842,10 +4841,10 @@
         ],
         "compound": false
       },
-      "residential": 217,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 210,
@@ -4865,10 +4864,10 @@
         ],
         "compound": false
       },
-      "residential": 147,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 211,
@@ -4888,10 +4887,10 @@
         ],
         "compound": false
       },
-      "residential": 61,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 212,
@@ -4911,10 +4910,10 @@
         ],
         "compound": false
       },
-      "residential": 156,
-      "commercial": 0,
-      "industrial": 11,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 213,
@@ -4934,10 +4933,10 @@
         ],
         "compound": false
       },
-      "residential": 69,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 214,
@@ -4957,10 +4956,10 @@
         ],
         "compound": false
       },
-      "residential": 128,
-      "commercial": 720,
-      "industrial": 15,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 215,
@@ -4980,10 +4979,10 @@
         ],
         "compound": false
       },
-      "residential": 55,
-      "commercial": 4,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 216,
@@ -5003,10 +5002,10 @@
         ],
         "compound": false
       },
-      "residential": 211,
-      "commercial": 3,
-      "industrial": 60,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 217,
@@ -5026,10 +5025,10 @@
         ],
         "compound": false
       },
-      "residential": 467,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 218,
@@ -5049,10 +5048,10 @@
         ],
         "compound": false
       },
-      "residential": 109,
-      "commercial": 4,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 219,
@@ -5072,10 +5071,10 @@
         ],
         "compound": false
       },
-      "residential": 56,
-      "commercial": 20,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 220,
@@ -5095,10 +5094,10 @@
         ],
         "compound": false
       },
-      "residential": 90,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 221,
@@ -5118,10 +5117,10 @@
         ],
         "compound": false
       },
-      "residential": 133,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 222,
@@ -5141,10 +5140,10 @@
         ],
         "compound": false
       },
-      "residential": 291,
-      "commercial": 7,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 223,
@@ -5164,10 +5163,10 @@
         ],
         "compound": false
       },
-      "residential": 366,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 224,
@@ -5187,10 +5186,10 @@
         ],
         "compound": false
       },
-      "residential": 10,
-      "commercial": 0,
-      "industrial": 11,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 225,
@@ -5210,10 +5209,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 10,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 226,
@@ -5233,10 +5232,10 @@
         ],
         "compound": false
       },
-      "residential": 22,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 227,
@@ -5256,10 +5255,10 @@
         ],
         "compound": false
       },
-      "residential": 163,
-      "commercial": 6,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 228,
@@ -5279,10 +5278,10 @@
         ],
         "compound": false
       },
-      "residential": 62,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 229,
@@ -5302,10 +5301,10 @@
         ],
         "compound": false
       },
-      "residential": 102,
-      "commercial": 21,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 230,
@@ -5325,10 +5324,10 @@
         ],
         "compound": false
       },
-      "residential": 79,
-      "commercial": 13,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 231,
@@ -5348,10 +5347,10 @@
         ],
         "compound": false
       },
-      "residential": 58,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 232,
@@ -5371,10 +5370,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 57,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 233,
@@ -5394,10 +5393,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 31,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 234,
@@ -5417,10 +5416,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 73,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 235,
@@ -5440,10 +5439,10 @@
         ],
         "compound": false
       },
-      "residential": 36,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 236,
@@ -5463,10 +5462,10 @@
         ],
         "compound": false
       },
-      "residential": 421,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 237,
@@ -5486,10 +5485,10 @@
         ],
         "compound": false
       },
-      "residential": 43,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 238,
@@ -5509,10 +5508,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 79,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 239,
@@ -5532,10 +5531,10 @@
         ],
         "compound": false
       },
-      "residential": 64,
-      "commercial": 106,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 240,
@@ -5555,10 +5554,10 @@
         ],
         "compound": false
       },
-      "residential": 28,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 241,
@@ -5578,10 +5577,10 @@
         ],
         "compound": false
       },
-      "residential": 10,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 242,
@@ -5601,10 +5600,10 @@
         ],
         "compound": false
       },
-      "residential": 52,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 243,
@@ -5624,10 +5623,10 @@
         ],
         "compound": false
       },
-      "residential": 23,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 244,
@@ -5647,10 +5646,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 22,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 245,
@@ -5670,10 +5669,10 @@
         ],
         "compound": false
       },
-      "residential": 20,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 246,
@@ -5693,10 +5692,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 16,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 247,
@@ -5716,10 +5715,10 @@
         ],
         "compound": false
       },
-      "residential": 88,
-      "commercial": 10,
-      "industrial": 4,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 248,
@@ -5739,10 +5738,10 @@
         ],
         "compound": false
       },
-      "residential": 115,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 249,
@@ -5762,10 +5761,10 @@
         ],
         "compound": false
       },
-      "residential": 28,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 250,
@@ -5785,10 +5784,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 48,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 251,
@@ -5808,10 +5807,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 92,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 252,
@@ -5831,10 +5830,10 @@
         ],
         "compound": false
       },
-      "residential": 52,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 253,
@@ -5854,10 +5853,10 @@
         ],
         "compound": false
       },
-      "residential": 68,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 254,
@@ -5877,10 +5876,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 25,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 255,
@@ -5900,10 +5899,10 @@
         ],
         "compound": false
       },
-      "residential": 608,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 256,
@@ -5923,10 +5922,10 @@
         ],
         "compound": false
       },
-      "residential": 60,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 257,
@@ -5946,10 +5945,10 @@
         ],
         "compound": false
       },
-      "residential": 76,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 258,
@@ -5969,10 +5968,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 79,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 259,
@@ -5992,10 +5991,10 @@
         ],
         "compound": false
       },
-      "residential": 28,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 260,
@@ -6015,10 +6014,10 @@
         ],
         "compound": false
       },
-      "residential": 16,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 261,
@@ -6038,10 +6037,10 @@
         ],
         "compound": false
       },
-      "residential": 102,
-      "commercial": 2,
-      "industrial": 6,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 262,
@@ -6061,10 +6060,10 @@
         ],
         "compound": false
       },
-      "residential": 80,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 263,
@@ -6084,10 +6083,10 @@
         ],
         "compound": false
       },
-      "residential": 23,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 264,
@@ -6107,10 +6106,10 @@
         ],
         "compound": false
       },
-      "residential": 2,
-      "commercial": 60,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 265,
@@ -6130,10 +6129,10 @@
         ],
         "compound": false
       },
-      "residential": 4,
-      "commercial": 1,
-      "industrial": 2,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 266,
@@ -6153,10 +6152,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 24,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 267,
@@ -6176,10 +6175,10 @@
         ],
         "compound": false
       },
-      "residential": 172,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 268,
@@ -6199,10 +6198,10 @@
         ],
         "compound": false
       },
-      "residential": 84,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 269,
@@ -6222,10 +6221,10 @@
         ],
         "compound": false
       },
-      "residential": 107,
-      "commercial": 4,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 270,
@@ -6245,10 +6244,10 @@
         ],
         "compound": false
       },
-      "residential": 6,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 271,
@@ -6268,10 +6267,10 @@
         ],
         "compound": false
       },
-      "residential": 520,
-      "commercial": 50,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 272,
@@ -6291,10 +6290,10 @@
         ],
         "compound": false
       },
-      "residential": 57,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 273,
@@ -6314,10 +6313,10 @@
         ],
         "compound": false
       },
-      "residential": 33,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 274,
@@ -6337,10 +6336,10 @@
         ],
         "compound": false
       },
-      "residential": 17,
-      "commercial": 0,
-      "industrial": 14,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 275,
@@ -6360,10 +6359,10 @@
         ],
         "compound": false
       },
-      "residential": 127,
-      "commercial": 0,
-      "industrial": 3,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 276,
@@ -6383,10 +6382,10 @@
         ],
         "compound": false
       },
-      "residential": 33,
-      "commercial": 6,
-      "industrial": 10,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 277,
@@ -6406,10 +6405,10 @@
         ],
         "compound": false
       },
-      "residential": 92,
-      "commercial": 10,
-      "industrial": 20,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 278,
@@ -6429,10 +6428,10 @@
         ],
         "compound": false
       },
-      "residential": 60,
-      "commercial": 0,
-      "industrial": 2,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 279,
@@ -6452,10 +6451,10 @@
         ],
         "compound": false
       },
-      "residential": 89,
-      "commercial": 0,
-      "industrial": 4,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 280,
@@ -6475,10 +6474,10 @@
         ],
         "compound": false
       },
-      "residential": 67,
-      "commercial": 1,
-      "industrial": 3,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 281,
@@ -6498,10 +6497,10 @@
         ],
         "compound": false
       },
-      "residential": 101,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 282,
@@ -6521,10 +6520,10 @@
         ],
         "compound": false
       },
-      "residential": 88,
-      "commercial": 8,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 283,
@@ -6544,10 +6543,10 @@
         ],
         "compound": false
       },
-      "residential": 189,
-      "commercial": 2,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 284,
@@ -6567,10 +6566,10 @@
         ],
         "compound": false
       },
-      "residential": 86,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 285,
@@ -6590,10 +6589,10 @@
         ],
         "compound": false
       },
-      "residential": 831,
-      "commercial": 1,
-      "industrial": 3,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 286,
@@ -6613,10 +6612,10 @@
         ],
         "compound": false
       },
-      "residential": 232,
-      "commercial": 3,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 287,
@@ -6636,10 +6635,10 @@
         ],
         "compound": false
       },
-      "residential": 50,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 288,
@@ -6659,10 +6658,10 @@
         ],
         "compound": false
       },
-      "residential": 153,
-      "commercial": 6,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 289,
@@ -6682,10 +6681,10 @@
         ],
         "compound": false
       },
-      "residential": 102,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 290,
@@ -6705,10 +6704,10 @@
         ],
         "compound": false
       },
-      "residential": 19,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 291,
@@ -6728,10 +6727,10 @@
         ],
         "compound": false
       },
-      "residential": 21,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 292,
@@ -6751,10 +6750,10 @@
         ],
         "compound": false
       },
-      "residential": 233,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 293,
@@ -6774,10 +6773,10 @@
         ],
         "compound": false
       },
-      "residential": 18,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 294,
@@ -6797,10 +6796,10 @@
         ],
         "compound": false
       },
-      "residential": 14,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 295,
@@ -6820,10 +6819,10 @@
         ],
         "compound": false
       },
-      "residential": 234,
-      "commercial": 3,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 296,
@@ -6843,10 +6842,10 @@
         ],
         "compound": false
       },
-      "residential": 820,
-      "commercial": 24,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 297,
@@ -6866,10 +6865,10 @@
         ],
         "compound": false
       },
-      "residential": 45,
-      "commercial": 0,
-      "industrial": 2,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 298,
@@ -6889,10 +6888,10 @@
         ],
         "compound": false
       },
-      "residential": 304,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 299,
@@ -6912,10 +6911,10 @@
         ],
         "compound": false
       },
-      "residential": 786,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 300,
@@ -6935,10 +6934,10 @@
         ],
         "compound": false
       },
-      "residential": 29,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 301,
@@ -6958,10 +6957,10 @@
         ],
         "compound": false
       },
-      "residential": 138,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 302,
@@ -6981,10 +6980,10 @@
         ],
         "compound": false
       },
-      "residential": 394,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 303,
@@ -7004,10 +7003,10 @@
         ],
         "compound": false
       },
-      "residential": 138,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 304,
@@ -7027,10 +7026,10 @@
         ],
         "compound": false
       },
-      "residential": 38,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 305,
@@ -7050,10 +7049,10 @@
         ],
         "compound": false
       },
-      "residential": 817,
-      "commercial": 13,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 306,
@@ -7073,10 +7072,10 @@
         ],
         "compound": false
       },
-      "residential": 102,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 307,
@@ -7096,10 +7095,10 @@
         ],
         "compound": false
       },
-      "residential": 186,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 308,
@@ -7119,10 +7118,10 @@
         ],
         "compound": false
       },
-      "residential": 52,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 309,
@@ -7142,10 +7141,10 @@
         ],
         "compound": false
       },
-      "residential": 220,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 310,
@@ -7165,10 +7164,10 @@
         ],
         "compound": false
       },
-      "residential": 222,
-      "commercial": 20,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 311,
@@ -7188,10 +7187,10 @@
         ],
         "compound": false
       },
-      "residential": 123,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 312,
@@ -7211,10 +7210,10 @@
         ],
         "compound": false
       },
-      "residential": 253,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 313,
@@ -7234,10 +7233,10 @@
         ],
         "compound": false
       },
-      "residential": 117,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 314,
@@ -7257,10 +7256,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 46,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 315,
@@ -7280,10 +7279,10 @@
         ],
         "compound": false
       },
-      "residential": 47,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 316,
@@ -7303,10 +7302,10 @@
         ],
         "compound": false
       },
-      "residential": 253,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 317,
@@ -7326,10 +7325,10 @@
         ],
         "compound": false
       },
-      "residential": 88,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 318,
@@ -7349,10 +7348,10 @@
         ],
         "compound": false
       },
-      "residential": 29,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 319,
@@ -7372,10 +7371,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 179,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 320,
@@ -7395,10 +7394,10 @@
         ],
         "compound": false
       },
-      "residential": 54,
-      "commercial": 13,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 321,
@@ -7418,10 +7417,10 @@
         ],
         "compound": false
       },
-      "residential": 453,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 322,
@@ -7441,10 +7440,10 @@
         ],
         "compound": false
       },
-      "residential": 375,
-      "commercial": 2,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 323,
@@ -7464,10 +7463,10 @@
         ],
         "compound": false
       },
-      "residential": 579,
-      "commercial": 2,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 324,
@@ -7487,10 +7486,10 @@
         ],
         "compound": false
       },
-      "residential": 151,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 325,
@@ -7510,10 +7509,10 @@
         ],
         "compound": false
       },
-      "residential": 100,
-      "commercial": 166,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 326,
@@ -7533,10 +7532,10 @@
         ],
         "compound": false
       },
-      "residential": 24,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 327,
@@ -7556,10 +7555,10 @@
         ],
         "compound": false
       },
-      "residential": 186,
-      "commercial": 9,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 328,
@@ -7579,10 +7578,10 @@
         ],
         "compound": false
       },
-      "residential": 33,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 329,
@@ -7602,10 +7601,10 @@
         ],
         "compound": false
       },
-      "residential": 42,
-      "commercial": 15,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 330,
@@ -7625,10 +7624,10 @@
         ],
         "compound": false
       },
-      "residential": 22,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 331,
@@ -7648,10 +7647,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 100,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 332,
@@ -7671,10 +7670,10 @@
         ],
         "compound": false
       },
-      "residential": 37,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 333,
@@ -7694,10 +7693,10 @@
         ],
         "compound": false
       },
-      "residential": 228,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 334,
@@ -7717,10 +7716,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 52,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 335,
@@ -7740,10 +7739,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 29,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 336,
@@ -7763,10 +7762,10 @@
         ],
         "compound": false
       },
-      "residential": 2,
-      "commercial": 53,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 337,
@@ -7786,10 +7785,10 @@
         ],
         "compound": false
       },
-      "residential": 124,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 338,
@@ -7809,10 +7808,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 10,
-      "industrial": 51,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 339,
@@ -7832,10 +7831,10 @@
         ],
         "compound": false
       },
-      "residential": 228,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 340,
@@ -7855,10 +7854,10 @@
         ],
         "compound": false
       },
-      "residential": 864,
-      "commercial": 2,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 341,
@@ -7878,10 +7877,10 @@
         ],
         "compound": false
       },
-      "residential": 62,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 342,
@@ -7901,10 +7900,10 @@
         ],
         "compound": false
       },
-      "residential": 35,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 343,
@@ -7924,10 +7923,10 @@
         ],
         "compound": false
       },
-      "residential": 174,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 344,
@@ -7947,10 +7946,10 @@
         ],
         "compound": false
       },
-      "residential": 355,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 345,
@@ -7970,10 +7969,10 @@
         ],
         "compound": false
       },
-      "residential": 71,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 346,
@@ -7993,10 +7992,10 @@
         ],
         "compound": false
       },
-      "residential": 84,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 347,
@@ -8016,10 +8015,10 @@
         ],
         "compound": false
       },
-      "residential": 97,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 348,
@@ -8039,10 +8038,10 @@
         ],
         "compound": false
       },
-      "residential": 58,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 349,
@@ -8062,10 +8061,10 @@
         ],
         "compound": false
       },
-      "residential": 115,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 350,
@@ -8085,10 +8084,10 @@
         ],
         "compound": false
       },
-      "residential": 70,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 351,
@@ -8108,10 +8107,10 @@
         ],
         "compound": false
       },
-      "residential": 79,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 352,
@@ -8131,10 +8130,10 @@
         ],
         "compound": false
       },
-      "residential": 75,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 353,
@@ -8143,10 +8142,10 @@
       "letter": "J",
       "wardCode": "JL",
       "constituency": null,
-      "residential": 66,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 354,
@@ -8166,10 +8165,10 @@
         ],
         "compound": false
       },
-      "residential": 88,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 355,
@@ -8189,10 +8188,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 26,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 356,
@@ -8212,10 +8211,10 @@
         ],
         "compound": false
       },
-      "residential": 79,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 357,
@@ -8235,10 +8234,10 @@
         ],
         "compound": false
       },
-      "residential": 66,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 358,
@@ -8258,10 +8257,10 @@
         ],
         "compound": false
       },
-      "residential": 210,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 359,
@@ -8281,10 +8280,10 @@
         ],
         "compound": false
       },
-      "residential": 193,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 360,
@@ -8304,10 +8303,10 @@
         ],
         "compound": false
       },
-      "residential": 7,
-      "commercial": 3,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 361,
@@ -8327,10 +8326,10 @@
         ],
         "compound": false
       },
-      "residential": 48,
-      "commercial": 4,
-      "industrial": 14,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 362,
@@ -8350,10 +8349,10 @@
         ],
         "compound": false
       },
-      "residential": 16,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 363,
@@ -8373,10 +8372,10 @@
         ],
         "compound": false
       },
-      "residential": 152,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 364,
@@ -8396,10 +8395,10 @@
         ],
         "compound": false
       },
-      "residential": 637,
-      "commercial": 15,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 365,
@@ -8419,10 +8418,10 @@
         ],
         "compound": false
       },
-      "residential": 38,
-      "commercial": 0,
-      "industrial": 6,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 366,
@@ -8442,10 +8441,10 @@
         ],
         "compound": false
       },
-      "residential": 19,
-      "commercial": 3,
-      "industrial": 3,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 367,
@@ -8465,10 +8464,10 @@
         ],
         "compound": false
       },
-      "residential": 2801,
-      "commercial": 203,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 368,
@@ -8488,10 +8487,10 @@
         ],
         "compound": false
       },
-      "residential": 704,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 369,
@@ -8511,10 +8510,10 @@
         ],
         "compound": false
       },
-      "residential": 31,
-      "commercial": 3,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 370,
@@ -8534,10 +8533,10 @@
         ],
         "compound": false
       },
-      "residential": 6,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 371,
@@ -8557,10 +8556,10 @@
         ],
         "compound": false
       },
-      "residential": 440,
-      "commercial": 5,
-      "industrial": 17,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 372,
@@ -8580,10 +8579,10 @@
         ],
         "compound": false
       },
-      "residential": 58,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 373,
@@ -8603,10 +8602,10 @@
         ],
         "compound": false
       },
-      "residential": 801,
-      "commercial": 46,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 374,
@@ -8626,10 +8625,10 @@
         ],
         "compound": false
       },
-      "residential": 490,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 375,
@@ -8649,10 +8648,10 @@
         ],
         "compound": false
       },
-      "residential": 646,
-      "commercial": 20,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 376,
@@ -8672,10 +8671,10 @@
         ],
         "compound": false
       },
-      "residential": 12,
-      "commercial": 36,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 377,
@@ -8695,10 +8694,10 @@
         ],
         "compound": false
       },
-      "residential": 308,
-      "commercial": 8,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 378,
@@ -8718,10 +8717,10 @@
         ],
         "compound": false
       },
-      "residential": 232,
-      "commercial": 184,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 379,
@@ -8741,10 +8740,10 @@
         ],
         "compound": false
       },
-      "residential": 720,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 380,
@@ -8764,10 +8763,10 @@
         ],
         "compound": false
       },
-      "residential": 624,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 381,
@@ -8787,10 +8786,10 @@
         ],
         "compound": false
       },
-      "residential": 986,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 382,
@@ -8810,10 +8809,10 @@
         ],
         "compound": false
       },
-      "residential": 26,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 383,
@@ -8833,10 +8832,10 @@
         ],
         "compound": false
       },
-      "residential": 149,
-      "commercial": 28,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 384,
@@ -8856,10 +8855,10 @@
         ],
         "compound": false
       },
-      "residential": 64,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 385,
@@ -8879,10 +8878,10 @@
         ],
         "compound": false
       },
-      "residential": 84,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 386,
@@ -8902,10 +8901,10 @@
         ],
         "compound": false
       },
-      "residential": 856,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 387,
@@ -8925,10 +8924,10 @@
         ],
         "compound": false
       },
-      "residential": 94,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 388,
@@ -8948,10 +8947,10 @@
         ],
         "compound": false
       },
-      "residential": 645,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 389,
@@ -8971,10 +8970,10 @@
         ],
         "compound": false
       },
-      "residential": 426,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 390,
@@ -8994,10 +8993,10 @@
         ],
         "compound": false
       },
-      "residential": 200,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 391,
@@ -9017,10 +9016,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 60,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 392,
@@ -9040,10 +9039,10 @@
         ],
         "compound": false
       },
-      "residential": 512,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 393,
@@ -9063,10 +9062,10 @@
         ],
         "compound": false
       },
-      "residential": 123,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 394,
@@ -9086,10 +9085,10 @@
         ],
         "compound": false
       },
-      "residential": 106,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 395,
@@ -9109,10 +9108,10 @@
         ],
         "compound": false
       },
-      "residential": 20,
-      "commercial": 1,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 396,
@@ -9132,10 +9131,10 @@
         ],
         "compound": false
       },
-      "residential": 114,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 397,
@@ -9155,10 +9154,10 @@
         ],
         "compound": false
       },
-      "residential": 78,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 398,
@@ -9178,10 +9177,10 @@
         ],
         "compound": false
       },
-      "residential": 78,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 399,
@@ -9201,10 +9200,10 @@
         ],
         "compound": false
       },
-      "residential": 52,
-      "commercial": 10,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 400,
@@ -9224,10 +9223,10 @@
         ],
         "compound": false
       },
-      "residential": 315,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 401,
@@ -9247,10 +9246,10 @@
         ],
         "compound": false
       },
-      "residential": 35,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 402,
@@ -9270,10 +9269,10 @@
         ],
         "compound": false
       },
-      "residential": 816,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 403,
@@ -9293,10 +9292,10 @@
         ],
         "compound": false
       },
-      "residential": 40,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 404,
@@ -9316,10 +9315,10 @@
         ],
         "compound": false
       },
-      "residential": 28,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 405,
@@ -9339,10 +9338,10 @@
         ],
         "compound": false
       },
-      "residential": 673,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 406,
@@ -9362,10 +9361,10 @@
         ],
         "compound": false
       },
-      "residential": 76,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 407,
@@ -9385,10 +9384,10 @@
         ],
         "compound": false
       },
-      "residential": 60,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 408,
@@ -9408,10 +9407,10 @@
         ],
         "compound": false
       },
-      "residential": 36,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 409,
@@ -9431,10 +9430,10 @@
         ],
         "compound": false
       },
-      "residential": 65,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 410,
@@ -9454,10 +9453,10 @@
         ],
         "compound": false
       },
-      "residential": 27,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 411,
@@ -9477,10 +9476,10 @@
         ],
         "compound": false
       },
-      "residential": 130,
-      "commercial": 20,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 412,
@@ -9500,10 +9499,10 @@
         ],
         "compound": false
       },
-      "residential": 750,
-      "commercial": 2,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 413,
@@ -9523,10 +9522,10 @@
         ],
         "compound": false
       },
-      "residential": 94,
-      "commercial": 27,
-      "industrial": 20,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 414,
@@ -9546,10 +9545,10 @@
         ],
         "compound": false
       },
-      "residential": 156,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 415,
@@ -9569,10 +9568,10 @@
         ],
         "compound": false
       },
-      "residential": 34,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 416,
@@ -9592,10 +9591,10 @@
         ],
         "compound": false
       },
-      "residential": 27,
-      "commercial": 1,
-      "industrial": 4,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 417,
@@ -9615,10 +9614,10 @@
         ],
         "compound": false
       },
-      "residential": 25,
-      "commercial": 2,
-      "industrial": 10,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 418,
@@ -9638,10 +9637,10 @@
         ],
         "compound": false
       },
-      "residential": 95,
-      "commercial": 1,
-      "industrial": 8,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 419,
@@ -9661,10 +9660,10 @@
         ],
         "compound": false
       },
-      "residential": 16,
-      "commercial": 1,
-      "industrial": 10,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 420,
@@ -9684,10 +9683,10 @@
         ],
         "compound": false
       },
-      "residential": 269,
-      "commercial": 11,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 421,
@@ -9707,10 +9706,10 @@
         ],
         "compound": false
       },
-      "residential": 58,
-      "commercial": 16,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 422,
@@ -9730,10 +9729,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 115,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 423,
@@ -9753,10 +9752,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 166,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 424,
@@ -9776,10 +9775,10 @@
         ],
         "compound": false
       },
-      "residential": 148,
-      "commercial": 16,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 425,
@@ -9799,10 +9798,10 @@
         ],
         "compound": false
       },
-      "residential": 42,
-      "commercial": 2,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 426,
@@ -9822,10 +9821,10 @@
         ],
         "compound": false
       },
-      "residential": 59,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 427,
@@ -9845,10 +9844,10 @@
         ],
         "compound": false
       },
-      "residential": 78,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 428,
@@ -9868,10 +9867,10 @@
         ],
         "compound": false
       },
-      "residential": 139,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 429,
@@ -9891,10 +9890,10 @@
         ],
         "compound": false
       },
-      "residential": 448,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 430,
@@ -9914,10 +9913,10 @@
         ],
         "compound": false
       },
-      "residential": 912,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 431,
@@ -9937,10 +9936,10 @@
         ],
         "compound": false
       },
-      "residential": 24,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 432,
@@ -9960,10 +9959,10 @@
         ],
         "compound": false
       },
-      "residential": 28,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 433,
@@ -9983,10 +9982,10 @@
         ],
         "compound": false
       },
-      "residential": 1,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 434,
@@ -10006,10 +10005,10 @@
         ],
         "compound": false
       },
-      "residential": 86,
-      "commercial": 14,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 435,
@@ -10029,10 +10028,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 34,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 436,
@@ -10052,10 +10051,10 @@
         ],
         "compound": false
       },
-      "residential": 90,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 437,
@@ -10075,10 +10074,10 @@
         ],
         "compound": false
       },
-      "residential": 190,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 438,
@@ -10098,10 +10097,10 @@
         ],
         "compound": false
       },
-      "residential": 252,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 439,
@@ -10121,10 +10120,10 @@
         ],
         "compound": false
       },
-      "residential": 167,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 440,
@@ -10144,10 +10143,10 @@
         ],
         "compound": false
       },
-      "residential": 47,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 441,
@@ -10167,10 +10166,10 @@
         ],
         "compound": false
       },
-      "residential": 496,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 442,
@@ -10190,10 +10189,10 @@
         ],
         "compound": false
       },
-      "residential": 99,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 443,
@@ -10213,10 +10212,10 @@
         ],
         "compound": false
       },
-      "residential": 289,
-      "commercial": 0,
-      "industrial": 2,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 444,
@@ -10236,10 +10235,10 @@
         ],
         "compound": false
       },
-      "residential": 85,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 445,
@@ -10259,10 +10258,10 @@
         ],
         "compound": false
       },
-      "residential": 129,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 446,
@@ -10282,10 +10281,10 @@
         ],
         "compound": false
       },
-      "residential": 88,
-      "commercial": 4,
-      "industrial": 12,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 447,
@@ -10305,10 +10304,10 @@
         ],
         "compound": false
       },
-      "residential": 196,
-      "commercial": 45,
-      "industrial": 67,
-      "exempted": 1
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 448,
@@ -10328,10 +10327,10 @@
         ],
         "compound": false
       },
-      "residential": 210,
-      "commercial": 4,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 449,
@@ -10351,10 +10350,10 @@
         ],
         "compound": false
       },
-      "residential": 67,
-      "commercial": 10,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 450,
@@ -10374,10 +10373,10 @@
         ],
         "compound": false
       },
-      "residential": 287,
-      "commercial": 4,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 451,
@@ -10397,10 +10396,10 @@
         ],
         "compound": false
       },
-      "residential": 796,
-      "commercial": 22,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 452,
@@ -10420,10 +10419,10 @@
         ],
         "compound": false
       },
-      "residential": 122,
-      "commercial": 3,
-      "industrial": 6,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 453,
@@ -10443,10 +10442,10 @@
         ],
         "compound": false
       },
-      "residential": 78,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 454,
@@ -10466,10 +10465,10 @@
         ],
         "compound": false
       },
-      "residential": 410,
-      "commercial": 9,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 455,
@@ -10489,10 +10488,10 @@
         ],
         "compound": false
       },
-      "residential": 237,
-      "commercial": 6,
-      "industrial": 19,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 456,
@@ -10512,10 +10511,10 @@
         ],
         "compound": false
       },
-      "residential": 197,
-      "commercial": 0,
-      "industrial": 9,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 457,
@@ -10535,10 +10534,10 @@
         ],
         "compound": false
       },
-      "residential": 54,
-      "commercial": 0,
-      "industrial": 8,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 458,
@@ -10558,10 +10557,10 @@
         ],
         "compound": false
       },
-      "residential": 235,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 459,
@@ -10581,10 +10580,10 @@
         ],
         "compound": false
       },
-      "residential": 663,
-      "commercial": 24,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 460,
@@ -10604,10 +10603,10 @@
         ],
         "compound": false
       },
-      "residential": 67,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 461,
@@ -10627,10 +10626,10 @@
         ],
         "compound": false
       },
-      "residential": 157,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 462,
@@ -10650,10 +10649,10 @@
         ],
         "compound": false
       },
-      "residential": 39,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 463,
@@ -10673,10 +10672,10 @@
         ],
         "compound": false
       },
-      "residential": 812,
-      "commercial": 20,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 464,
@@ -10696,10 +10695,10 @@
         ],
         "compound": false
       },
-      "residential": 180,
-      "commercial": 6,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 465,
@@ -10719,10 +10718,10 @@
         ],
         "compound": false
       },
-      "residential": 83,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 466,
@@ -10742,10 +10741,10 @@
         ],
         "compound": false
       },
-      "residential": 1910,
-      "commercial": 906,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 467,
@@ -10765,10 +10764,10 @@
         ],
         "compound": false
       },
-      "residential": 56,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 468,
@@ -10788,10 +10787,10 @@
         ],
         "compound": false
       },
-      "residential": 291,
-      "commercial": 10,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 469,
@@ -10811,10 +10810,10 @@
         ],
         "compound": false
       },
-      "residential": 275,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 470,
@@ -10834,10 +10833,10 @@
         ],
         "compound": false
       },
-      "residential": 167,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 471,
@@ -10857,10 +10856,10 @@
         ],
         "compound": false
       },
-      "residential": 102,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 472,
@@ -10880,10 +10879,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 35,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 473,
@@ -10903,10 +10902,10 @@
         ],
         "compound": false
       },
-      "residential": 954,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 474,
@@ -10926,10 +10925,10 @@
         ],
         "compound": false
       },
-      "residential": 239,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 475,
@@ -10949,10 +10948,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 27,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 476,
@@ -10972,10 +10971,10 @@
         ],
         "compound": false
       },
-      "residential": 560,
-      "commercial": 5,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 477,
@@ -10995,10 +10994,10 @@
         ],
         "compound": false
       },
-      "residential": 119,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 478,
@@ -11018,10 +11017,10 @@
         ],
         "compound": false
       },
-      "residential": 138,
-      "commercial": 82,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 479,
@@ -11041,10 +11040,10 @@
         ],
         "compound": false
       },
-      "residential": 72,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 480,
@@ -11064,10 +11063,10 @@
         ],
         "compound": false
       },
-      "residential": 48,
-      "commercial": 8,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 481,
@@ -11087,10 +11086,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 44,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 482,
@@ -11110,10 +11109,10 @@
         ],
         "compound": false
       },
-      "residential": 74,
-      "commercial": 4,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 483,
@@ -11133,10 +11132,10 @@
         ],
         "compound": false
       },
-      "residential": 75,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 484,
@@ -11156,10 +11155,10 @@
         ],
         "compound": false
       },
-      "residential": 304,
-      "commercial": 21,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 485,
@@ -11179,10 +11178,10 @@
         ],
         "compound": false
       },
-      "residential": 256,
-      "commercial": 12,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 486,
@@ -11202,10 +11201,10 @@
         ],
         "compound": false
       },
-      "residential": 84,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 487,
@@ -11225,10 +11224,10 @@
         ],
         "compound": false
       },
-      "residential": 156,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 488,
@@ -11248,10 +11247,10 @@
         ],
         "compound": false
       },
-      "residential": 4,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 489,
@@ -11271,10 +11270,10 @@
         ],
         "compound": false
       },
-      "residential": 15,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 490,
@@ -11294,10 +11293,10 @@
         ],
         "compound": false
       },
-      "residential": 70,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 491,
@@ -11317,10 +11316,10 @@
         ],
         "compound": false
       },
-      "residential": 131,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 492,
@@ -11340,10 +11339,10 @@
         ],
         "compound": false
       },
-      "residential": 4,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 493,
@@ -11363,10 +11362,10 @@
         ],
         "compound": false
       },
-      "residential": 1,
-      "commercial": 0,
-      "industrial": 4,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 494,
@@ -11386,10 +11385,10 @@
         ],
         "compound": false
       },
-      "residential": 16,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 495,
@@ -11409,10 +11408,10 @@
         ],
         "compound": false
       },
-      "residential": 2,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 496,
@@ -11432,10 +11431,10 @@
         ],
         "compound": false
       },
-      "residential": 111,
-      "commercial": 0,
-      "industrial": 6,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 497,
@@ -11455,10 +11454,10 @@
         ],
         "compound": false
       },
-      "residential": 5,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 498,
@@ -11478,10 +11477,10 @@
         ],
         "compound": false
       },
-      "residential": 274,
-      "commercial": 7,
-      "industrial": 6,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 499,
@@ -11501,10 +11500,10 @@
         ],
         "compound": false
       },
-      "residential": 13,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 500,
@@ -11524,10 +11523,10 @@
         ],
         "compound": false
       },
-      "residential": 146,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 501,
@@ -11547,10 +11546,10 @@
         ],
         "compound": false
       },
-      "residential": 166,
-      "commercial": 2,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 502,
@@ -11570,10 +11569,10 @@
         ],
         "compound": false
       },
-      "residential": 82,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 503,
@@ -11593,10 +11592,10 @@
         ],
         "compound": false
       },
-      "residential": 2,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 504,
@@ -11616,10 +11615,10 @@
         ],
         "compound": false
       },
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 505,
@@ -11639,10 +11638,10 @@
         ],
         "compound": false
       },
-      "residential": 17,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 506,
@@ -11662,10 +11661,10 @@
         ],
         "compound": false
       },
-      "residential": 180,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 507,
@@ -11685,10 +11684,10 @@
         ],
         "compound": false
       },
-      "residential": 201,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 508,
@@ -11708,10 +11707,10 @@
         ],
         "compound": false
       },
-      "residential": 87,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 509,
@@ -11731,10 +11730,10 @@
         ],
         "compound": false
       },
-      "residential": 17,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 510,
@@ -11754,10 +11753,10 @@
         ],
         "compound": false
       },
-      "residential": 89,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 511,
@@ -11777,10 +11776,10 @@
         ],
         "compound": false
       },
-      "residential": 8,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 512,
@@ -11800,10 +11799,10 @@
         ],
         "compound": false
       },
-      "residential": 72,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 513,
@@ -11823,10 +11822,10 @@
         ],
         "compound": false
       },
-      "residential": 47,
-      "commercial": 0,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 514,
@@ -11846,10 +11845,10 @@
         ],
         "compound": false
       },
-      "residential": 1,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 515,
@@ -11858,10 +11857,10 @@
       "letter": "X",
       "wardCode": null,
       "constituency": null,
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 16,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 516,
@@ -11870,10 +11869,10 @@
       "letter": "X",
       "wardCode": null,
       "constituency": null,
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 6,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 517,
@@ -11882,10 +11881,10 @@
       "letter": "X",
       "wardCode": null,
       "constituency": null,
-      "residential": 0,
-      "commercial": 0,
-      "industrial": 1,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 518,
@@ -11894,10 +11893,10 @@
       "letter": "X",
       "wardCode": null,
       "constituency": null,
-      "residential": 0,
-      "commercial": 2,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 519,
@@ -11906,10 +11905,10 @@
       "letter": "X",
       "wardCode": null,
       "constituency": null,
-      "residential": 0,
-      "commercial": 5,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 520,
@@ -11918,10 +11917,10 @@
       "letter": "X",
       "wardCode": null,
       "constituency": null,
-      "residential": 0,
-      "commercial": 24,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 521,
@@ -11930,10 +11929,10 @@
       "letter": "X",
       "wardCode": null,
       "constituency": null,
-      "residential": 0,
-      "commercial": 2,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 522,
@@ -11942,10 +11941,10 @@
       "letter": "X",
       "wardCode": null,
       "constituency": null,
-      "residential": 0,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 523,
@@ -11954,10 +11953,10 @@
       "letter": "X",
       "wardCode": null,
       "constituency": null,
-      "residential": 0,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 524,
@@ -11966,10 +11965,10 @@
       "letter": "X",
       "wardCode": null,
       "constituency": null,
-      "residential": 0,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     },
     {
       "no": 525,
@@ -11978,26 +11977,20 @@
       "letter": "X",
       "wardCode": null,
       "constituency": null,
-      "residential": 0,
-      "commercial": 1,
-      "industrial": 0,
-      "exempted": 0
+      "residential": null,
+      "commercial": null,
+      "industrial": null,
+      "exempted": null
     }
   ],
   "totals": {
     "localities": 525,
-    "residential": 77015,
-    "commercial": 5780,
-    "industrial": 1805,
-    "exempted": 1,
+    "residential": null,
+    "commercial": null,
+    "industrial": null,
+    "exempted": null,
     "stateConstituencies": 9,
     "parliamentConstituencies": 5
-  },
-  "sheetTotals": {
-    "residential": 77015,
-    "commercial": 5780,
-    "industrial": 1805,
-    "exempted": 1
   },
   "breakdowns": {
     "byWard": {
@@ -12090,5 +12083,6 @@
         "count": 56
       }
     }
-  }
+  },
+  "propertyUsage": "withheld"
 }

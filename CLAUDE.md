@@ -177,7 +177,7 @@ git commit -m "..."
 git push                     # .github/workflows/cloudflare-pages.yml → wrangler
 ```
 
-Optional env (unset → documented fallback, never a crash): `AQICN_TOKEN`, `CITY_REPORTER_SUPABASE_URL`, `CITY_REPORTER_SUPABASE_KEY`, `GOOGLE_SHEETS_ID`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `PAGES_PUBLIC_URL`, `LIVE_IOC_URL`. Secrets live in GitHub repo settings, never in source.
+Optional env (unset → documented fallback, never a crash): `AQICN_TOKEN`, `FIRMS_MAP_KEY`, `CITY_REPORTER_SUPABASE_URL`, `CITY_REPORTER_SUPABASE_KEY`, `GOOGLE_SHEETS_ID`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `GCP_PROJECT_ID`, `PADAWAN_ZONING_KML_URL`, `PAGES_PUBLIC_URL`, `LIVE_IOC_URL`. Secrets live in GitHub repo settings, never in source. Do not bake `FIRMS_MAP_KEY` into `public/api/`.
 
 Local nightly refresh (TimesFM, AlphaEarth) is on the M5 Max only — never CI. Runbook in `tasks/todo.md`.
 

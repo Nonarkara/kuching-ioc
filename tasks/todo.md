@@ -95,7 +95,7 @@ IOC 2.0, 2.1, and 2.2 are SHIPPED. Latest commit: a6b3136.
 - [ ] Replace MBKS/MPP/DBKU HTML scrapes with proper APIs when available
 - [ ] Sentinel-1 SAR flood extent (when available from PLANMalaysia/LGMS)
 - [ ] Redis persistent cache (survive server restarts)
-- [ ] Register `ee-nonsmartcity` in EE web console for future EE-native workflows
+- [ ] Register the Earth Engine project in the EE web console for future EE-native workflows
 - [ ] Delete orphaned refactor files: `geo.mjs`, `api-client.mjs`, `constants.mjs`
       (other agent's abandoned modular refactor, never imported by server.mjs)
 
@@ -103,7 +103,7 @@ IOC 2.0, 2.1, and 2.2 are SHIPPED. Latest commit: a6b3136.
 
 ```bash
 # Refresh TimesFM forecast (nightly, local M5 Max):
-cd "/Users/nonarkara/Projects/Padawan Municipality Kuching Dashboard"
+cd "$HOME/Projects/Padawan Municipality Kuching Dashboard"
 scripts/forecast/.venv/bin/python scripts/forecast/forecast_runner.py
 node build.mjs
 git add public/api/forecast.json public/api/dashboard.json public/api/build-manifest.json

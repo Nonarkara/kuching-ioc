@@ -64,7 +64,7 @@ Per §13: the same mistake never happens twice.
 
 ## 2026-06-02 · Earth Engine project registration blocks GCS access — bypass via parquet index
 
-- **What went wrong:** EE project `ee-nonsmartcity` exists and EE API is enabled, but registration (accept ToS in web console) was needed. Can't register programmatically.
+- **What went wrong:** The Earth Engine project exists and the EE API is enabled, but registration (accept ToS in the web console) was needed. Can't register programmatically.
 - **Correct behaviour:** Use the AlphaEarth public GCS bucket `gs://alphaearth_foundations` directly. Download `aef_index.parquet` (66MB), find the UTM tile via bbox intersection, range-read with rasterio /vsigs/ + ADC + requester-pays billing on a billing-linked project. No EE needed.
 - **How to recognise:** `EEException: Project X is not registered to use Earth Engine` during `ee.Initialize()`. Fall back to GCS immediately.
 

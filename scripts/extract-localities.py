@@ -101,20 +101,13 @@ def main():
     print(f"  Sheet: '{sheet.title}'  rows={sheet.max_row}  cols={sheet.max_column}")
 
     items = []
-    totals_row = None
 
     for row_idx in range(2, sheet.max_row + 1):
         no, code, desc, constituency, res, com, ind, exe = (
             sheet.cell(row_idx, c).value for c in range(1, 9)
         )
 
-        if code is None and desc is None and (constituency or "").strip().lower() == "total":
-            totals_row = {
-                "residential": int_or_zero(res),
-                "commercial":  int_or_zero(com),
-                "industrial":  int_or_zero(ind),
-                "exempted":    int_or_zero(exe),
-            }
+        if code is None and desc is None and str(constituency or "").strip().lower() == "total":
             continue
 
         if code is None:
@@ -123,6 +116,8 @@ def main():
         letter, ward_group = derive_ward_code(code)
         parsed_constituency = parse_constituency(constituency)
 
+        # Property-usage counts stay in the operator's spreadsheet. The
+        # committed directory keeps place, ward, and constituency only.
         items.append({
             "no": int_or_zero(no) or None,
             "code": str(code).strip(),
@@ -130,17 +125,11 @@ def main():
             "letter": letter,
             "wardCode": ward_group,
             "constituency": parsed_constituency,
-            "residential": int_or_zero(res),
-            "commercial":  int_or_zero(com),
-            "industrial":  int_or_zero(ind),
-            "exempted":    int_or_zero(exe),
+            "residential": None,
+            "commercial": None,
+            "industrial": None,
+            "exempted": None,
         })
-
-    # Derived totals (sum of all items — authoritative regardless of sheet totals row)
-    sum_res = sum(it["residential"] for it in items)
-    sum_com = sum(it["commercial"]  for it in items)
-    sum_ind = sum(it["industrial"]  for it in items)
-    sum_exe = sum(it["exempted"]    for it in items)
 
     # Breakdowns
     by_ward = {}
@@ -165,19 +154,18 @@ def main():
 
     payload = {
         "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "source": "MPP Locality Listing and Property Usage with State and Parliament Constituency",
-        "sourceFile": XLSX_PATH.name,
+        "source": "Public demo locality directory. Property-usage counts are withheld.",
+        "propertyUsage": "withheld",
         "items": items,
         "totals": {
             "localities": len(items),
-            "residential": sum_res,
-            "commercial":  sum_com,
-            "industrial":  sum_ind,
-            "exempted":    sum_exe,
-            "stateConstituencies":      len(by_state),
+            "residential": None,
+            "commercial": None,
+            "industrial": None,
+            "exempted": None,
+            "stateConstituencies": len(by_state),
             "parliamentConstituencies": len(by_parliament),
         },
-        "sheetTotals": totals_row,  # Raw totals row from xlsx (may differ from sum)
         "breakdowns": {
             "byWard":         dict(sorted(by_ward.items())),
             "byLetter":       dict(sorted(by_letter.items())),
@@ -191,8 +179,7 @@ def main():
         json.dump(payload, f, indent=2, ensure_ascii=False)
 
     print(f"  ✓ Wrote {OUT_PATH}")
-    print(f"    - {payload['totals']['localities']} localities")
-    print(f"    - {sum_res:,} residential / {sum_com:,} commercial / {sum_ind:,} industrial / {sum_exe:,} exempted")
+    print(f"    - {payload['totals']['localities']} localities (property-usage counts withheld)")
     print(f"    - {len(by_state)} state constituencies / {len(by_parliament)} parliament constituencies")
     print(f"    - ward breakdown: {json.dumps(payload['breakdowns']['byWard'])}")
 

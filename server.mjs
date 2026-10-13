@@ -45,7 +45,9 @@ const SITE = {
   ],
   monitoring: {
     firms: {
-      url: "https://firms.modaps.eosdis.nasa.gov/api/country/csv/dd7f3299763784dfb5db4f3690d97034/VIIRS_SNPP/MYS/1",
+      // Public landing page only. The MAP_KEY stays in FIRMS_MAP_KEY and is
+      // never written into a payload or a baked snapshot.
+      url: "https://firms.modaps.eosdis.nasa.gov/",
       label: "NASA FIRMS / VIIRS Fire Detection",
     },
     quarks: {
@@ -231,9 +233,8 @@ const JURISDICTIONS = [
     source:
       "MPP council profile lists a jurisdiction area of 984.34 km², population 260,058, and 83,744 private holdings.",
     sourceUrl: "https://mpp.sarawak.gov.my/web/subpage/webpage_view/55",
-    mapReferenceLabel: "MPP Zoning Map",
-    mapReferenceUrl:
-      "https://www.google.com/maps/d/viewer?mid=1SNnLbpINjhdKf5IlzBTGQ8fECCjdUdIM&ll=1.3796230801341653%2C110.3232464&z=10",
+    mapReferenceLabel: "MPP council profile",
+    mapReferenceUrl: "https://mpp.sarawak.gov.my/web/subpage/webpage_view/55",
     mapAnchor: { x: 42, y: 68 },
     mapPanelNote: "Padawan growth ring spanning Batu Kawa, Penrissen, Kota Padawan, and Siburan.",
     fallbackPolygons: [
@@ -1504,11 +1505,35 @@ async function loadAirQuality() {
   }
 }
 
+function firmsRequestUrl() {
+  const key = String(process.env.FIRMS_MAP_KEY || "").trim();
+  if (!/^[A-Za-z0-9_-]{10,128}$/.test(key)) return null;
+  return `https://firms.modaps.eosdis.nasa.gov/api/country/csv/${encodeURIComponent(key)}/VIIRS_SNPP/MYS/1`;
+}
+
+function redactPerson(person) {
+  if (!person || typeof person !== "object") return person;
+  return { ...person, phone: null };
+}
+
+function redactLocality(item) {
+  if (!item || typeof item !== "object") return item;
+  return { ...item, residential: null, commercial: null, industrial: null, exempted: null };
+}
+
 async function loadFires() {
   return cached("sat-fires", 30 * 60 * 1000, async () => {
+    const url = firmsRequestUrl();
+    if (!url) {
+      return {
+        status: "offline",
+        updatedAt: nowIso(),
+        hotspots: [],
+        summary: "NASA FIRMS map key is not configured.",
+      };
+    }
     try {
-      // Use the SITE config for FIRMS (VIIRS SNPP for Malaysia)
-      const csv = await fetchText(SITE.monitoring.firms.url, 10000);
+      const csv = await fetchText(url, 10000);
       const lines = csv.split("\n").slice(1).filter(l => l.trim());
       
       const hotspots = lines.map(line => {
@@ -3205,11 +3230,11 @@ async function loadPadawanZoning() {
       wards: ["Ward A", "Ward B", "Ward D", "Ward F", "Ward G", "Ward H"],
     };
 
+    const kmlUrl = String(process.env.PADAWAN_ZONING_KML_URL || "").trim();
+    if (!kmlUrl) return fallback;
+
     try {
-      const kml = await fetchText(
-        "https://www.google.com/maps/d/kml?mid=1SNnLbpINjhdKf5IlzBTGQ8fECCjdUdIM&forcekml=1",
-        12000,
-      );
+      const kml = await fetchText(kmlUrl, 12000);
       const wardNames = Array.from(kml.matchAll(/<name>(Ward[^<]+)<\/name>/gi), (match) =>
         stripTags(match[1]).replace(/\s+/g, " ").trim(),
       );
@@ -3702,11 +3727,15 @@ async function loadMppCouncillors() {
       updatedAt: doc.generatedAt || nowIso(),
       term: doc.term,
       source: doc.source,
-      chairman: doc.chairman,
-      deputy: doc.deputy,
-      wards: doc.wards,
+      chairman: redactPerson(doc.chairman),
+      deputy: redactPerson(doc.deputy),
+      wards: (doc.wards || []).map((ward) => ({
+        ...ward,
+        councillors: (ward.councillors || []).map(redactPerson),
+      })),
       totals: doc.totals,
       notes: doc.notes,
+      contacts: "withheld",
     };
   }).catch((error) => ({
     status: "error",
@@ -3721,12 +3750,18 @@ async function loadMppLocalities() {
   return cached("mpp-localities", 3600_000, async () => {
     const raw = await fs.readFile(path.join(DATA_DIR, "localities.json"), "utf-8");
     const doc = JSON.parse(raw);
+    const totals = { ...(doc.totals || {}) };
+    totals.residential = null;
+    totals.commercial = null;
+    totals.industrial = null;
+    totals.exempted = null;
     return {
       status: "official",
       updatedAt: doc.generatedAt || nowIso(),
       source: doc.source,
-      items: doc.items,
-      totals: doc.totals,
+      propertyUsage: "withheld",
+      items: (doc.items || []).map(redactLocality),
+      totals,
       breakdowns: doc.breakdowns,
     };
   }).catch((error) => ({
@@ -4132,8 +4167,8 @@ async function buildDashboard() {
         "mpp-zoning-map",
         "MPP zoning map",
         padawanZoning.status,
-        `Official Padawan zoning reference with ${padawanZoning.wardCount} ward placemarks.`,
-        "https://www.google.com/maps/d/viewer?mid=1SNnLbpINjhdKf5IlzBTGQ8fECCjdUdIM&ll=1.3796230801341653%2C110.3232464&z=10",
+        `Padawan ward placemarks (${padawanZoning.wardCount}). An external zoning KML is used only when PADAWAN_ZONING_KML_URL is set.`,
+        "https://mpp.sarawak.gov.my/web/subpage/webpage_view/55",
         generatedAt,
       ),
       sourceRecord(
@@ -4299,9 +4334,9 @@ async function buildDashboard() {
       ),
       sourceRecord(
         "mpp-localities",
-        "MPP Locality Listing & Property Usage",
+        "MPP locality directory",
         mppLocalities.status,
-        `${mppLocalities?.totals?.localities ?? 0} localities · ${mppLocalities?.totals?.residential?.toLocaleString?.() ?? 0} residential / ${mppLocalities?.totals?.commercial?.toLocaleString?.() ?? 0} commercial / ${mppLocalities?.totals?.industrial?.toLocaleString?.() ?? 0} industrial properties across ${mppLocalities?.totals?.stateConstituencies ?? 0} state + ${mppLocalities?.totals?.parliamentConstituencies ?? 0} parliament constituencies.`,
+        `${mppLocalities?.totals?.localities ?? 0} localities. Property-usage counts withheld. ${mppLocalities?.totals?.stateConstituencies ?? 0} state + ${mppLocalities?.totals?.parliamentConstituencies ?? 0} parliament constituencies.`,
         "https://mpp.sarawak.gov.my/",
         mppLocalities.updatedAt || generatedAt,
       ),

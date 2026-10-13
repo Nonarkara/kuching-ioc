@@ -5,7 +5,11 @@
 
 set -euo pipefail
 
-PROJECT_ID="kuching-dashboard-and-systems"
+PROJECT_ID="${GCP_PROJECT_ID:-}"
+if [ -z "$PROJECT_ID" ]; then
+  echo "Set GCP_PROJECT_ID to the Google Cloud project that should own the archive."
+  exit 1
+fi
 SA_NAME="kuching-ioc-sa"
 SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 KEY_FILE="./sa-key.json"

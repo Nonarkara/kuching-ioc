@@ -7,6 +7,7 @@ Output: data/councillors.json
 
 Parses the single 3-column table (Zone | Councillors & Contact No | Area Name / Locality)
 into a structured roster keyed by ward letter.
+Personal contact numbers are stripped before write.
 """
 import json
 import os
@@ -32,8 +33,8 @@ ROSTER = [
         "ward_label": "Ward 1",
         "area": "Upper Padawan",
         "councillors": [
-            {"title": "Cr.", "name": "Mark Kellon anak Awo",      "phone": "016-8922060"},
-            {"title": "Cr.", "name": "Stephen Jatu anak Sawet",   "phone": "019-4592366"},
+            {"title": "Cr.", "name": "Mark Kellon anak Awo",      "phone": None},
+            {"title": "Cr.", "name": "Stephen Jatu anak Sawet",   "phone": None},
         ],
     },
     {
@@ -41,10 +42,10 @@ ROSTER = [
         "ward_label": "Ward 2",
         "area": "Upper Padawan: Biperoh & Bengoh",
         "councillors": [
-            {"title": "Cr.", "name": "Felix Ngui",                "phone": "016-8548070"},
-            {"title": "Cr.", "name": "Tito Grabo anak Teyok",     "phone": "011-33203700"},
-            {"title": "Cr.", "name": "Niput anak Ahip",           "phone": "019-7658166"},
-            {"title": "Cr.", "name": "Roselin anak Lasek",        "phone": "010-9752611"},
+            {"title": "Cr.", "name": "Felix Ngui",                "phone": None},
+            {"title": "Cr.", "name": "Tito Grabo anak Teyok",     "phone": None},
+            {"title": "Cr.", "name": "Niput anak Ahip",           "phone": None},
+            {"title": "Cr.", "name": "Roselin anak Lasek",        "phone": None},
         ],
     },
     {
@@ -52,8 +53,8 @@ ROSTER = [
         "ward_label": "Ward 3",
         "area": "Mambong & Puncak Borneo",
         "councillors": [
-            {"title": "Cr.",         "name": "Walter anak Suhai",       "phone": "010-4087717"},
-            {"title": "Lt. Kol.",    "name": "Monday anak Juhid",       "phone": "013-8036477"},
+            {"title": "Cr.",         "name": "Walter anak Suhai",       "phone": None},
+            {"title": "Lt. Kol.",    "name": "Monday anak Juhid",       "phone": None},
         ],
     },
     {
@@ -62,10 +63,10 @@ ROSTER = [
         "ward_label": "Ward 4",
         "area": "Kota Padawan, Kuap, Landeh & Batu 10-15 Kuching-Serian Road",
         "councillors": [
-            {"title": "Cr.", "name": "Lim Lian Kee",              "phone": "019-8185350"},
-            {"title": "Cr.", "name": "Shamsudin bin Unai",        "phone": "013-9065805"},
-            {"title": "Cr.", "name": "Norolhadi bin Dolla Sabari","phone": "019-8747445"},
-            {"title": "Cr.", "name": "Wilarmy Geniron Jebron",    "phone": "011-29109925"},
+            {"title": "Cr.", "name": "Lim Lian Kee",              "phone": None},
+            {"title": "Cr.", "name": "Shamsudin bin Unai",        "phone": None},
+            {"title": "Cr.", "name": "Norolhadi bin Dolla Sabari","phone": None},
+            {"title": "Cr.", "name": "Wilarmy Geniron Jebron",    "phone": None},
         ],
     },
     {
@@ -73,9 +74,9 @@ ROSTER = [
         "ward_label": "Ward 5",
         "area": "3rd Mile Maong Bazaar, Arang, Semeba & Kung Phin",
         "councillors": [
-            {"title": "Cr.", "name": "Gerald Goh Teck Joo",       "phone": "019-8165368"},
-            {"title": "Cr.", "name": "Alvin Chong Nyuk Fah",      "phone": "012-8442885"},
-            {"title": "Cr.", "name": "Leng Chai anak Mendu",      "phone": "011-14567777"},
+            {"title": "Cr.", "name": "Gerald Goh Teck Joo",       "phone": None},
+            {"title": "Cr.", "name": "Alvin Chong Nyuk Fah",      "phone": None},
+            {"title": "Cr.", "name": "Leng Chai anak Mendu",      "phone": None},
         ],
     },
     {
@@ -83,9 +84,9 @@ ROSTER = [
         "ward_label": "Ward 6",
         "area": "Kota Sentosa & Batu Kitang",
         "councillors": [
-            {"title": "Sr. Cr.", "name": "Chen Chee Joong",       "phone": "019-8130636"},
-            {"title": "Cr.",     "name": "Philip Liaw Kian Sin",  "phone": "016-8611233"},
-            {"title": "Cr.",     "name": "Mohamad Fauzi bin Ali", "phone": "016-8565626"},
+            {"title": "Sr. Cr.", "name": "Chen Chee Joong",       "phone": None},
+            {"title": "Cr.",     "name": "Philip Liaw Kian Sin",  "phone": None},
+            {"title": "Cr.",     "name": "Mohamad Fauzi bin Ali", "phone": None},
         ],
     },
     {
@@ -94,10 +95,10 @@ ROSTER = [
         "ward_label": "Ward 7",
         "area": "Batu Kawah & Datuk Stephen Yong Road",
         "councillors": [
-            {"title": "Cr.", "name": "Samsudin bin Sapri",        "phone": "019-8916606"},
-            {"title": "Cr.", "name": "Gary Yeo Shin Huat",        "phone": "010-7922988"},
-            {"title": "Cr.", "name": "Phang Kit Lung",            "phone": "013-9406228"},
-            {"title": "Cr.", "name": "Bassiron bin Haji Latep",   "phone": "011-53355255"},
+            {"title": "Cr.", "name": "Samsudin bin Sapri",        "phone": None},
+            {"title": "Cr.", "name": "Gary Yeo Shin Huat",        "phone": None},
+            {"title": "Cr.", "name": "Phang Kit Lung",            "phone": None},
+            {"title": "Cr.", "name": "Bassiron bin Haji Latep",   "phone": None},
         ],
     },
     {
@@ -105,9 +106,9 @@ ROSTER = [
         "ward_label": "Ward 8",
         "area": "Matang",
         "councillors": [
-            {"title": "Cr.", "name": "Jamilah binti Rakim",       "phone": "016-8741442"},
-            {"title": "Cr.", "name": "Madhi bin Tomi",            "phone": "019-9707411"},
-            {"title": "Cr.", "name": "Lee Yen Huei",              "phone": "010-7878162"},
+            {"title": "Cr.", "name": "Jamilah binti Rakim",       "phone": None},
+            {"title": "Cr.", "name": "Madhi bin Tomi",            "phone": None},
+            {"title": "Cr.", "name": "Lee Yen Huei",              "phone": None},
         ],
     },
     {
@@ -115,9 +116,9 @@ ROSTER = [
         "ward_label": "Ward 9",
         "area": "Batu Kawah Township, Stapok & Sunny Hill Batu Kawah",
         "councillors": [
-            {"title": "Ir. Dr. Cr.", "name": "Jackie Sim Hui Hui","phone": "010-2227751"},
-            {"title": "Cr.",         "name": "Aaron Tay Kok Tung","phone": "012-8885065"},
-            {"title": "Cr.",         "name": "Ronnie Hii Ru Wei", "phone": "012-8860505"},
+            {"title": "Ir. Dr. Cr.", "name": "Jackie Sim Hui Hui","phone": None},
+            {"title": "Cr.",         "name": "Aaron Tay Kok Tung","phone": None},
+            {"title": "Cr.",         "name": "Ronnie Hii Ru Wei", "phone": None},
         ],
     },
     {
@@ -126,8 +127,8 @@ ROSTER = [
         "ward_label": "Ward 10",
         "area": "Telaga Air, Sibu Laut & Kawasan Kpg. Tg. Bako",
         "councillors": [
-            {"title": "Cr.", "name": "Sebeki bin Jen",            "phone": "019-8763231"},
-            {"title": "Cr.", "name": "Othman bin Ibrahim",        "phone": "010-9765149"},
+            {"title": "Cr.", "name": "Sebeki bin Jen",            "phone": None},
+            {"title": "Cr.", "name": "Othman bin Ibrahim",        "phone": None},
         ],
     },
 ]
@@ -135,7 +136,7 @@ ROSTER = [
 CHAIRMAN = {
     "title": "Cr.",
     "name": "Tan Kai",
-    "phone": "013-8095165",
+    "phone": None,
     "role": "Chairman",
     "coverage": "All zones",
 }
@@ -143,7 +144,7 @@ CHAIRMAN = {
 DEPUTY = {
     "title": "Cr.",
     "name": "Mahmud Bin Dato Sri Haji Ibrahim",
-    "phone": "012-8087997",
+    "phone": None,
     "role": "Deputy Chairman",
     "coverage": "All zones",
 }
@@ -164,17 +165,11 @@ def extract_raw_text():
     return text
 
 
-def verify_phone_coverage(raw_text):
-    """Sanity check: every phone in our roster appears in the raw docx."""
-    phones = [CHAIRMAN["phone"], DEPUTY["phone"]]
-    for ward in ROSTER:
-        for c in ward["councillors"]:
-            phones.append(c["phone"])
-    missing = [p for p in phones if p not in raw_text]
-    if missing:
-        print(f"WARN: phone numbers not found verbatim in docx: {missing}", file=sys.stderr)
-    else:
-        print(f"  ✓ All {len(phones)} phone numbers verified against source docx.")
+def public_person(person):
+    """Drop personal numbers. The public demo keeps name, title, and role."""
+    out = dict(person)
+    out["phone"] = None
+    return out
 
 
 def build_payload():
@@ -186,16 +181,16 @@ def build_payload():
             "label": w["ward_label"],
             "area": w["area"],
             "councillorCount": len(w["councillors"]),
-            "councillors": w["councillors"],
+            "councillors": [public_person(c) for c in w["councillors"]],
         }
         wards.append(ward)
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "source": "MPP Resident Councillors System 2025-2028",
-        "sourceFile": "MPP RESIDENT COUNCILLORS SYSTEM 2025.docx",
+        "source": "Public demo roster for the 2025-2028 term. Personal contact numbers are withheld.",
         "term": "2025-2028",
-        "chairman": CHAIRMAN,
-        "deputy": DEPUTY,
+        "contacts": "withheld",
+        "chairman": public_person(CHAIRMAN),
+        "deputy": public_person(DEPUTY),
         "wards": wards,
         "totals": {
             "wards": len(wards),
@@ -210,8 +205,7 @@ def build_payload():
 
 def main():
     verify_docx_exists()
-    raw = extract_raw_text()
-    verify_phone_coverage(raw)
+    extract_raw_text()
     payload = build_payload()
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(OUT_PATH, "w", encoding="utf-8") as f:

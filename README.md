@@ -139,8 +139,11 @@ None of these are required to open the dashboard. Unset means a documented fallb
 | Variable | Effect when set |
 |----------|-----------------|
 | `AQICN_TOKEN` | Ground AQI via WAQI/AQICN. Unset → the AQICN public `demo` token already in `server.mjs`. |
+| `FIRMS_MAP_KEY` | NASA FIRMS hotspot fetch, server-side only. Unset → the fire panel stays offline. The key is never written into `public/api/`. |
 | `CITY_REPORTER_SUPABASE_URL` + `CITY_REPORTER_SUPABASE_KEY` | Live civic-report feed. Unset → built-in demo reports. |
 | `GOOGLE_SHEETS_ID` + `GOOGLE_SERVICE_ACCOUNT_JSON` | `npm run archive:sheets` appends a bake to Sheets. Unset → script exits 0. |
+| `GCP_PROJECT_ID` | Google Cloud project for `scripts/provision-sheets.sh`. Required by that script; no project id is stored in the repo. |
+| `PADAWAN_ZONING_KML_URL` | Optional KML for ward placemarks. Unset → the built-in ward list. |
 | `PAGES_PUBLIC_URL` / `LIVE_IOC_URL` | Labels written into the static HTML boot payload. |
 
 Deploy credentials for **this** GitHub Actions workflow live in that GitHub repo’s settings, not in source. Forks do not need them to run locally.

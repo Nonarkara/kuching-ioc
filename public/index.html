@@ -52,6 +52,7 @@
             <button id="themeToggle" class="ctrl-btn">LIGHT</button>
             <button class="lang-btn active" data-lang="en">EN</button>
             <button class="lang-btn" data-lang="ms">BM</button>
+            <button class="lang-btn" data-lang="th">TH</button>
             <button class="lang-btn" data-lang="zh">CN</button>
           </div>
           <div class="runtime-meta">
@@ -165,16 +166,20 @@
           <div id="wardCategoryBar" class="ward-category-bar" role="toolbar" aria-label="Filter Padawan Wards by Category"></div>
           <div class="building-tools">
             <div class="building-buttons">
-              <button id="buildingsToggle" type="button" aria-pressed="false" disabled>3D buildings · pilot</button>
-              <button id="buildingsFocus" type="button" disabled>Focus pilot</button>
+              <button id="buildingsToggle" type="button" aria-pressed="false" disabled>3D buildings</button>
+              <button id="buildingsFocus" type="button" disabled>Assembly</button>
+              <button id="buildingsPadawan" type="button" disabled>Padawan</button>
               <a id="arnisDownload" href="./data/buildings/kota-padawan-arnis.zip" download>Download Arnis world</a>
+              <button type="button" class="bldg-lang" data-lang="en">EN</button>
+              <button type="button" class="bldg-lang" data-lang="th">TH</button>
+              <button type="button" class="bldg-lang" data-lang="zh">中文</button>
             </div>
             <p id="buildingsStatus" role="status" aria-live="polite"></p>
             <details id="buildingsDetails">
               <summary data-i18n="buildingsEvidence">Buildings · coverage &amp; sources</summary>
               <p id="arnisWorldNote"></p>
               <p id="buildingsDataDates"></p>
-              <p data-i18n="buildingsCoverage">Pilot only, not all Padawan. Footprints may be incomplete; default 6 m heights are estimates. No flood-depth simulation.</p>
+              <p data-i18n="buildingsCoverage">Padawan and Greater Kuching footprints, loaded by view. Tagged height, otherwise storeys × 3.2 m, otherwise a type default. The State Assembly is a hand model. Not a flood model.</p>
               <a href="./data/buildings/manifest.json" target="_blank" rel="noopener" data-i18n="buildingsManifest">Building data manifest</a>
               <a href="./data/buildings/world-manifest.json" target="_blank" rel="noopener" data-i18n="arnisManifest">Arnis world manifest</a>
             </details>
@@ -195,6 +200,7 @@
             <!-- The Catchment Story — click a gauge, get the argument, not the materials.
                  Corner overlay inside the map (never a full-width bar across it). -->
             <aside id="catchmentStory" class="catchment-story" role="dialog" aria-label="Catchment risk" hidden></aside>
+            <aside id="bldgFloat" class="bldg-float" hidden></aside>
           </div>
           <footer class="map-footer">
             <div id="mapLegend" class="map-legend"></div>

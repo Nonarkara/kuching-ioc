@@ -1,0 +1,3163 @@
+{
+  "id": "greater-kuching-buildings",
+  "name": "Padawan and Greater Kuching building footprints",
+  "z": 14,
+  "bakedAt": "2026-10-14T14:05:39.225Z",
+  "overtureRelease": "2026-09-23.1",
+  "overtureUrl": "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-09-23.1/buildings.pmtiles",
+  "featureCount": 239711,
+  "heightCounts": {
+    "default-estimate": 235701,
+    "type-estimate": 3696,
+    "overture-height": 58,
+    "levels-estimate": 256
+  },
+  "councilCounts": {
+    "mpp": 114299,
+    "dbku": 63420,
+    "mbks": 61992
+  },
+  "datasetCounts": {
+    "google": 97799,
+    "microsoft": 118249,
+    "osm": 23663
+  },
+  "tileCount": 301,
+  "bytes": 6436374,
+  "tiles": [
+    {
+      "z": 14,
+      "x": 13204,
+      "y": 8125,
+      "count": 16,
+      "bytes": 536,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13204,
+      "y": 8126,
+      "count": 39,
+      "bytes": 1046,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13205,
+      "y": 8124,
+      "count": 18,
+      "bytes": 547,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13205,
+      "y": 8125,
+      "count": 461,
+      "bytes": 12046,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13205,
+      "y": 8126,
+      "count": 446,
+      "bytes": 11514,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13205,
+      "y": 8127,
+      "count": 562,
+      "bytes": 14534,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13205,
+      "y": 8128,
+      "count": 6,
+      "bytes": 299,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13206,
+      "y": 8117,
+      "count": 10,
+      "bytes": 398,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13206,
+      "y": 8119,
+      "count": 1,
+      "bytes": 135,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13206,
+      "y": 8124,
+      "count": 367,
+      "bytes": 9974,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13206,
+      "y": 8125,
+      "count": 360,
+      "bytes": 9465,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13206,
+      "y": 8126,
+      "count": 615,
+      "bytes": 16510,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13206,
+      "y": 8127,
+      "count": 609,
+      "bytes": 15896,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13206,
+      "y": 8128,
+      "count": 133,
+      "bytes": 3639,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13207,
+      "y": 8116,
+      "count": 11,
+      "bytes": 392,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13207,
+      "y": 8117,
+      "count": 422,
+      "bytes": 11092,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13207,
+      "y": 8118,
+      "count": 214,
+      "bytes": 5741,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13207,
+      "y": 8119,
+      "count": 3,
+      "bytes": 250,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13207,
+      "y": 8120,
+      "count": 146,
+      "bytes": 3965,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13207,
+      "y": 8121,
+      "count": 5,
+      "bytes": 251,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13207,
+      "y": 8122,
+      "count": 1,
+      "bytes": 133,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13207,
+      "y": 8123,
+      "count": 42,
+      "bytes": 1188,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13207,
+      "y": 8124,
+      "count": 554,
+      "bytes": 14853,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13207,
+      "y": 8125,
+      "count": 348,
+      "bytes": 9018,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13207,
+      "y": 8126,
+      "count": 980,
+      "bytes": 24977,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13207,
+      "y": 8127,
+      "count": 536,
+      "bytes": 13949,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13207,
+      "y": 8128,
+      "count": 336,
+      "bytes": 8410,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13208,
+      "y": 8117,
+      "count": 65,
+      "bytes": 1653,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13208,
+      "y": 8118,
+      "count": 348,
+      "bytes": 9295,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13208,
+      "y": 8119,
+      "count": 936,
+      "bytes": 24771,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13208,
+      "y": 8120,
+      "count": 660,
+      "bytes": 18056,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13208,
+      "y": 8121,
+      "count": 26,
+      "bytes": 818,
+      "councils": [
+        "mpp",
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13208,
+      "y": 8122,
+      "count": 319,
+      "bytes": 8291,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13208,
+      "y": 8123,
+      "count": 122,
+      "bytes": 3074,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13208,
+      "y": 8124,
+      "count": 232,
+      "bytes": 6125,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13208,
+      "y": 8125,
+      "count": 703,
+      "bytes": 18518,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13208,
+      "y": 8126,
+      "count": 1173,
+      "bytes": 31046,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13208,
+      "y": 8127,
+      "count": 274,
+      "bytes": 6717,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13208,
+      "y": 8128,
+      "count": 261,
+      "bytes": 6237,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13208,
+      "y": 8129,
+      "count": 29,
+      "bytes": 858,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13209,
+      "y": 8115,
+      "count": 57,
+      "bytes": 1504,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13209,
+      "y": 8116,
+      "count": 7,
+      "bytes": 315,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13209,
+      "y": 8117,
+      "count": 1,
+      "bytes": 138,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13209,
+      "y": 8118,
+      "count": 2,
+      "bytes": 166,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13209,
+      "y": 8119,
+      "count": 239,
+      "bytes": 6256,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13209,
+      "y": 8120,
+      "count": 918,
+      "bytes": 25122,
+      "councils": [
+        "dbku",
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13209,
+      "y": 8121,
+      "count": 1056,
+      "bytes": 30554,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13209,
+      "y": 8122,
+      "count": 1278,
+      "bytes": 35797,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13209,
+      "y": 8123,
+      "count": 1066,
+      "bytes": 31217,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13209,
+      "y": 8124,
+      "count": 494,
+      "bytes": 13939,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13209,
+      "y": 8125,
+      "count": 218,
+      "bytes": 5646,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13209,
+      "y": 8126,
+      "count": 664,
+      "bytes": 17876,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13209,
+      "y": 8127,
+      "count": 453,
+      "bytes": 11634,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13209,
+      "y": 8128,
+      "count": 66,
+      "bytes": 1698,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13209,
+      "y": 8129,
+      "count": 6,
+      "bytes": 268,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13210,
+      "y": 8116,
+      "count": 3,
+      "bytes": 204,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13210,
+      "y": 8117,
+      "count": 1,
+      "bytes": 130,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13210,
+      "y": 8118,
+      "count": 2,
+      "bytes": 162,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13210,
+      "y": 8119,
+      "count": 397,
+      "bytes": 10850,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13210,
+      "y": 8120,
+      "count": 1189,
+      "bytes": 31076,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13210,
+      "y": 8121,
+      "count": 614,
+      "bytes": 16622,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13210,
+      "y": 8122,
+      "count": 525,
+      "bytes": 13185,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13210,
+      "y": 8123,
+      "count": 1373,
+      "bytes": 36087,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13210,
+      "y": 8124,
+      "count": 527,
+      "bytes": 13812,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13210,
+      "y": 8125,
+      "count": 674,
+      "bytes": 17039,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13210,
+      "y": 8126,
+      "count": 562,
+      "bytes": 14406,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13210,
+      "y": 8127,
+      "count": 286,
+      "bytes": 7061,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13210,
+      "y": 8128,
+      "count": 669,
+      "bytes": 16768,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13210,
+      "y": 8129,
+      "count": 85,
+      "bytes": 2237,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13210,
+      "y": 8130,
+      "count": 360,
+      "bytes": 9212,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8115,
+      "count": 37,
+      "bytes": 1064,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8116,
+      "count": 234,
+      "bytes": 5701,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8117,
+      "count": 1,
+      "bytes": 134,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8118,
+      "count": 9,
+      "bytes": 342,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8119,
+      "count": 338,
+      "bytes": 8402,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8120,
+      "count": 3112,
+      "bytes": 76613,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8121,
+      "count": 586,
+      "bytes": 14342,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8122,
+      "count": 1636,
+      "bytes": 43156,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8123,
+      "count": 3273,
+      "bytes": 86939,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8124,
+      "count": 2173,
+      "bytes": 56555,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8125,
+      "count": 2066,
+      "bytes": 53810,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8126,
+      "count": 336,
+      "bytes": 8431,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8127,
+      "count": 1710,
+      "bytes": 46660,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8128,
+      "count": 109,
+      "bytes": 2758,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8129,
+      "count": 347,
+      "bytes": 9061,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8130,
+      "count": 375,
+      "bytes": 9439,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13211,
+      "y": 8131,
+      "count": 59,
+      "bytes": 1618,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8113,
+      "count": 32,
+      "bytes": 942,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8114,
+      "count": 388,
+      "bytes": 9896,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8115,
+      "count": 969,
+      "bytes": 24488,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8116,
+      "count": 252,
+      "bytes": 7435,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8117,
+      "count": 180,
+      "bytes": 5038,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8118,
+      "count": 36,
+      "bytes": 1023,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8119,
+      "count": 2472,
+      "bytes": 64543,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8120,
+      "count": 3915,
+      "bytes": 112562,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8121,
+      "count": 2077,
+      "bytes": 53993,
+      "councils": [
+        "mbks",
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8122,
+      "count": 4179,
+      "bytes": 111872,
+      "councils": [
+        "mbks",
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8123,
+      "count": 3844,
+      "bytes": 107336,
+      "councils": [
+        "mbks",
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8124,
+      "count": 2786,
+      "bytes": 73604,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8125,
+      "count": 2258,
+      "bytes": 59063,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8126,
+      "count": 845,
+      "bytes": 21156,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8127,
+      "count": 1542,
+      "bytes": 40528,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8128,
+      "count": 493,
+      "bytes": 12851,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8129,
+      "count": 1425,
+      "bytes": 34862,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8130,
+      "count": 1081,
+      "bytes": 28288,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13212,
+      "y": 8131,
+      "count": 70,
+      "bytes": 1753,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8113,
+      "count": 92,
+      "bytes": 2531,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8114,
+      "count": 84,
+      "bytes": 2228,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8115,
+      "count": 1061,
+      "bytes": 25843,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8116,
+      "count": 1219,
+      "bytes": 30967,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8117,
+      "count": 3774,
+      "bytes": 113255,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8118,
+      "count": 2244,
+      "bytes": 64497,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8119,
+      "count": 4629,
+      "bytes": 126194,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8120,
+      "count": 5931,
+      "bytes": 158637,
+      "councils": [
+        "dbku",
+        "mbks"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8121,
+      "count": 6054,
+      "bytes": 172481,
+      "councils": [
+        "mbks"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8122,
+      "count": 5388,
+      "bytes": 152446,
+      "councils": [
+        "mbks"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8123,
+      "count": 5209,
+      "bytes": 142291,
+      "councils": [
+        "mbks",
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8124,
+      "count": 2543,
+      "bytes": 67066,
+      "councils": [
+        "mpp",
+        "mbks"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8125,
+      "count": 3034,
+      "bytes": 81084,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8126,
+      "count": 3063,
+      "bytes": 82774,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8127,
+      "count": 2651,
+      "bytes": 75463,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8128,
+      "count": 1958,
+      "bytes": 53499,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8129,
+      "count": 987,
+      "bytes": 24599,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8130,
+      "count": 841,
+      "bytes": 20946,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13213,
+      "y": 8131,
+      "count": 422,
+      "bytes": 10131,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8113,
+      "count": 51,
+      "bytes": 1425,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8114,
+      "count": 1146,
+      "bytes": 28961,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8115,
+      "count": 587,
+      "bytes": 14644,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8116,
+      "count": 194,
+      "bytes": 4658,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8117,
+      "count": 24,
+      "bytes": 829,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8118,
+      "count": 387,
+      "bytes": 9629,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8119,
+      "count": 753,
+      "bytes": 20022,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8120,
+      "count": 4204,
+      "bytes": 110494,
+      "councils": [
+        "mbks",
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8121,
+      "count": 4542,
+      "bytes": 134174,
+      "councils": [
+        "mbks"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8122,
+      "count": 5494,
+      "bytes": 155744,
+      "councils": [
+        "mbks"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8123,
+      "count": 5120,
+      "bytes": 143711,
+      "councils": [
+        "mbks"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8124,
+      "count": 1197,
+      "bytes": 32753,
+      "councils": [
+        "mpp",
+        "mbks"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8125,
+      "count": 1330,
+      "bytes": 36748,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8126,
+      "count": 2084,
+      "bytes": 55315,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8127,
+      "count": 1542,
+      "bytes": 40160,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8128,
+      "count": 1180,
+      "bytes": 32442,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8129,
+      "count": 293,
+      "bytes": 7569,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8130,
+      "count": 360,
+      "bytes": 9096,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8131,
+      "count": 175,
+      "bytes": 4544,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13214,
+      "y": 8132,
+      "count": 39,
+      "bytes": 1123,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8114,
+      "count": 609,
+      "bytes": 14632,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8115,
+      "count": 17,
+      "bytes": 511,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8118,
+      "count": 2,
+      "bytes": 165,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8119,
+      "count": 415,
+      "bytes": 10525,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8120,
+      "count": 3497,
+      "bytes": 92421,
+      "councils": [
+        "dbku",
+        "mbks"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8121,
+      "count": 6195,
+      "bytes": 167746,
+      "councils": [
+        "mbks",
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8122,
+      "count": 4665,
+      "bytes": 137956,
+      "councils": [
+        "mbks"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8123,
+      "count": 5177,
+      "bytes": 141482,
+      "councils": [
+        "mbks"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8124,
+      "count": 1500,
+      "bytes": 36961,
+      "councils": [
+        "mbks",
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8125,
+      "count": 536,
+      "bytes": 13399,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8126,
+      "count": 1725,
+      "bytes": 47920,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8127,
+      "count": 352,
+      "bytes": 8763,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8128,
+      "count": 541,
+      "bytes": 13348,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8129,
+      "count": 1103,
+      "bytes": 28919,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8130,
+      "count": 336,
+      "bytes": 8347,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8131,
+      "count": 432,
+      "bytes": 10779,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13215,
+      "y": 8132,
+      "count": 260,
+      "bytes": 6426,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8115,
+      "count": 4,
+      "bytes": 224,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8116,
+      "count": 6,
+      "bytes": 284,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8119,
+      "count": 1276,
+      "bytes": 33029,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8120,
+      "count": 958,
+      "bytes": 24351,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8121,
+      "count": 1183,
+      "bytes": 31416,
+      "councils": [
+        "mbks",
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8122,
+      "count": 1506,
+      "bytes": 41818,
+      "councils": [
+        "mbks"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8123,
+      "count": 752,
+      "bytes": 20345,
+      "councils": [
+        "mbks"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8124,
+      "count": 1563,
+      "bytes": 44764,
+      "councils": [
+        "mpp",
+        "mbks"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8125,
+      "count": 3161,
+      "bytes": 86960,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8126,
+      "count": 2140,
+      "bytes": 61743,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8127,
+      "count": 202,
+      "bytes": 5378,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8128,
+      "count": 364,
+      "bytes": 9334,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8129,
+      "count": 869,
+      "bytes": 24466,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8130,
+      "count": 3450,
+      "bytes": 91788,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8131,
+      "count": 613,
+      "bytes": 15053,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13216,
+      "y": 8132,
+      "count": 1085,
+      "bytes": 25627,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8114,
+      "count": 3,
+      "bytes": 193,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8115,
+      "count": 27,
+      "bytes": 756,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8116,
+      "count": 978,
+      "bytes": 24125,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8118,
+      "count": 132,
+      "bytes": 3813,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8119,
+      "count": 1495,
+      "bytes": 38332,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8120,
+      "count": 606,
+      "bytes": 14635,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8121,
+      "count": 29,
+      "bytes": 805,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8122,
+      "count": 28,
+      "bytes": 927,
+      "councils": [
+        "mbks"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8124,
+      "count": 458,
+      "bytes": 12272,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8125,
+      "count": 2045,
+      "bytes": 59780,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8126,
+      "count": 1129,
+      "bytes": 32643,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8127,
+      "count": 320,
+      "bytes": 8183,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8128,
+      "count": 188,
+      "bytes": 4730,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8129,
+      "count": 784,
+      "bytes": 20010,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8130,
+      "count": 827,
+      "bytes": 20492,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8131,
+      "count": 172,
+      "bytes": 4589,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13217,
+      "y": 8132,
+      "count": 645,
+      "bytes": 16087,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8113,
+      "count": 21,
+      "bytes": 748,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8114,
+      "count": 6,
+      "bytes": 269,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8115,
+      "count": 187,
+      "bytes": 4764,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8116,
+      "count": 795,
+      "bytes": 20314,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8117,
+      "count": 344,
+      "bytes": 8846,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8118,
+      "count": 1067,
+      "bytes": 26826,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8119,
+      "count": 1419,
+      "bytes": 36438,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8120,
+      "count": 43,
+      "bytes": 1213,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8121,
+      "count": 4,
+      "bytes": 220,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8124,
+      "count": 236,
+      "bytes": 5684,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8125,
+      "count": 1534,
+      "bytes": 43648,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8126,
+      "count": 664,
+      "bytes": 18909,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8127,
+      "count": 773,
+      "bytes": 18992,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8128,
+      "count": 46,
+      "bytes": 1287,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8129,
+      "count": 471,
+      "bytes": 11724,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8130,
+      "count": 400,
+      "bytes": 9787,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8131,
+      "count": 54,
+      "bytes": 1401,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8132,
+      "count": 92,
+      "bytes": 2395,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13218,
+      "y": 8133,
+      "count": 29,
+      "bytes": 868,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8114,
+      "count": 1,
+      "bytes": 132,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8115,
+      "count": 81,
+      "bytes": 2157,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8116,
+      "count": 182,
+      "bytes": 5134,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8117,
+      "count": 682,
+      "bytes": 17831,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8118,
+      "count": 8,
+      "bytes": 327,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8119,
+      "count": 91,
+      "bytes": 2173,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8120,
+      "count": 22,
+      "bytes": 652,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8121,
+      "count": 6,
+      "bytes": 287,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8124,
+      "count": 510,
+      "bytes": 12709,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8125,
+      "count": 1066,
+      "bytes": 30153,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8126,
+      "count": 1248,
+      "bytes": 33936,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8127,
+      "count": 92,
+      "bytes": 2314,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8128,
+      "count": 33,
+      "bytes": 972,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8129,
+      "count": 3,
+      "bytes": 193,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8130,
+      "count": 28,
+      "bytes": 769,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8131,
+      "count": 19,
+      "bytes": 580,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8132,
+      "count": 201,
+      "bytes": 4937,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13219,
+      "y": 8133,
+      "count": 23,
+      "bytes": 688,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8114,
+      "count": 4,
+      "bytes": 224,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8115,
+      "count": 122,
+      "bytes": 3087,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8116,
+      "count": 109,
+      "bytes": 2837,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8117,
+      "count": 394,
+      "bytes": 9309,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8118,
+      "count": 219,
+      "bytes": 5314,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8119,
+      "count": 184,
+      "bytes": 4663,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8120,
+      "count": 416,
+      "bytes": 10229,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8121,
+      "count": 514,
+      "bytes": 13224,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8122,
+      "count": 8,
+      "bytes": 297,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8123,
+      "count": 7,
+      "bytes": 307,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8124,
+      "count": 744,
+      "bytes": 18553,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8125,
+      "count": 2624,
+      "bytes": 69214,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8126,
+      "count": 311,
+      "bytes": 8201,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8127,
+      "count": 46,
+      "bytes": 1307,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8128,
+      "count": 22,
+      "bytes": 620,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8129,
+      "count": 21,
+      "bytes": 602,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8130,
+      "count": 38,
+      "bytes": 1023,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8131,
+      "count": 315,
+      "bytes": 7955,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8132,
+      "count": 200,
+      "bytes": 5126,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13220,
+      "y": 8133,
+      "count": 30,
+      "bytes": 816,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13221,
+      "y": 8118,
+      "count": 389,
+      "bytes": 9108,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13221,
+      "y": 8119,
+      "count": 80,
+      "bytes": 2044,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13221,
+      "y": 8120,
+      "count": 170,
+      "bytes": 4479,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13221,
+      "y": 8121,
+      "count": 1092,
+      "bytes": 25760,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13221,
+      "y": 8124,
+      "count": 115,
+      "bytes": 2930,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13221,
+      "y": 8125,
+      "count": 508,
+      "bytes": 12418,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13221,
+      "y": 8126,
+      "count": 1450,
+      "bytes": 36456,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13221,
+      "y": 8127,
+      "count": 473,
+      "bytes": 11946,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13221,
+      "y": 8128,
+      "count": 153,
+      "bytes": 3943,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13221,
+      "y": 8129,
+      "count": 48,
+      "bytes": 1258,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13221,
+      "y": 8130,
+      "count": 44,
+      "bytes": 1223,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13221,
+      "y": 8131,
+      "count": 6,
+      "bytes": 281,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13221,
+      "y": 8132,
+      "count": 97,
+      "bytes": 2364,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13222,
+      "y": 8119,
+      "count": 7,
+      "bytes": 279,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13222,
+      "y": 8120,
+      "count": 365,
+      "bytes": 8631,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13222,
+      "y": 8121,
+      "count": 180,
+      "bytes": 4632,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13222,
+      "y": 8124,
+      "count": 8,
+      "bytes": 299,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13222,
+      "y": 8125,
+      "count": 36,
+      "bytes": 1011,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13222,
+      "y": 8126,
+      "count": 834,
+      "bytes": 20498,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13222,
+      "y": 8127,
+      "count": 729,
+      "bytes": 17959,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13222,
+      "y": 8128,
+      "count": 384,
+      "bytes": 9673,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13222,
+      "y": 8129,
+      "count": 762,
+      "bytes": 19317,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13222,
+      "y": 8130,
+      "count": 496,
+      "bytes": 12786,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13222,
+      "y": 8131,
+      "count": 14,
+      "bytes": 450,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13222,
+      "y": 8132,
+      "count": 40,
+      "bytes": 1018,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13223,
+      "y": 8119,
+      "count": 14,
+      "bytes": 457,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13223,
+      "y": 8120,
+      "count": 1109,
+      "bytes": 26938,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13223,
+      "y": 8121,
+      "count": 51,
+      "bytes": 1358,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13223,
+      "y": 8125,
+      "count": 75,
+      "bytes": 1729,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13223,
+      "y": 8126,
+      "count": 36,
+      "bytes": 954,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13223,
+      "y": 8127,
+      "count": 18,
+      "bytes": 531,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13223,
+      "y": 8128,
+      "count": 29,
+      "bytes": 779,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13223,
+      "y": 8129,
+      "count": 26,
+      "bytes": 713,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13223,
+      "y": 8130,
+      "count": 8,
+      "bytes": 322,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13223,
+      "y": 8131,
+      "count": 166,
+      "bytes": 4330,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13223,
+      "y": 8132,
+      "count": 230,
+      "bytes": 5729,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13224,
+      "y": 8119,
+      "count": 29,
+      "bytes": 812,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13224,
+      "y": 8120,
+      "count": 801,
+      "bytes": 19327,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13224,
+      "y": 8121,
+      "count": 17,
+      "bytes": 507,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13224,
+      "y": 8126,
+      "count": 2,
+      "bytes": 160,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13224,
+      "y": 8127,
+      "count": 68,
+      "bytes": 1585,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13224,
+      "y": 8128,
+      "count": 8,
+      "bytes": 294,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13224,
+      "y": 8129,
+      "count": 15,
+      "bytes": 468,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13224,
+      "y": 8130,
+      "count": 1,
+      "bytes": 130,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13225,
+      "y": 8119,
+      "count": 1,
+      "bytes": 133,
+      "councils": [
+        "dbku"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13225,
+      "y": 8127,
+      "count": 29,
+      "bytes": 763,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13225,
+      "y": 8128,
+      "count": 14,
+      "bytes": 428,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13225,
+      "y": 8129,
+      "count": 1,
+      "bytes": 131,
+      "councils": [
+        "mpp"
+      ]
+    },
+    {
+      "z": 14,
+      "x": 13225,
+      "y": 8130,
+      "count": 2,
+      "bytes": 167,
+      "councils": [
+        "mpp"
+      ]
+    }
+  ],
+  "assembly": {
+    "name": "Dewan Undangan Negeri Sarawak",
+    "osmType": "way",
+    "osmId": 1357531465,
+    "lat": 1.5618153,
+    "lon": 110.3479024,
+    "levels": 9,
+    "wikidata": "Q7011422",
+    "sourceUrl": "https://www.openstreetmap.org/way/1357531465",
+    "ring": [
+      [
+        110.348284,
+        1.561712
+      ],
+      [
+        110.34836,
+        1.561545
+      ],
+      [
+        110.348168,
+        1.561458
+      ],
+      [
+        110.348127,
+        1.5613
+      ],
+      [
+        110.347941,
+        1.561349
+      ],
+      [
+        110.347797,
+        1.561259
+      ],
+      [
+        110.347737,
+        1.561355
+      ],
+      [
+        110.347435,
+        1.561373
+      ],
+      [
+        110.347488,
+        1.561666
+      ],
+      [
+        110.347405,
+        1.561749
+      ],
+      [
+        110.347538,
+        1.561882
+      ],
+      [
+        110.347522,
+        1.562066
+      ],
+      [
+        110.347697,
+        1.562082
+      ],
+      [
+        110.347816,
+        1.562241
+      ],
+      [
+        110.347978,
+        1.562121
+      ],
+      [
+        110.348161,
+        1.562161
+      ],
+      [
+        110.348166,
+        1.562135
+      ],
+      [
+        110.348201,
+        1.561977
+      ],
+      [
+        110.348341,
+        1.56191
+      ],
+      [
+        110.348371,
+        1.561896
+      ],
+      [
+        110.348284,
+        1.561712
+      ]
+    ],
+    "model": "dun-sarawak.glb",
+    "modelMethod": "hand-modelled",
+    "heightEstimateM": 28.8,
+    "note": "Generic boxes inside this footprint are omitted. The GLB is a hand model of the golden umbrella roof, not a survey and not a photogrammetry mesh."
+  },
+  "osmEnrichment": "unavailable",
+  "osmTagged": 0,
+  "osmHeightsApplied": 0,
+  "heightRule": "OSM or Overture height when present; otherwise building:levels or num_floors × 3.2 m; otherwise a type default (house 6 m, shophouse 10 m, commercial 12 m); otherwise 6 m.",
+  "loadPolicy": "The browser fetches only the tiles in view, nearest first, and stops near 8 MB so the first view stays under 10 MB.",
+  "attribution": "© OpenStreetMap contributors (ODbL); Overture Maps Foundation; Microsoft ML Buildings; Google Open Buildings",
+  "licenceUrl": "https://www.openstreetmap.org/copyright",
+  "credits": "CREDITS.md",
+  "caveat": "Mapped footprints, not a surveyed building inventory and not a flood model. Overture detector footprints can be missing, duplicated or out of date. Heights without a height tag are estimates. The jurisdiction sketch includes a short fringe so buildings on the drawn boundary are kept."
+}

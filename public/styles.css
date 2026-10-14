@@ -5095,3 +5095,97 @@ a.pulse-stat:focus-visible strong {
 .ward-brief-cat-pill {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
+
+/* 3D buildings: map fills the screen. Top bar 48px, bottom bar 56px, stats float. */
+.bldg-float {
+  position: absolute;
+  z-index: 6;
+  top: 12px;
+  left: 12px;
+  max-width: min(340px, calc(100% - 24px));
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--hud-bg) 92%, transparent);
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  font: 12px/1.35 var(--font-sans);
+  pointer-events: none;
+}
+.bldg-float p { margin: 4px 0 0; }
+.bldg-float[hidden] { display: none !important; }
+.dashboard-shell.bldg-map {
+  overflow: hidden;
+}
+.dashboard-shell.bldg-map .map-frame {
+  position: fixed;
+  top: 48px;
+  right: 0;
+  bottom: 56px;
+  left: 0;
+  z-index: 40;
+  height: auto !important;
+  min-height: 0 !important;
+}
+.dashboard-shell.bldg-map .building-tools {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 50;
+  height: 48px;
+  max-height: 48px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 2px 6px;
+  overflow: hidden;
+  background: var(--hud-bg);
+  border-bottom: 1px solid var(--line-strong);
+  border-top: 0;
+}
+.dashboard-shell.bldg-map .building-buttons {
+  flex-wrap: nowrap;
+  width: 100%;
+  gap: 6px;
+  overflow-x: auto;
+}
+.dashboard-shell.bldg-map .building-tools button,
+.dashboard-shell.bldg-map .building-tools .building-buttons a {
+  min-height: 44px;
+  height: 44px;
+  padding: 0 8px;
+  font-size: 12px;
+  line-height: 44px;
+}
+.dashboard-shell.bldg-map .building-tools > p,
+.dashboard-shell.bldg-map .building-tools > details,
+.dashboard-shell.bldg-map #buildingSelection {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.dashboard-shell.bldg-map #buildingsAttribution {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 56px;
+  max-height: 56px;
+  margin: 0;
+  padding: 6px 12px;
+  overflow: hidden;
+  background: var(--hud-bg);
+  border-top: 1px solid var(--line-strong);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: pre-line;
+}

@@ -30,6 +30,15 @@ No model generation runs in CI. The runner writes its private working world bene
 
 The supplied ZIP is the real 4,900-chunk pilot, not a manifest placeholder. The saved world metadata defines Web Mercator coordinates and block scale; no approximate GPS-to-teleport formula is presented as exact.
 
+## City footprints
+
+`bake-city-buildings.mjs` reads the public Overture buildings PMTiles (OSM, Microsoft ML Buildings, Google Open Buildings), clips them to the dashboard jurisdiction sketches, and writes gzip tiles plus `public/data/buildings/city-index.json`. Heights use a tagged value, otherwise storeys × 3.2 m, otherwise a type default. The Sarawak State Assembly complex is left out of the boxes. `build-assembly-model.mjs` writes the hand-modelled GLB. Neither script runs in CI. Overpass height tags are merged only when a public Overpass server answers.
+
+```sh
+node scripts/arnis/bake-city-buildings.mjs
+node scripts/arnis/build-assembly-model.mjs
+```
+
 ## Data limits
 
 The mapped MPP townhall landmark is OSM way 958011498, not a surveyed control point. The pilot rectangle is about 1.2 km² and is not the municipal boundary.

@@ -3,7 +3,12 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@gltf-transform/core": "^4.2.1",
+    "@gltf-transform/extensions": "^4.2.1",
+    "@gltf-transform/functions": "^4.2.1",
     "@mapbox/vector-tile": "3.0.0",
-    "pbf": "5.1.2"
+    "draco3dgltf": "^1.5.7",
+    "pbf": "5.1.2",
+    "pmtiles": "^3.2.1"
   }
 }

@@ -555,9 +555,13 @@ async function fetchOptionalJson(url, ms = 5000) {
 }
 
 // --- i18n ---
-function t(key) { return (TRANSLATIONS[state.lang] ?? TRANSLATIONS.en)[key] ?? key; }
+function t(key) {
+  return (TRANSLATIONS[state.lang] && TRANSLATIONS[state.lang][key]) || TRANSLATIONS.en[key] || key;
+}
 // Translation with an explicit fallback for payload-driven labels.
-function tOr(key, fallback) { return (TRANSLATIONS[state.lang] ?? TRANSLATIONS.en)[key] ?? fallback; }
+function tOr(key, fallback) {
+  return (TRANSLATIONS[state.lang] && TRANSLATIONS[state.lang][key]) || TRANSLATIONS.en[key] || fallback;
+}
 
 // --- Data Loaders ---
 async function loadWeather() {
@@ -4907,7 +4911,7 @@ function cycleWard(direction) {
 // Drives the masthead scope-toggle button + the `s` keyboard shortcut. Reactive:
 // no full reload — just rewires the scope state, re-fits the map, and re-runs
 // renderDashboard() so the filtered data flows through the same renderers.
-function setScope(scope, { silent = false } = {}) {
+function setScope(scope, { silent = false, skipFly = false } = {}) {
   if (!VALID_SCOPES.includes(scope)) return;
   if (state.scope === scope) return;
   state.scope = scope;
@@ -4945,7 +4949,7 @@ function setScope(scope, { silent = false } = {}) {
   // In 3D mode, also fly the Cesium camera + re-render 3D entities
   // (since the scope filter changes which hydro + jurisdictions show).
   if (state.dimension === "3d" && state.cesiumInitialised) {
-    if (state.cesiumViewer) {
+    if (state.cesiumViewer && !skipFly) {
       flyCesiumToScope(scope);
     }
     if (state.payload) {
@@ -4955,6 +4959,7 @@ function setScope(scope, { silent = false } = {}) {
 
   updateMapKicker();
   renderWardCategoryBar();
+  buildingLayer?.scopeChanged?.();
 
   // Re-render the dashboard panels that branch on scope. No reload needed.
   if (state.payload) {
@@ -6007,7 +6012,8 @@ function renderInsights(payload) {
 // In boot(), render insights after dashboard render
 const buildingLayer = setupBuildings3D({
   getViewer: () => state.cesiumViewer, getDimension: () => state.dimension,
-  setDimension, getLang: () => state.lang, version: __ASSET_VER__,
+  setDimension, getLang: () => state.lang, getScope: () => state.scope, setScope,
+  onLang: setLang, version: __ASSET_VER__,
 });
 boot();
 setInterval(boot, 60000);

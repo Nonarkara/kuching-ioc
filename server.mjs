@@ -4282,7 +4282,7 @@ async function buildDashboard() {
     padawanZoning, trends, govStats,
     infobanjirRaw, apims, ckanHarvest, exchange, metWarnings, floodForecast,
     mppCouncillors, mppLocalities, forecast, alphaEarth, imperviousData, cityReports,
-    mppService, waterSupply, rainRegime, mppCoverage, reliefCentres, dosmDistricts,
+    mppService,
   ] = await Promise.all([
     loadWeather(),
     loadAirQuality(),
@@ -4307,12 +4307,24 @@ async function buildDashboard() {
     loadImperviousData(),
     loadCityReports(),
     loadMppServiceLedger(),
-    loadWaterSupply(),
-    loadRainRegime(),
-    loadMppCoverage(),
-    loadReliefCentres(),
-    loadDistrictPopulation(),
   ]);
+
+  // Second wave. Fired together with the first ~30 loaders, these hit undici's
+  // 10 s connect timeout on CI runners (14 Oct 2026). Run them after, and
+  // retry once with a fresh cache entry if a source came back unavailable.
+  const wave2 = [
+    ["water-supply", loadWaterSupply], ["rain-regime", loadRainRegime], ["mpp-coverage", loadMppCoverage],
+    ["jkm-pps", loadReliefCentres], ["dosm-districts", loadDistrictPopulation],
+  ];
+  const ok = (v) => Array.isArray(v) ? v.some((x) => x.status === "live") : v?.status === "live";
+  const wave2Results = await Promise.all(wave2.map(async ([key, fn]) => {
+    const first = await fn();
+    if (ok(first)) return first;
+    cache.delete(key);
+    await new Promise((r) => setTimeout(r, 1500));
+    return fn();
+  }));
+  const [waterSupply, rainRegime, mppCoverage, reliefCentres, dosmDistricts] = wave2Results;
 
   // Catchment enrichment compounds Infobanjir + OSM drainage. Pure post-process,
   // no extra fetches — only runs if drainage cache is hot.

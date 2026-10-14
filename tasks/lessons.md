@@ -148,3 +148,9 @@ Per §13: the same mistake never happens twice.
 - **What went wrong:** `buildCityReportsDemoData()` returned six invented complaints when no Supabase env was set; the list badged them DEMO but the map pinned them unlabelled. The river-flow fallback also invented a discharge curve labelled "Seasonal estimate".
 - **Correct behaviour:** a missing feed returns `status: "not-connected"` with no rows; renderers draw pins and curves only from `status: "live"`. "No data" is a valid, honest state.
 - **How to recognise:** `grep -n "Demo\|demo\|fallback" server.mjs` near any function that returns arrays of plausible records.
+
+## 2026-10-14 · api.open-meteo.com refuses the CI runner; the browser is not refused
+
+- **What went wrong:** The baked rain-regime label stayed "unknown" (and the main weather feed showed "degraded") because api.open-meteo.com refused GitHub's shared runner IPs; retries with backoff did not help. air-quality-api and flood-api subdomains still answered.
+- **Correct behaviour:** For CORS-open sources, keep the computation in a shared module (public/rain-regime.js) and let the browser finish it when the bake lacks inputs. Never let a bake failure become a confident-looking label.
+- **How to recognise:** `rainRegime.inputs.kuching === null` or `climate.weather.status === "degraded"` in production while a local probe returns 200.

@@ -28,3 +28,34 @@ export function classifyRainRegime({ month, cyclones = [], mmdAdvisory = null, k
   if (calm) return { label: "local", confidence: "medium", evidence, season };
   return { label: "unknown", confidence: null, evidence, season };
 }
+
+// Shared by the server bake and the browser (Open-Meteo is CORS-open; CI
+// runner IPs are sometimes refused, a visitor's browser is not).
+export const RAIN_REGIME_OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast?latitude=1.55,12.0&longitude=110.35,112.0&hourly=pressure_msl,wind_speed_850hPa,wind_direction_850hPa&wind_speed_unit=ms&past_days=2&forecast_days=1&timezone=Asia%2FKuching";
+
+function vecMean(speeds, dirs) {
+  let u = 0, v = 0, n = 0;
+  speeds.forEach((sp, i) => { if (sp == null || dirs[i] == null) return; const r = dirs[i] * Math.PI / 180; u += sp * Math.sin(r); v += sp * Math.cos(r); n += 1; });
+  if (!n) return null;
+  const dir = (Math.atan2(u / n, v / n) * 180 / Math.PI + 360) % 360;
+  const meanSpeed = speeds.filter((x) => x != null).reduce((a, b) => a + b, 0) / n;
+  return { speedMean: Math.round(meanSpeed * 10) / 10, dirMean: Math.round(dir) };
+}
+
+// Open-Meteo multi-location JSON -> [kuching, southChinaSea] 24 h summaries.
+export function summariseOpenMeteo(json, nowMs = Date.now()) {
+  const point = (i) => {
+    const loc = Array.isArray(json) ? json[i] : i === 0 ? json : null;
+    const h = loc?.hourly;
+    if (!h?.time?.length) return null;
+    const nowIdx = h.time.findIndex((t) => Date.parse(`${t}:00+08:00`) > nowMs) - 1;
+    const end = nowIdx > 24 ? nowIdx : h.time.length - 1;
+    const last24 = (arr) => arr.slice(Math.max(0, end - 23), end + 1);
+    const prev24 = (arr) => arr.slice(Math.max(0, end - 47), Math.max(0, end - 23));
+    const mean = (arr) => { const v = arr.filter((x) => x != null); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length * 10) / 10 : null; };
+    const m1 = mean(last24(h.pressure_msl)), m0 = mean(prev24(h.pressure_msl));
+    return { mslMean24: m1, mslChange24: m1 != null && m0 != null ? Math.round((m1 - m0) * 10) / 10 : null,
+      wind850: vecMean(last24(h.wind_speed_850hPa), last24(h.wind_direction_850hPa)), asOf: h.time[end] };
+  };
+  return [point(0), point(1)];
+}

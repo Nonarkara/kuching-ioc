@@ -51,3 +51,15 @@ test("district population comes from DOSM or is marked missing", () => {
     else assert.equal(x.population, undefined);
   }
 });
+
+test("wind summary averages direction as vectors (350° and 10° is north, not south)", async () => {
+  const { summariseOpenMeteo } = await import("../public/rain-regime.js");
+  const hours = 48;
+  const time = Array.from({ length: hours }, (_, i) => new Date(Date.UTC(2026, 0, 1, i - 8)).toISOString().slice(0, 16));
+  const loc = (dirs) => ({ hourly: { time, pressure_msl: Array(hours).fill(1010), wind_speed_850hPa: Array(hours).fill(9),
+    wind_direction_850hPa: Array.from({ length: hours }, (_, i) => dirs[i % 2]) } });
+  const [k, s] = summariseOpenMeteo([loc([350, 10]), loc([200, 220])], Date.parse("2026-01-03T00:00:00+08:00"));
+  assert.ok(k.wind850.dirMean <= 2 || k.wind850.dirMean >= 358, `got ${k.wind850.dirMean}`);
+  assert.equal(s.wind850.dirMean, 210);
+  assert.equal(k.mslChange24, 0);
+});

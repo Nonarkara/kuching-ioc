@@ -21,6 +21,7 @@ const {
 } = await import(__dataUrl__);
 const { dataHealth, observationHealth, warningHealth } = await import(`./data-health.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { morningBrief } = await import(`./morning-brief.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { classifyRainRegime, summariseOpenMeteo, RAIN_REGIME_OPEN_METEO_URL } = await import(`./rain-regime.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupBuildings3D } = await import(`./buildings-3d.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupOperatorGuide } = await import(`./operator-guide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 
@@ -5381,9 +5382,28 @@ function renderWaterSupply(payload) {
 }
 
 // --- Rain regime (Outlook tray) -------------------------------------------------
+// If the server bake could not reach Open-Meteo, compute the wind half in the
+// browser with the same classifier, using the server's baked cyclone inputs.
+let rainRegimeClientTried = false;
+async function completeRainRegimeInBrowser(payload) {
+  const rr = payload.rainRegime;
+  if (rainRegimeClientTried || !rr || rr.inputs?.kuching) return;
+  rainRegimeClientTried = true;
+  try {
+    const json = await fetch(RAIN_REGIME_OPEN_METEO_URL).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+    const [kuching, scs] = summariseOpenMeteo(json);
+    if (!kuching || !scs) return;
+    const month = Number(new Date(Date.now() + 8 * 3600000).toISOString().slice(5, 7));
+    const res = classifyRainRegime({ month, cyclones: rr.inputs?.cyclones || [], mmdAdvisory: rr.inputs?.mmdAdvisory?.title || null, kuching, scs });
+    payload.rainRegime = { ...rr, ...res, status: "live", computedIn: "browser", updatedAt: new Date().toISOString(), inputs: { ...rr.inputs, kuching, scs } };
+    renderRainRegime(payload);
+  } catch { /* keep the server's honest "unknown" */ }
+}
+
 function renderRainRegime(payload) {
   const el = $("rainRegime");
   if (!el) return;
+  completeRainRegimeInBrowser(payload);
   const rr = payload.rainRegime;
   const label = rr?.label || "unknown";
   const radarImg = "https://www.met.gov.my/data/radar_east.gif";

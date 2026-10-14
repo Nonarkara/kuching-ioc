@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { renderIndexHtml, resolveAssetVersion } from "./site-build.mjs";
 import { normalizeMetWeather } from "./public/met-weather.js";
-import { classifyRainRegime } from "./public/rain-regime.js";
+import { classifyRainRegime, summariseOpenMeteo, RAIN_REGIME_OPEN_METEO_URL } from "./public/rain-regime.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
@@ -4081,20 +4081,12 @@ const KUCHING_LL = [1.55, 110.35];
 
 async function loadRainRegime() {
   return cached("rain-regime", 60 * 60 * 1000, async () => {
-    const vecMean = (speeds, dirs) => {
-      let u = 0, v = 0, n = 0;
-      speeds.forEach((sp, i) => { if (sp == null || dirs[i] == null) return; const r = dirs[i] * Math.PI / 180; u += sp * Math.sin(r); v += sp * Math.cos(r); n += 1; });
-      if (!n) return null;
-      const dir = (Math.atan2(u / n, v / n) * 180 / Math.PI + 360) % 360;
-      const meanSpeed = speeds.filter((x) => x != null).reduce((a, b) => a + b, 0) / n;
-      return { speedMean: Math.round(meanSpeed * 10) / 10, dirMean: Math.round(dir) };
-    };
     const [tcList, warnings, om] = await Promise.allSettled([
       fetchJson("https://www.jma.go.jp/bosai/typhoon/data/targetTc.json", 12000),
       fetchJson("https://api.data.gov.my/weather/warning/?limit=50", 12000),
       // api.open-meteo.com intermittently refuses shared CI runner IPs; back off and retry.
       (async () => {
-        const url = "https://api.open-meteo.com/v1/forecast?latitude=1.55,12.0&longitude=110.35,112.0&hourly=pressure_msl,wind_speed_850hPa,wind_direction_850hPa&wind_speed_unit=ms&past_days=2&forecast_days=1&timezone=Asia%2FKuching";
+        const url = RAIN_REGIME_OPEN_METEO_URL;
         for (let attempt = 0; ; attempt += 1) {
           try { return await fetchJson(url, 15000); }
           catch (err) { if (attempt >= 2) throw err; await new Promise((r) => setTimeout(r, 3000 * (attempt + 1))); }
@@ -4116,20 +4108,7 @@ async function loadRainRegime() {
     }
     const advisory = warnings.status === "fulfilled" && Array.isArray(warnings.value)
       ? warnings.value.find((w) => /tropical cyclone|ribut tropika|no advisory/i.test(`${w?.warning_issue?.title_en} ${w?.text_en}`)) : null;
-    const point = (i) => {
-      const loc = om.status === "fulfilled" ? (Array.isArray(om.value) ? om.value[i] : i === 0 ? om.value : null) : null;
-      const h = loc?.hourly;
-      if (!h?.time?.length) return null;
-      const nowIdx = h.time.findIndex((t) => Date.parse(`${t}:00+08:00`) > Date.now()) - 1;
-      const end = nowIdx > 24 ? nowIdx : h.time.length - 1;
-      const last24 = (arr) => arr.slice(Math.max(0, end - 23), end + 1);
-      const prev24 = (arr) => arr.slice(Math.max(0, end - 47), Math.max(0, end - 23));
-      const mean = (arr) => { const v = arr.filter((x) => x != null); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length * 10) / 10 : null; };
-      const m1 = mean(last24(h.pressure_msl)), m0 = mean(prev24(h.pressure_msl));
-      return { mslMean24: m1, mslChange24: m1 != null && m0 != null ? Math.round((m1 - m0) * 10) / 10 : null,
-        wind850: vecMean(last24(h.wind_speed_850hPa), last24(h.wind_direction_850hPa)), asOf: h.time[end] };
-    };
-    const kuching = point(0), scs = point(1);
+    const [kuching, scs] = summariseOpenMeteo(om.status === "fulfilled" ? om.value : null);
     const inputsOk = (tcList.status === "fulfilled" || warnings.status === "fulfilled") && kuching && scs;
     const month = Number(new Date(Date.now() + 8 * 3600000).toISOString().slice(5, 7));
     const mmdTitle = advisory ? (advisory.warning_issue?.title_en || advisory.heading_en) : null;

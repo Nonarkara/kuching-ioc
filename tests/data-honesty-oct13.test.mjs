@@ -1,0 +1,53 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { classifyRainRegime } from "../public/rain-regime.js";
+
+const d = JSON.parse(readFileSync(new URL("../public/api/dashboard.json", import.meta.url)));
+const calm = { wind850: { speedMean: 3, dirMean: 140 }, mslMean24: 1011, mslChange24: 0 };
+
+test("rain regime: an MMD advisory or a nearby JMA cyclone beats every wind rule", () => {
+  assert.equal(classifyRainRegime({ month: 1, mmdAdvisory: "Tropical Depression warning", kuching: calm, scs: calm }).label, "depression");
+  const near = [{ name: "TC X", category: "TD", lat: 8, lon: 115, distanceKm: 900 }];
+  assert.equal(classifyRainRegime({ month: 7, cyclones: near, kuching: calm, scs: calm }).label, "depression");
+  const far = [{ name: "TC Y", category: "STS", lat: 36, lon: 154, distanceKm: 5300 }];
+  assert.equal(classifyRainRegime({ month: 10, cyclones: far, mmdAdvisory: "No Advisory", kuching: calm, scs: calm }).label, "local");
+});
+
+test("rain regime: monsoon labels need the wind, season only sets confidence", () => {
+  const ne = { wind850: { speedMean: 10, dirMean: 40 } };
+  const r = classifyRainRegime({ month: 12, kuching: calm, scs: ne });
+  assert.equal(r.label, "monsoon_ne");
+  assert.equal(r.confidence, "medium");
+  assert.equal(classifyRainRegime({ month: 7, kuching: calm, scs: ne }).confidence, "low");
+  const mixed = { wind850: { speedMean: 6, dirMean: 120 } };
+  assert.equal(classifyRainRegime({ month: 10, kuching: mixed, scs: calm }).label, "unknown");
+});
+
+test("snapshot never pins invented citizen reports", () => {
+  assert.notEqual(d.cityReports.status, "demo");
+  if (d.cityReports.status !== "live") assert.equal(d.cityReports.recent.length, 0);
+});
+
+test("coverage data carries company names and areas, never phone numbers", () => {
+  const text = JSON.stringify(d.mppCoverage || {});
+  assert.equal(/\b01\d[-\s]?\d{7,8}\b/.test(text), false, "personal mobile in coverage");
+  assert.equal(/\b082[-\s]?\d{6}\b/.test(text.replace("082-615566", "")), false, "phone in coverage");
+  if (d.mppCoverage?.status === "live") assert.ok(d.mppCoverage.refuse.items.length > 10);
+});
+
+test("water supply and river forecast show readings or nothing — never a made-up curve", () => {
+  const ws = d.waterSupply;
+  if (ws?.intake?.latest) {
+    assert.ok(ws.intake.thresholds.alert > ws.intake.thresholds.normal);
+    assert.ok(ws.intake.latest.v > 0 && ws.intake.latest.v < 20);
+  }
+  if (d.floodForecast?.status === "fallback") assert.equal(d.floodForecast.forecast.length, 0);
+});
+
+test("district population comes from DOSM or is marked missing", () => {
+  for (const x of d.govStats.districts) {
+    if (x.status === "live") assert.ok(x.population > 10000 && x.population < 2_000_000, x.name);
+    else assert.equal(x.population, undefined);
+  }
+});

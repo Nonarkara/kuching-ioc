@@ -191,9 +191,11 @@
               <button type="button" role="tab" class="tray-tab" data-pane="growth" aria-selected="false" data-i18n="trayGrowth">Growth vs drains</button>
               <button type="button" role="tab" class="tray-tab" data-pane="localities" aria-selected="false" data-i18n="trayLocalities">525 localities</button>
               <button type="button" role="tab" class="tray-tab" data-pane="economy" aria-selected="false" data-i18n="trayEconomy">Economy · pulse</button>
+              <button type="button" role="tab" class="tray-tab" data-pane="coverage" aria-selected="false" data-i18n="trayCoverage">Who covers</button>
               <button type="button" role="tab" class="tray-tab" data-pane="sources" aria-selected="false" data-i18n="traySources">Sources</button>
             </div>
             <div class="tray-pane" role="tabpanel" data-pane="outlook">
+      <section id="rainRegime" class="rain-regime" aria-live="polite"></section>
       <section id="deltaStrip" class="delta-strip" data-empty="true">
         <div class="delta-stamp">DELTA //</div>
         <div id="deltaSince" class="delta-since"></div>
@@ -285,6 +287,9 @@
       </section>
 
             </div>
+            <div class="tray-pane" role="tabpanel" data-pane="coverage" hidden>
+      <section id="coveragePanel" class="coverage-panel"></section>
+            </div>
             <div class="tray-pane" role="tabpanel" data-pane="sources" hidden>
         <section class="panel source-panel">
           <div class="panel-head">
@@ -316,6 +321,11 @@
               <div class="section-label" data-i18n="directives">What to do</div>
               <div id="operationList" class="operation-list"></div>
             </div>
+
+            <details class="rail-disclosure">
+              <summary class="rail-disclosure-summary"><span data-i18n="waterRelief">Water supply &amp; relief centres</span><span data-i18n="waterReliefSub">Batu Kitang intake · DID gauges · JKM</span></summary>
+              <div id="waterSupply" class="water-supply rail-disclosure-body"></div>
+            </details>
 
             <details class="rail-disclosure">
               <summary class="rail-disclosure-summary"><span data-i18n="citizenReports">Citizen reports</span><span data-i18n="citizenReportsSub">field reports &amp; work orders</span></summary>

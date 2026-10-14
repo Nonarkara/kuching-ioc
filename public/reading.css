@@ -84,7 +84,9 @@ html[data-text-scale="large"] .dashboard-shell .controls-row button { font-size:
   }
   .dashboard-shell .col-now { overflow-y: visible; }
   .dashboard-shell .col-now .news-rail { flex: 0 0 auto; overflow: visible; }
-  .dashboard-shell .col-map .map-panel { min-height: 480px; }
+  /* Bounded: with auto rows and no height, the Leaflet canvas grew to ~2,900px
+     (map read as a grey strip, tray pushed ~3,700px down). 14 Oct 2026. */
+  .dashboard-shell .col-map .map-panel { min-height: 480px; height: clamp(560px, calc(100svh - 160px), 920px); flex: 0 0 auto; }
   .dashboard-shell .deep-tray { flex-basis: 220px; }
   .dashboard-shell .title-block h1 { font-size: 24px; white-space: normal; }
   .dashboard-shell .operator-tools { flex-wrap: wrap; }

@@ -466,32 +466,58 @@ function buildQualitativeLens(payload, activeSatellite) {
   };
 }
 
+// Directive text in the active language; the server ships BM/ZH twins in
+// item.i18n. Falls back field by field to the English original.
+function localOp(o) {
+  const tw = o?.i18n?.[state.lang] || {};
+  return {
+    owner: tw.owner || o.owner, title: tw.title || o.title,
+    detail: tw.detail || o.detail, humanContext: tw.humanContext !== undefined ? tw.humanContext : o.humanContext,
+  };
+}
+
+const BRIEF_COPY = {
+  en: { calm: "Nothing urgent right now — keep scanning the map.", rain: (v,u,c) => `Rain: ${v}${u} in the next hours — ${c}`, air: (v,c) => `Air: AQI ${v} — ${c}`,
+        flights: (n) => `Flights: ${n} aircraft near KCH right now`, flightsThin: "Flights: live tracker is thin — treat counts as indicative only",
+        snapshot: "Static snapshot — check the payload date; page refresh does not update the source observations", is: (n, st) => `${n} is ${st}`, healthy: "Main feeds look healthy",
+        status: SOURCE_STATUS_LABEL },
+  ms: { calm: "Tiada perkara mendesak sekarang — terus pantau peta.", rain: (v,u,c) => `Hujan: ${v}${u} dalam beberapa jam akan datang — ${c}`, air: (v,c) => `Udara: IKU ${v} — ${c}`,
+        flights: (n) => `Penerbangan: ${n} pesawat berhampiran KCH sekarang`, flightsThin: "Penerbangan: penjejak langsung terhad — anggap kiraan sebagai petunjuk sahaja",
+        snapshot: "Paparan statik — semak tarikh data; muat semula halaman tidak mengemas kini pemerhatian sumber", is: (n, st) => `${n}: ${st}`, healthy: "Suapan utama kelihatan baik",
+        status: { live: "langsung", official: "rasmi", fallback: "suapan sandaran", offline: "luar talian", reference: "cache", curated: "dikurasi" } },
+  zh: { calm: "目前没有紧急事项——请继续查看地图。", rain: (v,u,c) => `降雨：未来数小时 ${v}${u} — ${c}`, air: (v,c) => `空气：指数 ${v} — ${c}`,
+        flights: (n) => `航班：目前 KCH 附近有 ${n} 架飞机`, flightsThin: "航班：实时追踪数据较少——计数仅供参考",
+        snapshot: "静态快照——请检查数据日期；刷新页面不会更新原始观测", is: (n, st) => `${n}：${st}`, healthy: "主要数据源运行正常",
+        status: { live: "实时", official: "官方", fallback: "备用数据", offline: "离线", reference: "缓存", curated: "人工整理" } },
+};
+
 function buildBoardBrief(payload) {
+  const B = BRIEF_COPY[state.lang] || BRIEF_COPY.en;
   const operations = payload.operations || [];
   const rainMetric = payload.metrics.find((metric) => metric.id === "rain6h");
   const aqiMetric = payload.metrics.find((metric) => metric.id === "aqi");
   const airportMetric = payload.metrics.find((metric) => metric.id === "airport");
   const degradedSources = (payload.sources || []).filter((source) => ["fallback", "offline", "reference", "curated"].includes(source.status));
 
-  const now = operations.slice(0, 3).map((item) => item.title || item.detail || item.owner);
-  if (now.length === 0) now.push("Nothing urgent right now — keep scanning the map.");
+  const now = operations.slice(0, 3).map((item) => { const o = localOp(item); return o.title || o.detail || o.owner; });
+  if (now.length === 0) now.push(B.calm);
 
   const next = [];
-  if (rainMetric) next.push(`Rain: ${rainMetric.value}${rainMetric.unit} in the next hours — ${rainMetric.context}`);
-  if (aqiMetric) next.push(`Air: AQI ${aqiMetric.value} — ${aqiMetric.context}`);
+  if (rainMetric) next.push(B.rain(rainMetric.value, rainMetric.unit, rainMetric.context));
+  if (aqiMetric) next.push(B.air(aqiMetric.value, aqiMetric.context));
   if (payload.airport?.status === "live") {
-    next.push(`Flights: ${airportMetric?.value ?? payload.airport.movements?.totalTracked ?? 0} aircraft near KCH right now`);
+    next.push(B.flights(airportMetric?.value ?? payload.airport.movements?.totalTracked ?? 0));
   } else {
-    next.push("Flights: live tracker is thin — treat counts as indicative only");
+    next.push(B.flightsThin);
   }
 
   const blind = [];
   if (payload.delivery?.mode !== "live-api") {
-    blind.push("Static snapshot — check the payload date; page refresh does not update the source observations");
+    blind.push(B.snapshot);
   }
   const actionableBlind = degradedSources.filter((source) => ["fallback", "offline"].includes(source.status));
-  actionableBlind.slice(0, 3).forEach((source) => blind.push(`${source.name} is ${SOURCE_STATUS_LABEL[source.status] || source.status}`));
-  if (blind.length === 0) blind.push("Main feeds look healthy");
+  actionableBlind.slice(0, 3).forEach((source) => blind.push(B.is(source.name, B.status[source.status] || source.status)));
+  if (blind.length === 0) blind.push(B.healthy);
 
   return { now: now.slice(0, 3), next: next.slice(0, 3), blind: blind.slice(0, 3) };
 }
@@ -823,6 +849,8 @@ async function buildFallbackDashboard() {
       districts: [],
     },
     mppService: { status: "unavailable", source: "mpp.sarawak.gov.my" },
+    waterSupply: { status: "unavailable" }, rainRegime: { status: "unavailable", label: "unknown", evidence: [] },
+    mppCoverage: { status: "unavailable" }, reliefCentres: { status: "unavailable", items: [] },
     metWarnings: {
       status: "fallback",
       activeCount: 0,
@@ -834,13 +862,9 @@ async function buildFallbackDashboard() {
     operations: buildOperations({ weather, air, airport, news: enrichedNews, jurisdictions, padawanZoning, trends, fires, quakes }),
     floodForecast: {
       status: "fallback", station: "Sarawak River at Kuching", units: "m³/s",
-      model: "GloFAS seamless v4 via Open-Meteo",
-      todayCms: 148, peakCms: 175,
-      forecast: [
-        { date: null, dischargeCms: 148 }, { date: null, dischargeCms: 155 },
-        { date: null, dischargeCms: 162 }, { date: null, dischargeCms: 170 },
-        { date: null, dischargeCms: 175 },
-      ],
+      model: "unreachable",
+      todayCms: null, peakCms: null,
+      forecast: [],
     },
     mapScene: { hydroBands: defaultHydroBands },
     // IOC 2.0 — forecast + AlphaEarth absent in pure client-fallback (tier 3);
@@ -943,20 +967,8 @@ async function buildFallbackDashboard() {
       bounds: { west: 110.269963, south: 1.390003, east: 110.40006, north: 1.482227 },
       stats: { mean: 0.42, p50: 0.407, p75: 0.522, p90: 0.617, max: 0.867 }
     },
-    cityReports: {
-      status: "demo",
-      count: 6,
-      open: 4,
-      resolved: 2,
-      recent: [
-        { ticketNumber: "CR-1025-01", problemType: "Drainage Blockage", streetName: "Jalan Penrissen (Pasar Batu 10)", lat: 1.4475, lon: 110.3305, urgency: "high", status: "in_progress", reportedAt: new Date(Date.now() - 180 * 60 * 1000).toISOString() },
-        { ticketNumber: "CR-1025-02", problemType: "Flash Flooding", streetName: "Taman Desa Wira (Batu Kawa)", lat: 1.5115, lon: 110.2872, urgency: "high", status: "received", reportedAt: new Date(Date.now() - 45 * 60 * 1000).toISOString() },
-        { ticketNumber: "CR-1025-03", problemType: "Illegal Dumping", streetName: "Jalan Siburan", lat: 1.3962, lon: 110.3608, urgency: "medium", status: "in_progress", reportedAt: new Date(Date.now() - 600 * 60 * 1000).toISOString() },
-        { ticketNumber: "CR-1025-04", problemType: "Pothole", streetName: "Jalan Matang", lat: 1.5843, lon: 110.3015, urgency: "medium", status: "completed", reportedAt: new Date(Date.now() - 1440 * 60 * 1000).toISOString() },
-        { ticketNumber: "CR-1025-05", problemType: "Streetlight Outage", streetName: "Petra Jaya", lat: 1.5950, lon: 110.3650, urgency: "low", status: "in_progress", reportedAt: new Date(Date.now() - 120 * 60 * 1000).toISOString() },
-        { ticketNumber: "CR-1025-06", problemType: "Water Main Leak", streetName: "Jalan Satok", lat: 1.5595, lon: 110.3280, urgency: "medium", status: "completed", reportedAt: new Date(Date.now() - 720 * 60 * 1000).toISOString() }
-      ]
-    },
+    cityReports: { status: "not-connected", count: 0, open: 0, resolved: 0, recent: [],
+      note: "No citizen report feed is connected. MPP complaints go through Talikhidmat (talikhidmat.sarawak.gov.my)." },
     // MPP governance — sample stubs so the councillor + locality panels
     // render meaningfully even in pure client-fallback mode (no server, no snapshot).
     mppCouncillors: {
@@ -1261,7 +1273,8 @@ function renderMap(payload) {
   if (!mc) return;
   if (!state.map) {
     state.map = window.L.map(mc, {
-      zoomControl: false, attributionControl: false, fadeAnimation: false,
+      // Attribution on: OSM, Esri and RainViewer all require a visible credit.
+      zoomControl: false, attributionControl: true, fadeAnimation: false,
       // preferCanvas: draw vectors on a single <canvas> instead of one SVG element
       // per feature. On large GeoJSON layers (transit 1MB, drainage 600KB) this
       // eliminates the zoom/pan stutter that was caused by the browser repainting
@@ -1280,7 +1293,7 @@ function renderMap(payload) {
     const layers = (payload.mapLayers || buildMapLayers()).map(l => ({ ...l, active: l.id === "imagery" }));
     state.activeLayerId = "imagery";
     layers.forEach(l => {
-      const tl = window.L.tileLayer(l.url, { maxZoom: l.maxZoom || 18 });
+      const tl = window.L.tileLayer(l.url, { maxZoom: l.maxZoom || 18, attribution: l.attribution || (l.id === "street" ? "&copy; OpenStreetMap contributors" : "Tiles &copy; Esri") });
       state.tileLayers.set(l.id, tl);
       if (l.active) tl.addTo(state.map);
     });
@@ -1428,7 +1441,8 @@ function renderMap(payload) {
   });
 
   // Citizen Reports — ground-truth complaint markers. Red=high, amber=medium, green=resolved.
-  const crReports = payload.cityReports?.recent || [];
+  // Pins only from a live feed — never demo or placeholder rows.
+  const crReports = payload.cityReports?.status === "live" ? (payload.cityReports.recent || []) : [];
   const crColors = { high: "#ff003c", medium: "#f59e0b", low: "#00ffaa", completed: "#8aa2c8" };
   crReports.forEach((r) => {
     if (r.lat == null || r.lon == null) return;
@@ -1446,6 +1460,13 @@ function renderMap(payload) {
         `<strong>${escapeHtml(r.problem_type)}</strong><br>${escapeHtml(r.location_text || "—")}<br>Urgency: ${r.urgency.toUpperCase()} · ${(r.status || "").replace("_"," ").toUpperCase()}<br><em>${escapeHtml(r.ticket)}</em>`,
         { className: "marker-tooltip cr-tooltip", direction: "top" },
       )
+      .addTo(state.markerLayerGroup);
+  });
+
+  // JKM open relief centres (PPS) — official, with coordinates. Empty = none open.
+  (payload.reliefCentres?.status === "live" ? payload.reliefCentres.items || [] : []).forEach((c) => {
+    window.L.circleMarker([c.lat, c.lon], { radius: 8, fillColor: "#1f4e79", fillOpacity: 0.95, color: "#ffffff", weight: 2 })
+      .bindTooltip(`<strong>${escapeHtml(c.name)}</strong><br>JKM PPS · ${escapeHtml(c.district)} · ${escapeHtml(c.disaster || "")}<br>${c.evacuees} evacuees${c.capacity ? ` / capacity ${c.capacity}` : ""}`, { className: "marker-tooltip", direction: "top" })
       .addTo(state.markerLayerGroup);
   });
 
@@ -1587,6 +1608,39 @@ function renderGisLegend(activeLayerIds) {
 }
 
 
+// Live weather tiles. RainViewer: newest past frame from its index (10-min
+// cadence, native zoom ≤7, credit required). GIBS Himawari-9 Band 13 IR:
+// "default" time = latest slot, native zoom ≤6.
+async function toggleWeatherTiles(layer, btn) {
+  const existing = state.urbanLayerGroups.get(layer.id);
+  if (!layer.active) { if (existing) state.map.removeLayer(existing); return; }
+  try {
+    let tl;
+    if (layer.id === "rain_radar") {
+      const idx = await fetch("https://api.rainviewer.com/public/weather-maps.json").then(r => r.json());
+      const frame = idx?.radar?.past?.at(-1);
+      if (!frame?.path) throw new Error("no radar frame");
+      tl = window.L.tileLayer(`${idx.host || "https://tilecache.rainviewer.com"}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`, {
+        opacity: 0.7, maxNativeZoom: 7, maxZoom: 18, zIndex: 450,
+        attribution: `Weather data by <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a> · ${new Date(frame.time * 1000).toLocaleTimeString("en-MY", { timeZone: "Asia/Kuching", hour: "2-digit", minute: "2-digit" })} MYT`,
+      });
+    } else {
+      tl = window.L.tileLayer("https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Himawari_AHI_Band13_Clean_Infrared/default/default/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png", {
+        opacity: 0.6, maxNativeZoom: 6, maxZoom: 18, zIndex: 440,
+        attribution: 'Himawari-9 AHI Band 13 via <a href="https://www.earthdata.nasa.gov/gibs" target="_blank" rel="noopener">NASA GIBS</a> · ~40 min behind',
+      });
+    }
+    if (existing) state.map.removeLayer(existing);
+    state.urbanLayerGroups.set(layer.id, tl);
+    tl.addTo(state.map);
+  } catch (err) {
+    console.warn("weather tiles unavailable", layer.id, err);
+    layer.active = false;
+    btn.classList.remove("active");
+    btn.title = "Unavailable right now — try again later";
+  }
+}
+
 function renderUrbanLayerToggle() {
   const el = $("watchpointList");
   if (!el) return;
@@ -1606,6 +1660,8 @@ function renderUrbanLayerToggle() {
 
     layer.active = !layer.active;
     btn.classList.toggle("active", layer.active);
+
+    if (layer.type === "tile") { await toggleWeatherTiles(layer, btn); return; }
 
     // AlphaEarth raster overlays — route by layer id.
     if (layer.type === "image") {
@@ -2184,6 +2240,7 @@ function buildSitrepText(p) {
   const health = dataHealth(p, state.scope);
   const posture = health.uncertain ? "VERIFY DATA / FIELD CONDITIONS" : (p.summary?.posture || "unconfirmed").toUpperCase();
   const acts = (p.operations || []).filter(o => o.severity === "high").slice(0, 3);
+  const allOps = p.operations || [];
   const env = [];
   const heat = p.metrics?.find(m => m.id === "heat");
   if (heat) env.push(`Heat index ${heat.value}°C · ${heat.context}`);
@@ -2199,6 +2256,20 @@ function buildSitrepText(p) {
   const met = p.metWarnings;
   if (met?.activeCount > 0) env.push(`MET warning in payload: ${met.items?.[0]?.heading || "Check official bulletin"}`);
   const air = p.airport?.movements;
+
+  // Hotlines — copy-paste-ready phone numbers. Secretary Goh pastes this
+  // text into WhatsApp; the numbers must be dialable on tap.
+  const hot = (p.floodAction?.hotlines || []).filter(h => h.number || h.url).slice(0, 5);
+  const hotlineLines = hot.map(h => {
+    const dial = h.number ? h.number.replace(/[^\d+]/g, "") : null;
+    return dial ? `${h.label}: ${h.number}` : `${h.label}: ${h.url}`;
+  });
+
+  // Medium-severity items — these don't trigger ACT NOW but matter for the
+  // council-brief thread (e.g. charter gap, public-health watch, drainage
+  // stress). Keep them after ACT NOW so the eye reads the urgent block first.
+  const medium = allOps.filter(o => o.severity === "medium").slice(0, 3);
+
   const lines = [
     "🛰 KUCHING SITREP · " + stamp,
     `DATA TIMESTAMP: ${p.generatedAt || "Unknown"} · ${p.delivery?.modeLabel || "Check source times"}`,
@@ -2209,11 +2280,17 @@ function buildSitrepText(p) {
     "ACT NOW",
     ...(acts.length ? acts.map((o, i) => `${i + 1}. ${o.owner}: ${o.title}`) : ["No high-severity directives."]),
     "",
+    "WATCH",
+    ...(medium.length ? medium.map((o) => `· ${o.owner}: ${o.title}`) : ["· No medium-severity items."]),
+    "",
     "ENVIRONMENT",
     ...env,
     "",
     "KCH AIRSPACE",
     air ? `${air.totalTracked} aircraft tracked · ${air.arrivals} arrivals / ${air.departures} departures` : "—",
+    "",
+    "HOTLINES (tap to call)",
+    ...(hotlineLines.length ? hotlineLines : ["· No hotlines in payload."]),
     "",
     "— Office of Secretary Daniel Goh, MPP",
   ];
@@ -2319,8 +2396,9 @@ function renderDirectives(ops) {
     const age = ageBucket(entry.firstSeen);
     const status = Object.hasOwn(DIRECTIVE_NEXT_STATUS, entry.status) ? entry.status : "queued";
     const stale = age === "stale" ? `<span class="directive-stale-mark">FIRST SEEN &gt;8H AGO</span>` : "";
-    const ownerSafe = escapeHtml(o.owner || "");
-    const titleSafe = escapeHtml(o.title || "");
+    const L = localOp(o);
+    const ownerSafe = escapeHtml(L.owner || "");
+    const titleSafe = escapeHtml(L.title || "");
     return `
       <article class="operation-card" role="button" tabindex="0"
                aria-label="${titleSafe}: ${escapeHtml(status)}. Change local task status"
@@ -2332,8 +2410,8 @@ function renderDirectives(ops) {
         <span class="directive-status" data-status="${status}">${DIRECTIVE_STATUS_GLYPH[status]}</span>
         <div class="kicker">${ownerSafe}${stale}</div>
         <strong>${titleSafe}</strong>
-        <div class="operation-detail">${escapeHtml(o.detail || "")}</div>
-        ${o.humanContext ? `<div class="directive-context">${escapeHtml(o.humanContext)}</div>` : ""}
+        <div class="operation-detail">${escapeHtml(L.detail || "")}</div>
+        ${L.humanContext ? `<div class="directive-context">${escapeHtml(L.humanContext)}</div>` : ""}
       </article>`;
   }).join("");
 
@@ -2411,7 +2489,7 @@ function renderBriefStrip(payload) {
   blindEl.innerHTML = renderItems(brief.blind);
   const evidence = $("briefEvidence");
   if (evidence) evidence.innerHTML = renderItems((payload.operations || []).slice(0, 8)
-    .map(item => item.title || item.detail || item.owner).filter(Boolean));
+    .map(item => { const o = localOp(item); return o.title || o.detail || o.owner; }).filter(Boolean));
 }
 
 function renderQualitativeLens(payload, activeSatellite) {
@@ -2954,7 +3032,11 @@ function renderCitizenReports(payload) {
   const STATUS_LABEL = { received: "NEW", in_progress: "OPEN", completed: "DONE" };
   const STATUS_TONE  = { received: "warn", in_progress: "warn", completed: "good" };
 
-  const isDemo = cr.status === "demo";
+  if (cr.status !== "live") {
+    el.innerHTML = `<div class="cr-empty">${escapeHtml(t("crNotConnected"))} <a href="https://talikhidmat.sarawak.gov.my/" target="_blank" rel="noopener noreferrer">Talikhidmat ↗</a></div>`;
+    return;
+  }
+  const isDemo = false;
   const badge = isDemo
     ? `<span class="cr-mode-badge" style="color:var(--soft)">DEMO</span>`
     : `<span class="cr-mode-badge" style="color:var(--cyan)">LIVE</span>`;
@@ -3019,7 +3101,7 @@ function renderFloodForecast(floodForecast) {
       }).join("")}
     </div>
     ${reaches ? `<div class="flood-days" style="margin-top:4px">${reaches}</div>` : ""}
-    <div class="flood-model">${isFallback ? "Seasonal estimate · river model" : "River model via Open-Meteo / GloFAS"}</div>`;
+    <div class="flood-model">${isFallback ? "River model unreachable — no forecast shown" : "River model via Open-Meteo / GloFAS"}</div>`;
 }
 
 function renderBypassTracker() {
@@ -3028,18 +3110,19 @@ function renderBypassTracker() {
   const p = RIVER_BYPASS_PROJECT;
   el.innerHTML = `
     <div class="bypass-head">
-      <span class="bypass-title">${escapeHtml(p.name)} <span class="ward-brief-badge ward-brief-badge-illust" title="Budget, phases and flow figures are not yet tied to a published source — see data.js RIVER_BYPASS_PROJECT">ILLUSTRATIVE</span></span>
+      <span class="bypass-title">${escapeHtml(p.name)}</span>
       <span class="bypass-budget">${escapeHtml(p.budget)}</span>
     </div>
     <div class="bypass-phases">
       ${p.phases.map(ph => `
         <div class="bypass-phase">
           <div class="bypass-dot ${ph.status === "active" ? "active" : ""}"></div>
-          <span class="bypass-phase-label">${ph.label}</span>
-          <span class="bypass-period">${ph.period}</span>
+          <span class="bypass-phase-label">${escapeHtml(ph.label)}</span>
+          <span class="bypass-period">${escapeHtml(ph.period)}</span>
         </div>`).join("")}
     </div>
-    <div class="bypass-benefit">${p.benefit}</div>`;
+    <div class="bypass-benefit">${escapeHtml(p.benefit)}</div>
+    <div class="bypass-src">${(p.sources || []).map((src) => `<a href="${escapeHtml(src.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(src.name)} ↗</a>`).join(" · ")}</div>`;
 }
 
 function renderPosture(payload) {
@@ -3634,6 +3717,8 @@ function renderWardBrief(wardCode, payload) {
     : `View ${totalLoc} localities in Explorer ↗`;
 
   // Tension Index — illustrative until a real sentiment / 311 feed is wired in.
+  // Hand-curated scores ("92/100 critical") are not shown to the council while
+  // WARD_TENSION_ILLUSTRATIVE is true; wire a real complaint feed first.
   const tension = WARD_TENSION[wardCode] || { score: 0, topIssue: "No data", trend: "stable", tone: "muted" };
   const tensionGlyph = tension.trend === "rising" ? "▲" : tension.trend === "falling" ? "▼" : "—";
   const tensionSourceBadge = WARD_TENSION_ILLUSTRATIVE
@@ -3659,7 +3744,7 @@ function renderWardBrief(wardCode, payload) {
     <button type="button" class="ward-brief-loc-btn" id="wardBriefExploreBtn">
       <span>${escapeHtml(lblExplore)}</span>
     </button>
-    <div class="ward-brief-row"><span class="ward-brief-label">Tension Index</span>${tensionLine}</div>
+    ${WARD_TENSION_ILLUSTRATIVE ? "" : `<div class="ward-brief-row"><span class="ward-brief-label">Tension Index</span>${tensionLine}</div>`}
     <div class="ward-brief-row"><span class="ward-brief-label">${lblState}</span>${escapeHtml(stateSeat)}</div>
     <div class="ward-brief-row"><span class="ward-brief-label">${lblParl}</span>${escapeHtml(parlSeat)}</div>
     <div class="ward-brief-row"><span class="ward-brief-label">${lblCouncillor}</span>${councillorLine}</div>
@@ -4325,6 +4410,9 @@ function renderDashboard(payload) {
   renderAirportStats(payload.airport);
   renderNewsIntake(payload.news);
   renderOfficialPulse(payload);
+  renderWaterSupply(payload);
+  renderRainRegime(payload);
+  renderCoverage(payload);
   renderMppServicesDirectory();
   renderMppCouncillors(payload);
   renderMppLocalities(payload);
@@ -4501,6 +4589,7 @@ function setLang(lang) {
   if (state.payload) {
     renderRuntimeMeta(state.payload);
     renderBriefStrip(state.payload);
+    renderDirectives(state.payload.operations || []);
     renderVerdict(state.payload);
     if (state.activeStation) {
       const st = (state.payload.infobanjir?.stations || []).find(s => s.id === state.activeStation);
@@ -4513,6 +4602,9 @@ function setLang(lang) {
     renderPosture(state.payload);
     if (state.lastMetrics) renderMetrics(state.lastMetrics);
     renderOfficialPulse(state.payload);
+    renderWaterSupply(state.payload);
+    renderRainRegime(state.payload);
+    renderCoverage(state.payload);
     renderMppLocalities(state.payload);
     renderMppServicesDirectory();
     if (state.activeWard) {
@@ -5082,6 +5174,115 @@ async function boot() {
     // catches internally).
     renderInsights(payload);
   } catch (err) { console.error("IOC SYNC FAILURE", err); }
+}
+
+// --- Water supply context + JKM relief centres (rail) ------------------------
+function intakeSpark(intake) {
+  const pts = (intake?.points || []).filter((p) => p.v != null);
+  if (pts.length < 2) return "";
+  const th = intake.thresholds || {};
+  const lo = Math.min(...pts.map((p) => p.v), th.normal ?? Infinity) - 0.1;
+  const hi = Math.max(...pts.map((p) => p.v), th.alert ?? -Infinity) + 0.1;
+  const W = 240, H = 44, x = (i) => (i / (pts.length - 1)) * W, y = (v) => H - ((v - lo) / (hi - lo)) * H;
+  const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
+  const ref = (v, cls) => v != null && v >= lo && v <= hi ? `<line class="${cls}" x1="0" x2="${W}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/>` : "";
+  return `<svg class="ws-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="7-day river level">${ref(th.alert, "ws-alert")}${ref(th.normal, "ws-normal")}<polyline points="${line}"/></svg>`;
+}
+
+function renderWaterSupply(payload) {
+  const el = $("waterSupply");
+  if (!el) return;
+  const ws = payload.waterSupply, pps = payload.reliefCentres;
+  const fmtT = (iso) => iso ? new Date(iso).toLocaleString("en-MY", { timeZone: "Asia/Kuching", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
+  const parts = [];
+  const intake = ws?.intake;
+  if (intake?.latest) {
+    const th = intake.thresholds || {};
+    const band = th.danger != null && intake.latest.v >= th.danger ? "danger" : th.warning != null && intake.latest.v >= th.warning ? "warning" : th.alert != null && intake.latest.v >= th.alert ? "alert" : "normal";
+    parts.push(`<div class="ws-block">
+      <div class="ws-head"><span>${escapeHtml(t("intakeReach"))}</span><a href="${escapeHtml(intake.url)}" target="_blank" rel="noopener noreferrer">DID iHYDRO ↗</a></div>
+      <div class="ws-value" data-band="${band}"><strong>${intake.latest.v.toFixed(2)} m</strong> · ${escapeHtml(fmtT(intake.latest.t))}</div>
+      ${intakeSpark(intake)}
+      <div class="ws-meta">7d ${intake.min?.toFixed(2)}–${intake.max?.toFixed(2)} m · ${["normal","alert","warning","danger"].filter((k) => th[k] != null).map((k) => `${escapeHtml(t("band_" + k))} ${th[k]} m`).join(" · ")}</div>
+      <div class="ws-note">${escapeHtml(t("intakeNote"))}</div>
+    </div>`);
+  } else {
+    parts.push(`<div class="ws-block"><div class="ws-head"><span>${escapeHtml(t("intakeReach"))}</span></div><div class="ws-note">${escapeHtml(t("feedUnavailable"))}</div></div>`);
+  }
+  const gauges = ws?.gauges?.items || [];
+  if (gauges.length) {
+    parts.push(`<div class="ws-block"><div class="ws-head"><span>${escapeHtml(t("igGauges"))}</span><a href="${escapeHtml(ws.gauges.url)}" target="_blank" rel="noopener noreferrer">DID ↗</a></div>
+      ${gauges.map((g) => `<div class="ws-row"><span>${escapeHtml(g.name.replace(/^IG\s+/i, ""))}</span><strong>${g.levelM != null ? g.levelM.toFixed(2) + " m" : "—"}</strong></div>`).join("")}
+      <div class="ws-note">${escapeHtml(t("igNote"))} · ${escapeHtml(gauges[0].updated || "")}</div></div>`);
+  }
+  parts.push(`<div class="ws-block"><div class="ws-head"><span>${escapeHtml(t("waterUtility"))}</span><a href="https://sarawakwater.com/" target="_blank" rel="noopener noreferrer">Sarawak Water ↗</a></div><div class="ws-note">${escapeHtml(t("utilityNotPublic"))}</div></div>`);
+  const centres = pps?.items || [];
+  parts.push(`<div class="ws-block"><div class="ws-head"><span>${escapeHtml(t("reliefCentres"))}</span><a href="${escapeHtml(pps?.url || "https://infobencanajkmv2.jkm.gov.my/")}" target="_blank" rel="noopener noreferrer">JKM InfoBencana ↗</a></div>
+    ${pps?.status !== "live" ? `<div class="ws-note">${escapeHtml(t("feedUnavailable"))}</div>`
+      : centres.length ? centres.map((c) => `<div class="ws-row"><span>${escapeHtml(c.name)} · ${escapeHtml(c.district)}</span><strong>${c.evacuees}${c.capacity ? "/" + c.capacity : ""}</strong></div>`).join("")
+      : `<div class="ws-note">${escapeHtml(t("reliefNone"))}${pps.sarawakOpen ? ` (${pps.sarawakOpen} ${escapeHtml(t("reliefElsewhere"))})` : ""}</div>`}
+  </div>`);
+  el.innerHTML = parts.join("");
+}
+
+// --- Rain regime (Outlook tray) -------------------------------------------------
+function renderRainRegime(payload) {
+  const el = $("rainRegime");
+  if (!el) return;
+  const rr = payload.rainRegime;
+  const label = rr?.label || "unknown";
+  const radarImg = "https://www.met.gov.my/data/radar_east.gif";
+  el.dataset.regime = label;
+  el.innerHTML = `
+    <div class="rr-main">
+      <div class="rr-kicker">${escapeHtml(t("rainRegime"))}${rr?.confidence ? ` · ${escapeHtml(t("conf_" + rr.confidence))}` : ""}</div>
+      <div class="rr-label">${escapeHtml(t("regime_" + label))}</div>
+      <ul class="rr-evidence">${(rr?.evidence || []).slice(0, 4).map((e) => `<li>${escapeHtml(e)}</li>`).join("") || `<li>${escapeHtml(t("feedUnavailable"))}</li>`}</ul>
+      <details class="rr-method"><summary>${escapeHtml(t("regimeMethod"))}</summary><p>${escapeHtml(rr?.method || "")}</p>
+        <p>${(rr?.sources || []).map((src) => `<a href="${escapeHtml(src.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(src.name)} ↗</a>`).join(" · ")}</p></details>
+    </div>
+    <a class="rr-radar" href="https://www.met.gov.my/pencerapan/radar-sabah-and-sarawak" target="_blank" rel="noopener noreferrer" title="MetMalaysia Sabah & Sarawak radar composite">
+      <img src="${radarImg}?t=${Math.floor(Date.now() / 600000)}" alt="MetMalaysia radar composite, Sabah and Sarawak" loading="lazy" referrerpolicy="no-referrer">
+      <span>${escapeHtml(t("metRadar"))} ↗</span>
+    </a>`;
+}
+
+// --- Who covers this place (tray) ---------------------------------------------
+function renderCoverage(payload) {
+  const el = $("coveragePanel");
+  if (!el || el.contains(document.activeElement)) return; // don't steal focus mid-search on the 60 s refresh
+  const cov = payload.mppCoverage;
+  if (!cov || cov.status !== "live") {
+    el.innerHTML = `<div class="cov-note">${escapeHtml(t("feedUnavailable"))} <a href="https://mpp.sarawak.gov.my/web/subpage/webpage_view/258" target="_blank" rel="noopener noreferrer">MPP ↗</a></div>`;
+    return;
+  }
+  const all = [...(cov.refuse?.items || []), ...(cov.drain?.items || []), ...(cov.trees?.items || [])];
+  const svcLabel = { refuse: t("covRefuse"), "drains-grass-sweeping": t("covDrain"), "trees-landscape": t("covTrees") };
+  const svcUrl = { refuse: cov.refuse?.url, "drains-grass-sweeping": cov.drain?.url, "trees-landscape": cov.trees?.url };
+  const prev = el.querySelector("input")?.value || "";
+  el.innerHTML = `
+    <div class="cov-bar">
+      <input type="search" class="cov-search" placeholder="${escapeHtml(t("covSearch"))}" aria-label="${escapeHtml(t("covSearch"))}" value="${escapeHtml(prev)}">
+      <span class="cov-count">${cov.refuse?.items?.length || 0} ${escapeHtml(t("covRefuse"))} · ${cov.drain?.items?.length || 0} ${escapeHtml(t("covDrain"))} · ${cov.trees?.items?.length || 0} ${escapeHtml(t("covTrees"))}</span>
+    </div>
+    <div class="cov-results"></div>
+    <div class="cov-note">${escapeHtml(t("covNote"))}</div>`;
+  const input = el.querySelector(".cov-search"), out = el.querySelector(".cov-results");
+  const run = () => {
+    const q = input.value.trim().toLowerCase();
+    if (q.length < 3) { out.innerHTML = `<div class="cov-hint">${escapeHtml(t("covHint"))}</div>`; return; }
+    const hits = all.filter((z) => z.zone.toLowerCase() === q || z.areas.some((a) => a.toLowerCase().includes(q))).slice(0, 12);
+    out.innerHTML = hits.length ? hits.map((z) => {
+      const match = z.areas.find((a) => a.toLowerCase().includes(q)) || z.areas[0] || "";
+      const snippet = match.length > 160 ? (() => { const i = match.toLowerCase().indexOf(q); return "…" + match.slice(Math.max(0, i - 60), i + 90) + "…"; })() : match;
+      return `<div class="cov-row" data-svc="${escapeHtml(z.service)}">
+        <div class="cov-row-head"><span class="cov-svc">${escapeHtml(svcLabel[z.service] || z.service)}</span><strong>${escapeHtml(z.zone)}</strong>${z.days ? `<span class="cov-days">${escapeHtml(z.days)}</span>` : ""}</div>
+        <div class="cov-who">${escapeHtml(z.contractor || "—")} · <a href="${escapeHtml(svcUrl[z.service] || "#")}" target="_blank" rel="noopener noreferrer">MPP ↗</a></div>
+        <div class="cov-areas">${escapeHtml(snippet)}</div></div>`;
+    }).join("") : `<div class="cov-hint">${escapeHtml(t("covNone"))}</div>`;
+  };
+  input.addEventListener("input", run);
+  run();
 }
 
 // Evidence tray under the map: one pane at a time, so the board fits one screen.

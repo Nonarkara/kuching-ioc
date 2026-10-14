@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { renderIndexHtml, resolveAssetVersion } from "./site-build.mjs";
 import { normalizeMetWeather } from "./public/met-weather.js";
+import { classifyRainRegime } from "./public/rain-regime.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
@@ -500,14 +501,17 @@ async function cached(key, ttlMs, loader) {
   return value;
 }
 
-async function fetchText(url, timeoutMs = 10000) {
+// Some government hosts (iHYDRO, JKM) reject non-browser user agents.
+const BROWSER_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128 Safari/537.36";
+
+async function fetchText(url, timeoutMs = 10000, ua) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(url, {
       headers: {
-        "user-agent": "secretary-goh-super-dashboard/1.0",
+        "user-agent": ua || "secretary-goh-super-dashboard/1.0",
         accept: "text/plain,text/html,application/xml,text/xml,application/json;q=0.9,*/*;q=0.8",
       },
       signal: controller.signal,
@@ -523,8 +527,8 @@ async function fetchText(url, timeoutMs = 10000) {
   }
 }
 
-async function fetchJson(url, timeoutMs = 10000) {
-  const text = await fetchText(url, timeoutMs);
+async function fetchJson(url, timeoutMs = 10000, ua) {
+  const text = await fetchText(url, timeoutMs, ua);
   return JSON.parse(text);
 }
 
@@ -1712,26 +1716,13 @@ async function loadCKANDatasets(baseUrl, query) {
   }
 }
 
-// IOC 2.0 — Greater Kuching district focus. Districts the dashboard tracks
-// (DOSM admin boundaries; Padawan's growth-ring story spans Kuching + Serian).
-const GREATER_KUCHING_DOSM_DISTRICTS = ["Kuching", "Samarahan", "Serian"];
-
 async function loadGovStats() {
   return cached("gov-stats", 12 * 60 * 60 * 1000, async () => {
-    const [ckanData, dosmStateData, dosmDistrictData] = await Promise.allSettled([
+    const [ckanData, dosmStateData] = await Promise.allSettled([
       loadCKANDatasets("https://catalog.sarawak.gov.my", "population land use tourism"),
       // data.gov.my moved the catalogue to /data-catalogue/ and renamed the
       // aggregate values to overall_age / overall_sex / overall_ethnicity (checked 29 Sep 2026).
       fetchJson("https://api.data.gov.my/data-catalogue/?id=population_state&filter=Sarawak@state,overall_age@age,overall_sex@sex,overall_ethnicity@ethnicity&sort=-date&limit=1", 15000),
-      // DOSM's data-catalogue endpoint doesn't filter server-side; pull a slice
-      // sorted by latest date and filter to Sarawak districts in code. Sarawak
-      // has many districts in the alphabetical sweep — limit=50000 captures
-      // every Sarawak (state, district, overall/overall/overall) row at the
-      // latest reporting year. ~7 MB response, cached 12 h.
-      fetchJson(
-        "https://api.data.gov.my/data-catalogue/?id=population_district&sort=-date&limit=50000",
-        25000,
-      ),
     ]);
 
     const datasets = ckanData.status === "fulfilled" ? ckanData.value : [];
@@ -1741,29 +1732,7 @@ async function loadGovStats() {
     const portalCount = await fetchJson("https://catalog.sarawak.gov.my/api/3/action/package_search?rows=0", 12000)
       .then((r) => r?.result?.count ?? null).catch(() => null);
 
-    // Reduce 10k records to per-district latest-year overall totals for the
-    // three Greater Kuching DOSM districts. Filter overall age + both sex +
-    // overall ethnicity to get a single population number per (district, year).
-    const districtRows = dosmDistrictData.status === "fulfilled" && Array.isArray(dosmDistrictData.value)
-      ? dosmDistrictData.value : [];
-    const districts = GREATER_KUCHING_DOSM_DISTRICTS.map((name) => {
-      const rows = districtRows.filter((r) =>
-        (r.state || "").toLowerCase() === "sarawak"
-        && (r.district || "").toLowerCase() === name.toLowerCase()
-        && ["overall", "overall_age"].includes(r.age) && ["overall", "overall_sex"].includes(r.sex) && ["overall", "overall_ethnicity"].includes(r.ethnicity)
-      );
-      if (!rows.length) return { name, status: "missing" };
-      rows.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-      const top = rows[0];
-      // OpenDOSM `population` is in thousands; convert to absolute count.
-      const pop = top.population != null ? Math.round(Number(top.population) * 1000) : null;
-      return {
-        name, status: "live",
-        population: pop,
-        year: top.date ? top.date.slice(0, 4) : null,
-      };
-    });
-
+    // District population moved to loadDistrictPopulation() (DOSM CSV, 13 Oct 2026).
     return {
       updatedAt: nowIso(),
       sarawak: {
@@ -1778,7 +1747,6 @@ async function loadGovStats() {
         status: latest?.population != null ? "live" : "unavailable",
         latestSarawakPop: latest?.population != null ? Math.round(Number(latest.population) * 1000) : null,
         year: latest?.date ? latest.date.slice(0, 4) : null,
-        districts,
       }
     };
   });
@@ -3359,6 +3327,13 @@ function buildMetricCards(weather, air, airport, jurisdictions, news, padawanZon
   ];
 }
 
+// Directives are composed in English with BM / ZH twins built from the same
+// numbers, so the board never mixes languages. Upstream text (MPP pledge
+// wording, MET bulletins) stays as the agency published it.
+function withI18n(item, ms, zh) {
+  return { ...item, i18n: { ms, zh } };
+}
+
 function buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast, floodMatrix, mppService }) {
   const rain6h = round(weather.nextHours.reduce((sum, hour) => sum + hour.precipitationMm, 0), 1);
   const padawan = jurisdictions.items.find((item) => item.id === "mpp");
@@ -3381,26 +3356,52 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
       : effectiveAqi >= 150 ? "high"
       : "medium";
     const source = groundAqi != null ? `APIMS ground (${apims.worst.stationName})` : "Open-Meteo modelled";
-    items.push({
+    const aqiR = Math.round(effectiveAqi);
+    const tierMs = { "Very Unhealthy": "Sangat Tidak Sihat", Unhealthy: "Tidak Sihat", Sensitive: "Sensitif" }[tier];
+    const tierZh = { "Very Unhealthy": "非常不健康", Unhealthy: "不健康", Sensitive: "敏感" }[tier];
+    const heavy = effectiveAqi >= 150;
+    items.push(withI18n({
       severity,
       owner: "Public Health Watch",
-      title: `Haze advisory · AQI ${Math.round(effectiveAqi)} (${tier})`,
-      detail: `${source}. ${effectiveAqi >= 150 ? "Schools, outdoor worksites and elder-care facilities should reduce outdoor exposure. Issue the standing DOE advisory copy via the MPP bulletin." : "Sensitive groups (children, elderly, respiratory patients) should reduce prolonged outdoor exertion. Monitor DOE APIMS for escalation."}`,
-      humanContext: "Confirmed against eqms.doe.gov.my — Secretary Goh's pointer of 29 Sep. PM10/PM2.5 cross-check from the same upstream.",
-    });
+      title: `Haze advisory · AQI ${aqiR} (${tier})`,
+      detail: `${source}. ${heavy ? "Schools, outdoor worksites and elder-care facilities should reduce outdoor exposure. Issue the standing DOE advisory copy via the MPP bulletin." : "Sensitive groups (children, elderly, respiratory patients) should reduce prolonged outdoor exertion. Monitor DOE APIMS for escalation."}`,
+      humanContext: "Source: DOE APIMS (eqms.doe.gov.my). PM10 and PM2.5 are cross-checked from the same upstream.",
+    }, {
+      owner: "Pemantauan Kesihatan Awam",
+      title: `Nasihat jerebu · IKU ${aqiR} (${tierMs})`,
+      detail: `${source}. ${heavy ? "Sekolah, tapak kerja luar dan pusat jagaan warga emas perlu mengurangkan pendedahan di luar. Edarkan teks nasihat JAS melalui buletin MPP." : "Golongan sensitif (kanak-kanak, warga emas, pesakit pernafasan) perlu mengurangkan aktiviti luar yang lama. Pantau APIMS JAS jika keadaan memburuk."}`,
+      humanContext: "Sumber: APIMS JAS (eqms.doe.gov.my). PM10 dan PM2.5 disemak dari sumber yang sama.",
+    }, {
+      owner: "公共卫生监测",
+      title: `烟霾提醒 · 空气质量指数 ${aqiR}（${tierZh}）`,
+      detail: `${source}。${heavy ? "学校、户外工地和养老机构应减少户外暴露。请通过 MPP 公告发布环境局的标准提醒。" : "敏感人群（儿童、长者、呼吸道患者）应减少长时间户外活动。请留意环境局 APIMS 是否升级。"}`,
+      humanContext: "来源：环境局 APIMS（eqms.doe.gov.my）。PM10 与 PM2.5 来自同一数据源交叉核对。",
+    }));
   }
 
   // Client-charter directive — MPP's own published quarterly score. Names the
   // weakest pledge below 95% so the Secretary sees the gap before a councillor does.
   const charterGap = mppService?.charter?.weakest?.[0];
   if (charterGap) {
-    items.push({
+    const pledge = `${charterGap.pledge.replace(/\.\s*$/, "").slice(0, 140)}${charterGap.pledge.length > 140 ? "…" : ""}`;
+    const q = mppService.charter.latestQuarter, upd = mppService.charter.updated || "n/a";
+    items.push(withI18n({
       severity: charterGap.score < 80 ? "medium" : "low",
       owner: "Client Charter",
-      title: `Charter #${charterGap.no} at ${charterGap.score}% (${mppService.charter.latestQuarter})`,
-      detail: `${charterGap.pledge.replace(/\.\s*$/, "").slice(0, 140)}${charterGap.pledge.length > 140 ? "…" : ""}. MPP published achievement, updated ${mppService.charter.updated || "n/a"}.`,
+      title: `Charter #${charterGap.no} at ${charterGap.score}% (${q})`,
+      detail: `${pledge}. MPP published achievement, updated ${upd}.`,
       humanContext: "Source: MPP Client Charter Achievement page. The council's own number, not this board's estimate.",
-    });
+    }, {
+      owner: "Piagam Pelanggan",
+      title: `Piagam #${charterGap.no} pada ${charterGap.score}% (${q})`,
+      detail: `${pledge}. Pencapaian diterbitkan MPP, dikemas kini ${upd}.`,
+      humanContext: "Sumber: halaman Pencapaian Piagam Pelanggan MPP. Angka majlis sendiri, bukan anggaran papan ini.",
+    }, {
+      owner: "客户服务承诺",
+      title: `承诺第 ${charterGap.no} 项达成 ${charterGap.score}%（${q}）`,
+      detail: `${pledge}。MPP 公布的达成率，更新于 ${upd}。`,
+      humanContext: "来源：MPP 客户服务承诺达成页面。这是市议会公布的数字，不是本看板的估算。",
+    }));
   }
 
   // Hydrology directive — escalates from ground-truth river levels.
@@ -3408,13 +3409,23 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
     const triggered = infobanjir.stations.filter((s) => ["alert", "warning", "danger"].includes(s.band));
     const triggerLine = triggered.map((s) => `${s.name} (${s.bandLabel} ${s.waterLevelM ?? "—"}m)`).join(", ");
     const worst = triggered[0];
-    items.push({
+    const bandMs = { alert: "WASPADA", warning: "AMARAN", danger: "BAHAYA" }[infobanjir.highestBand] || infobanjir.highestBandLabel.toUpperCase();
+    const bandZh = { alert: "警戒", warning: "警告", danger: "危险" }[infobanjir.highestBand] || infobanjir.highestBandLabel;
+    items.push(withI18n({
       severity: "high",
       owner: "Hydrology Watch",
       title: `River posture ${infobanjir.highestBandLabel.toUpperCase()}`,
       detail: `JPS Infobanjir: ${triggerLine || "watch the upper Sarawak basin"}. Cross-reference rain forecast (${rain6h}mm/6h).`,
       humanContext: worst?.humanBrief || [worst?.affectedEstimate, worst?.lastEvent].filter(Boolean).join(". ") || null,
-    });
+    }, {
+      owner: "Pemantauan Hidrologi",
+      title: `Status sungai ${bandMs}`,
+      detail: `JPS Infobanjir: ${triggerLine || "pantau lembangan hulu Sarawak"}. Semak bersama ramalan hujan (${rain6h}mm/6j).`,
+    }, {
+      owner: "水文监测",
+      title: `河流状态：${bandZh}`,
+      detail: `JPS Infobanjir：${triggerLine || "留意砂拉越河上游流域"}。请对照降雨预报（${rain6h}mm/6小时）。`,
+    }));
   }
 
   // IOC 2.0/2.1 — forecast-driven directives. TimesFM p90 worst-case lookahead
@@ -3434,13 +3445,24 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
       const now = dis.lastValue ?? dis.quantiles.p50?.[0] ?? 0;
       const step = dis.quantiles.p90.indexOf(peak) + 1;
       if (now > 0 && peak >= now * 1.2) {
-        items.push({
+        const pk = Math.round(peak), nw = Math.round(now);
+        items.push(withI18n({
           severity: peak >= now * 1.5 ? "high" : "medium",
           owner: "Hydrology Forecast",
-          title: `River rising — p90 ${Math.round(peak)} m³/s in ${step}d`,
-          detail: `TimesFM 14-day outlook: worst-case discharge climbs from ${Math.round(now)} to ${Math.round(peak)} m³/s within ${step} day(s). Pre-position crews at Batu Kawa / Sg. Maong before the peak.`,
+          title: `River rising — p90 ${pk} m³/s in ${step}d`,
+          detail: `TimesFM 14-day outlook: worst-case discharge climbs from ${nw} to ${pk} m³/s within ${step} day(s). Pre-position crews at Batu Kawa / Sg. Maong before the peak.`,
           humanContext: "The forecast lead time is the window to act — clear the worst drains before the rain, not during it.",
-        });
+        }, {
+          owner: "Ramalan Hidrologi",
+          title: `Sungai meningkat — p90 ${pk} m³/s dalam ${step} hari`,
+          detail: `Tinjauan 14 hari TimesFM: aliran terburuk naik dari ${nw} ke ${pk} m³/s dalam ${step} hari. Tempatkan pasukan di Batu Kawa / Sg. Maong sebelum puncak.`,
+          humanContext: "Tempoh amaran ramalan ialah masa untuk bertindak — bersihkan longkang terburuk sebelum hujan, bukan semasa hujan.",
+        }, {
+          owner: "水文预报",
+          title: `河流上涨 — p90 ${pk} m³/s，${step} 天内`,
+          detail: `TimesFM 14天展望：最坏情况流量在 ${step} 天内由 ${nw} 升至 ${pk} m³/s。请在峰值前于 Batu Kawa / Sg. Maong 预置人员。`,
+          humanContext: "预报提前量就是行动窗口——在下雨前清理最差的排水渠，而不是下雨时。",
+        }));
       }
     }
     const aqiF = forecast.series.aqi;
@@ -3448,13 +3470,22 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
       const peak = Math.max(...aqiF.quantiles.p90);
       if (peak >= 100) {
         const step = aqiF.quantiles.p90.indexOf(peak) + 1;
-        items.push({
+        const pk = Math.round(peak);
+        items.push(withI18n({
           severity: peak >= 150 ? "high" : "medium",
           owner: "Health Forecast",
-          title: `Air quality may degrade — p90 AQI ${Math.round(peak)} in ${step}d`,
-          detail: `TimesFM outlook: worst-case AQI reaches ${Math.round(peak)} within ${step} day(s). Stage a haze advisory for sensitive groups; check NASA FIRMS hotspots for open burning.`,
+          title: `Air quality may degrade — p90 AQI ${pk} in ${step}d`,
+          detail: `TimesFM outlook: worst-case AQI reaches ${pk} within ${step} day(s). Stage a haze advisory for sensitive groups; check NASA FIRMS hotspots for open burning.`,
           humanContext: null,
-        });
+        }, {
+          owner: "Ramalan Kesihatan",
+          title: `Kualiti udara mungkin merosot — p90 IKU ${pk} dalam ${step} hari`,
+          detail: `Tinjauan TimesFM: IKU terburuk mencecah ${pk} dalam ${step} hari. Sediakan nasihat jerebu untuk golongan sensitif; semak titik panas NASA FIRMS untuk pembakaran terbuka.`,
+        }, {
+          owner: "健康预报",
+          title: `空气质量可能恶化 — p90 指数 ${pk}，${step} 天内`,
+          detail: `TimesFM 展望：最坏情况空气质量指数在 ${step} 天内达到 ${pk}。请为敏感人群准备烟霾提醒，并查看 NASA FIRMS 热点有无露天焚烧。`,
+        }));
       }
     }
   }
@@ -3466,13 +3497,24 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
     const amcLabel  = floodMatrix.basin_amc?.label || "";
     const amcNote   = floodMatrix.basin_amc?.note || "";
     if (amcClass === "III") {
-      items.push({
+      const mm14 = floodMatrix.basin_amc?.total_mm14d ?? "—";
+      items.push(withI18n({
         severity: "medium",
         owner: "Basin AMC Watch",
-        title: `Catchment saturated — AMC Class III (${floodMatrix.basin_amc?.total_mm14d ?? "—"}mm/14d)`,
+        title: `Catchment saturated — AMC Class III (${mm14}mm/14d)`,
         detail: `14-day accumulated rainfall has saturated the basin. ${amcNote} Pre-position drainage crews and review pump station readiness in the affected catchments.`,
         humanContext: "AMC III means the same rainstorm that would normally cause minor flooding will cause major flooding. Act before the next band arrives.",
-      });
+      }, {
+        owner: "Pemantauan AMC Lembangan",
+        title: `Tadahan tepu — AMC Kelas III (${mm14}mm/14 hari)`,
+        detail: "Hujan terkumpul 14 hari telah menepukan lembangan. Tempatkan pasukan saliran dan semak kesiapsiagaan stesen pam di tadahan yang terjejas.",
+        humanContext: "AMC III bermaksud ribut yang biasanya menyebabkan banjir kecil kini boleh menyebabkan banjir besar. Bertindak sebelum jalur hujan seterusnya.",
+      }, {
+        owner: "流域前期湿度监测",
+        title: `集水区已饱和 — AMC 第三级（${mm14}mm/14天）`,
+        detail: "14天累计降雨已使流域饱和。请预置排水人员，并检查受影响集水区的抽水站准备情况。",
+        humanContext: "AMC 第三级表示平常只造成小水灾的暴雨，现在可能造成大水灾。请在下一轮雨带到来前行动。",
+      }));
     }
     // Station-level warning / alert directives
     for (const row of floodMatrix.rows) {
@@ -3489,13 +3531,22 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
       const lagNote = row.lag_h > 0
         ? ` (${row.lag_h}h propagation lag to downstream gauges)`
         : "";
-      items.push({
+      const hz = horizon.replace("h", "");
+      items.push(withI18n({
         severity: highest.band === "warning" ? "high" : "medium",
         owner: `Flood Forecast // ${row.name}`,
         title: `${row.name}: ${highest.band.toUpperCase()} within ${horizon}`,
         detail: `TimesFM p90 + AMC ${amcClass} load index ${highest.load}. Catchment: ${row.basin}.${lagNote}${stressNote}`,
         humanContext: row.amc ? `${row.amc.label} catchment (${row.amc.total_mm14d}mm/14d). ${row.amc.note}` : null,
-      });
+      }, {
+        owner: `Ramalan Banjir // ${row.name}`,
+        title: `${row.name}: ${highest.band === "warning" ? "AMARAN" : "WASPADA"} dalam ${hz} jam`,
+        detail: `TimesFM p90 + AMC ${amcClass}, indeks beban ${highest.load}. Tadahan: ${row.basin}.${row.lag_h > 0 ? ` (sela ${row.lag_h} jam ke tolok hilir)` : ""}${row.drainage_stress === "high" ? ` Pecahan permukaan kedap tinggi (${Math.round((row.impervious_fraction || 0) * 100)}%) — saliran mungkin terlalu kecil untuk guna tanah semasa.` : ""}`,
+      }, {
+        owner: `洪水预报 // ${row.name}`,
+        title: `${row.name}：${hz} 小时内${highest.band === "warning" ? "警告" : "警戒"}`,
+        detail: `TimesFM p90 + AMC ${amcClass}，负荷指数 ${highest.load}。集水区：${row.basin}。${row.lag_h > 0 ? `（向下游水位站传播滞后 ${row.lag_h} 小时）` : ""}${row.drainage_stress === "high" ? `硬化地表比例高（${Math.round((row.impervious_fraction || 0) * 100)}%）——排水设施可能不足以应对现有土地覆盖。` : ""}`,
+      }));
     }
     // Drainage stress directive (AlphaEarth-driven): stations where high impervious
     // fraction + elevated risk = likely under-drained for current land cover.
@@ -3503,37 +3554,65 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
       (r) => r.drainage_stress === "high" && r.risk_72h?.band !== "normal"
     );
     if (stressStations.length && floodMatrix.impervious_status === "ready") {
-      items.push({
+      const names = stressStations.map((s) => s.name).join(", ");
+      items.push(withI18n({
         severity: "medium",
         owner: "AlphaEarth // Drainage Stress",
         title: `${stressStations.length} catchment(s) under drainage stress`,
-        detail: `AlphaEarth 2024 analysis: ${stressStations.map((s) => s.name).join(", ")} show high impervious surface fraction but elevated flood risk. New land cover may exceed existing drain capacity.`,
+        detail: `AlphaEarth 2024 analysis: ${names} show high impervious surface fraction but elevated flood risk. New land cover may exceed existing drain capacity.`,
         humanContext: "Hardened ground sends rain to the drains faster. Check these catchments first when rain is forecast.",
-      });
+      }, {
+        owner: "AlphaEarth // Tekanan Saliran",
+        title: `${stressStations.length} tadahan di bawah tekanan saliran`,
+        detail: `Analisis AlphaEarth 2024: ${names} menunjukkan pecahan permukaan kedap yang tinggi dan risiko banjir meningkat. Guna tanah baharu mungkin melebihi kapasiti longkang sedia ada.`,
+        humanContext: "Tanah yang keras menghantar hujan ke longkang dengan lebih cepat. Semak tadahan ini dahulu apabila hujan diramalkan.",
+      }, {
+        owner: "AlphaEarth // 排水压力",
+        title: `${stressStations.length} 个集水区排水压力偏高`,
+        detail: `AlphaEarth 2024 分析：${names} 硬化地表比例高，洪水风险上升。新的土地覆盖可能超出现有排水能力。`,
+        humanContext: "硬化地面使雨水更快流入排水渠。预报有雨时，请优先检查这些集水区。",
+      }));
     }
   }
 
   // MET Malaysia active weather warnings.
   if (metWarnings?.activeCount > 0) {
     const w = metWarnings.items[0];
-    items.push({
+    items.push(withI18n({
       severity: "high",
       owner: "MET Malaysia",
       title: w.heading || "Active Weather Warning",
       detail: `${w.text || "Official MET warning active for Sarawak/Kuching region."} Valid until ${w.validTo ? new Date(w.validTo).toLocaleString("en-MY", { timeZone: "Asia/Kuching", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}.`,
       humanContext: metWarnings.activeCount > 1 ? `${metWarnings.activeCount} concurrent warnings active.` : null,
-    });
+    }, {
+      title: w.headingBm || w.heading || "Amaran cuaca aktif",
+      detail: w.textBm ? `${w.textBm} Sah sehingga ${w.validTo ? new Date(w.validTo).toLocaleString("ms-MY", { timeZone: "Asia/Kuching", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}.` : undefined,
+      humanContext: metWarnings.activeCount > 1 ? `${metWarnings.activeCount} amaran serentak aktif.` : null,
+    }, {
+      humanContext: metWarnings.activeCount > 1 ? `${metWarnings.activeCount} 项警报同时生效。` : null,
+    }));
   }
 
   // Proactive Flood Directive
   if (metWarnings?.forecast?.hasRain || rain6h >= 5) {
-    items.push({
+    const fcText = metWarnings?.forecast?.text || `${rain6h}mm / 6h`;
+    items.push(withI18n({
       severity: "high",
       owner: "Flood Command",
-      title: `Pre-emptive drain clearance: ${metWarnings.forecast.text}`,
-      detail: `MET Malaysia indicates ${metWarnings.forecast.text}. Projected rainfall ${rain6h}mm. Focus on Penrissen and Batu Kawa sectors.`,
+      title: `Pre-emptive drain clearance: ${fcText}`,
+      detail: `MET Malaysia indicates ${fcText}. Projected rainfall ${rain6h}mm. Focus on Penrissen and Batu Kawa sectors.`,
       humanContext: "Sg. Maong is the first urban drain to back up. Watch the Kuala Maong gauge against its 2.0 m alert level.",
-    });
+    }, {
+      owner: "Arahan Banjir",
+      title: `Pembersihan longkang awal: ${fcText}`,
+      detail: `MET Malaysia menunjukkan ${fcText}. Unjuran hujan ${rain6h}mm. Utamakan sektor Penrissen dan Batu Kawa.`,
+      humanContext: "Sg. Maong ialah longkang bandar pertama yang melimpah. Pantau tolok Kuala Maong berbanding paras waspada 2.0 m.",
+    }, {
+      owner: "防洪指挥",
+      title: `提前清理排水渠：${fcText}`,
+      detail: `MET Malaysia 显示 ${fcText}。预计降雨 ${rain6h}mm。重点关注 Penrissen 与 Batu Kawa 区域。`,
+      humanContext: "Sg. Maong 是最先回涌的市区排水渠。请对照 2.0 m 警戒水位留意 Kuala Maong 水位站。",
+    }));
   }
 
   // Demographic Intelligence Directive
@@ -3613,14 +3692,11 @@ async function loadFloodForecast() {
         updatedAt: nowIso(),
         station: "Sarawak River at Kuching",
         units: "m³/s",
-        model: "fallback",
-        forecast: [
-          { date: "—", dischargeCms: 145 }, { date: "—", dischargeCms: 162 },
-          { date: "—", dischargeCms: 178 }, { date: "—", dischargeCms: 155 },
-          { date: "—", dischargeCms: 140 },
-        ],
-        peakCms: 178,
-        todayCms: 145,
+        model: "unreachable",
+        // No invented discharge: an unreachable model shows "—", not a curve.
+        forecast: [],
+        peakCms: null,
+        todayCms: null,
         reaches: [],
       };
     }
@@ -3893,96 +3969,245 @@ function buildFloodRiskMatrix(forecast, imperviousData) {
 // IOC 2.2 — Citizen Reports from City Reporter Supabase.
 // Queries reports within the Greater Kuching bounding box.
 // Falls back to synthetic demo data when no credentials or no live reports.
-function buildCityReportsDemoData() {
-  const gen = nowIso();
-  return {
-    status: "demo",
-    count: 6,
-    open: 4,
-    resolved: 2,
-    recent: [
-      {
-        id: "KCH-2026-001",
-        ticket: "MPP-2026-0841",
-        timestamp: new Date(Date.now() - 1.2 * 3600_000).toISOString(),
-        problem_type: "Flooding / Banjir",
-        description: "Jalan Penrissen flooded to knee height blocking two lanes after heavy rain",
-        ai_summary: "Road flooding at Jalan Penrissen. Two lanes blocked. Upstream drain capacity exceeded.",
-        lat: 1.4520, lon: 110.3380,
-        urgency: "high",
-        status: "in_progress",
-        location_text: "Jalan Penrissen, Padawan",
-      },
-      {
-        id: "KCH-2026-002",
-        ticket: "MPP-2026-0840",
-        timestamp: new Date(Date.now() - 3.5 * 3600_000).toISOString(),
-        problem_type: "Clogged Drain / Longkang Tersumbat",
-        description: "Large drain at Kota Padawan market completely blocked with debris",
-        ai_summary: "Primary drain obstruction at Kota Padawan market. Risk of overflow during next rain event.",
-        lat: 1.4340, lon: 110.3210,
-        urgency: "high",
-        status: "received",
-        location_text: "Kota Padawan Market",
-      },
-      {
-        id: "KCH-2026-003",
-        ticket: "MPP-2026-0838",
-        timestamp: new Date(Date.now() - 8 * 3600_000).toISOString(),
-        problem_type: "Road Damage / Jalan Rosak",
-        description: "Large pothole on Jalan Batu Kawa causing vehicle damage",
-        ai_summary: "Pothole ~60cm diameter on Jalan Batu Kawa near BP station. Reported two vehicle incidents.",
-        lat: 1.4680, lon: 110.3090,
-        urgency: "medium",
-        status: "received",
-        location_text: "Jalan Batu Kawa",
-      },
-      {
-        id: "KCH-2026-004",
-        ticket: "MPP-2026-0835",
-        timestamp: new Date(Date.now() - 14 * 3600_000).toISOString(),
-        problem_type: "Illegal Dumping / Pembuangan Haram",
-        description: "Construction waste dumped at roadside near Siburan junction",
-        ai_summary: "Illegal construction debris dump at Siburan junction. Approximately 3 lorry loads. Road partially blocked.",
-        lat: 1.3890, lon: 110.2720,
-        urgency: "medium",
-        status: "received",
-        location_text: "Siburan Junction, Padawan",
-      },
-      {
-        id: "KCH-2026-005",
-        ticket: "MPP-2026-0831",
-        timestamp: new Date(Date.now() - 22 * 3600_000).toISOString(),
-        problem_type: "Street Light / Lampu Jalan",
-        description: "Three consecutive street lights out on Jalan Matang",
-        ai_summary: "Street lighting failure — 3 consecutive poles. Safety risk for pedestrians and cyclists.",
-        lat: 1.5510, lon: 110.3320,
-        urgency: "low",
-        status: "completed",
-        location_text: "Jalan Matang, Kuching North",
-      },
-      {
-        id: "KCH-2026-006",
-        ticket: "MPP-2026-0829",
-        timestamp: new Date(Date.now() - 28 * 3600_000).toISOString(),
-        problem_type: "Water Pipe Burst / Paip Pecah",
-        description: "Water gushing from burst pipe at Petra Jaya residential area",
-        ai_summary: "Burst main water pipe at Petra Jaya. Water supply disrupted to approximately 40 households.",
-        lat: 1.5670, lon: 110.3810,
-        urgency: "high",
-        status: "completed",
-        location_text: "Petra Jaya, Kuching",
-      },
-    ],
-    updatedAt: gen,
+// No report feed → say so. The previous fallback generated six invented
+// complaints that were pinned on the live map (audit 13 Oct 2026).
+function cityReportsNotConnected(reason = "not-connected") {
+  return { status: reason, count: 0, open: 0, resolved: 0, recent: [], updatedAt: nowIso(),
+    note: "No citizen report feed is connected. MPP complaints go through Talikhidmat (talikhidmat.sarawak.gov.my)." };
+}
+
+// ---------------------------------------------------------------------------
+// Water supply context (audit 13 Oct 2026). Sarawak Water / LAKU / JBALB sites
+// sit behind Cloudflare challenges and publish no machine-readable notices, so
+// the board says so and links out. What IS public: DID iHYDRO's Batu Kitang
+// Telemetry gauge (station 101002, the river reach at the Batu Kitang intake)
+// with official thresholds, and DID's urban Intelligent Gauges in Kuching.
+// ---------------------------------------------------------------------------
+const IHYDRO_BASE = "https://ihydro.sarawak.gov.my/iHydro/en";
+
+function parseIhydroChart(html) {
+  const xml = /setXMLData\("([\s\S]+?)"\);/.exec(html)?.[1];
+  if (!xml) return null;
+  const caption = /Caption='([^']*)'/.exec(xml)?.[1]?.replace(/,\s*$/, "") || null;
+  const cats = Array.from(xml.matchAll(/<category[^>]*label='([^']*)'/g), (m) => m[1]);
+  const sets = Array.from(xml.matchAll(/<dataset([^>]*)>([\s\S]*?)<\/dataset>/g), (m) => ({
+    name: /seriesname='([^']*)'/.exec(m[1])?.[1] || "",
+    values: Array.from(m[2].matchAll(/value='([^']*)'/g), (v) => (v[1] === "" ? null : Number(v[1]))),
+  }));
+  const series = sets[0];
+  if (!series || !cats.length) return null;
+  const thresholds = {};
+  for (const set of sets.slice(1)) {
+    const m = /^(Normal|Alert|Warning|Danger)\s*\(([\d.]+)\s*m\)/i.exec(set.name);
+    if (m) thresholds[m[1].toLowerCase()] = Number(m[2]);
+  }
+  const toIso = (label) => {
+    const m = /^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})/.exec(label);
+    return m ? `${m[3]}-${m[2]}-${m[1]}T${m[4]}:${m[5]}:00+08:00` : null;
   };
+  const points = cats.map((c, i) => ({ t: toIso(c), v: Number.isFinite(series.values[i]) ? series.values[i] : null }));
+  const valid = points.filter((p) => p.v != null);
+  const latest = valid.at(-1) || null;
+  // Keep every 4th reading (~4-hourly over 7 days) plus the latest.
+  const sampled = points.filter((_, i) => i % 4 === 0);
+  if (latest && sampled.at(-1) !== latest) sampled.push(latest);
+  return { station: series.name || caption, caption, points: sampled, latest, thresholds,
+    min: valid.length ? Math.min(...valid.map((p) => p.v)) : null, max: valid.length ? Math.max(...valid.map((p) => p.v)) : null };
+}
+
+function parseIntelligentGauges(html) {
+  return htmlTableRows(html)
+    .filter((r) => /^\d+\.?$/.test(r[0]) && /kuching|samarahan|serian/i.test(r[2] || ""))
+    .map((r) => ({ name: r[1], division: r[2], updated: r[3] || null, levelM: r[4] !== "" && r[4] != null ? Number(r[4]) : null,
+      alertM: r[5] ? Number(r[5]) : null, warningM: r[6] ? Number(r[6]) : null, dangerM: r[7] ? Number(r[7]) : null }));
+}
+
+async function loadWaterSupply() {
+  return cached("water-supply", 30 * 60 * 1000, async () => {
+    const chartUrl = `${IHYDRO_BASE}/graph/waterlevel-graph-single.jsp?station=101002`;
+    const igUrl = `${IHYDRO_BASE}/datatable/ig/latest-iglevel.jsp`;
+    const [chart, ig] = await Promise.allSettled([
+      fetchText(chartUrl, 20000, BROWSER_UA).then(parseIhydroChart),
+      fetchText(igUrl, 15000, BROWSER_UA).then(parseIntelligentGauges),
+    ]);
+    const intake = chart.status === "fulfilled" ? chart.value : null;
+    const gauges = ig.status === "fulfilled" ? ig.value : null;
+    return {
+      status: intake || gauges ? "live" : "unavailable",
+      updatedAt: nowIso(),
+      intake: intake ? { ...intake, url: chartUrl, note: "River level at the Batu Kitang intake reach (Sungai Sarawak). DID gauge, not a treatment-plant or supply reading." } : { status: "unavailable", url: chartUrl },
+      gauges: gauges ? { items: gauges, url: igUrl } : { status: "unavailable", url: igUrl },
+      utility: {
+        name: "Sarawak Water (formerly Kuching Water Board)",
+        status: "not-public",
+        url: "https://sarawakwater.com/",
+        note: "Supply-interruption notices and dam levels are not published in a machine-readable form; check the utility directly.",
+      },
+    };
+  }).catch(() => ({ status: "unavailable", updatedAt: nowIso() }));
+}
+
+// DOSM district population. The data.gov.my API index for population_district
+// is empty (checked 13 Oct 2026); DOSM's own CSV is current. Values in thousands.
+// Siburan was split from Serian from 2025 — Serian's drop is that split.
+const DOSM_DISTRICT_CSV = "https://storage.dosm.gov.my/population/population_district.csv";
+const DOSM_DISTRICTS = ["Kuching", "Samarahan", "Serian", "Siburan"];
+
+async function loadDistrictPopulation() {
+  return cached("dosm-districts", 24 * 60 * 60 * 1000, async () => {
+    const csv = await fetchText(DOSM_DISTRICT_CSV, 90000);
+    const latest = new Map();
+    for (const line of csv.split("\n")) {
+      if (!line.startsWith("Sarawak,")) continue;
+      const [, district, date, sex, age, ethnicity, population] = line.split(",");
+      if (!DOSM_DISTRICTS.includes(district) || sex !== "both" || age !== "overall" || ethnicity !== "overall") continue;
+      const prev = latest.get(district);
+      if (!prev || date > prev.date) latest.set(district, { date, population: Number(population) });
+    }
+    return DOSM_DISTRICTS.map((name) => {
+      const row = latest.get(name);
+      return row && Number.isFinite(row.population)
+        ? { name, status: "live", population: Math.round(row.population * 1000), year: row.date.slice(0, 4) }
+        : { name, status: "missing" };
+    });
+  }).catch(() => DOSM_DISTRICTS.map((name) => ({ name, status: "missing" })));
+}
+
+// Rain regime: is today's rain monsoon-driven, a tropical system, or local
+// convection? Rule-based and labelled as such. Inputs: JMA RSMC Tokyo active
+// cyclones, MetMalaysia's tropical-cyclone advisory, and Open-Meteo model
+// pressure + 850 hPa wind at Kuching and a South China Sea point.
+const KUCHING_LL = [1.55, 110.35];
+
+async function loadRainRegime() {
+  return cached("rain-regime", 60 * 60 * 1000, async () => {
+    const vecMean = (speeds, dirs) => {
+      let u = 0, v = 0, n = 0;
+      speeds.forEach((sp, i) => { if (sp == null || dirs[i] == null) return; const r = dirs[i] * Math.PI / 180; u += sp * Math.sin(r); v += sp * Math.cos(r); n += 1; });
+      if (!n) return null;
+      const dir = (Math.atan2(u / n, v / n) * 180 / Math.PI + 360) % 360;
+      const meanSpeed = speeds.filter((x) => x != null).reduce((a, b) => a + b, 0) / n;
+      return { speedMean: Math.round(meanSpeed * 10) / 10, dirMean: Math.round(dir) };
+    };
+    const [tcList, warnings, om] = await Promise.allSettled([
+      fetchJson("https://www.jma.go.jp/bosai/typhoon/data/targetTc.json", 12000),
+      fetchJson("https://api.data.gov.my/weather/warning/?limit=50", 12000),
+      fetchJson("https://api.open-meteo.com/v1/forecast?latitude=1.55,12.0&longitude=110.35,112.0&hourly=pressure_msl,wind_speed_850hPa,wind_direction_850hPa&wind_speed_unit=ms&past_days=2&forecast_days=1&timezone=Asia%2FKuching", 15000),
+    ]);
+    const cyclones = [];
+    if (tcList.status === "fulfilled" && Array.isArray(tcList.value)) {
+      for (const tc of tcList.value.slice(0, 6)) {
+        try {
+          const spec = await fetchJson(`https://www.jma.go.jp/bosai/typhoon/data/${tc.tropicalCyclone}/specifications.json`, 12000);
+          const now = (Array.isArray(spec) ? spec : []).find((x) => x?.position?.deg);
+          if (!now) continue;
+          const [lat, lon] = now.position.deg;
+          cyclones.push({ id: tc.tropicalCyclone, name: `TC ${tc.typhoonNumber || tc.tropicalCyclone}`, category: now.category?.en || tc.category, lat, lon,
+            pressureHpa: Number(now.pressure) || null, validTime: now.validtime?.UTC || null, distanceKm: Math.round(kmBetween(KUCHING_LL[0], KUCHING_LL[1], lat, lon)) });
+        } catch { /* skip one cyclone */ }
+      }
+    }
+    const advisory = warnings.status === "fulfilled" && Array.isArray(warnings.value)
+      ? warnings.value.find((w) => /tropical cyclone|ribut tropika|no advisory/i.test(`${w?.warning_issue?.title_en} ${w?.text_en}`)) : null;
+    const point = (i) => {
+      const loc = om.status === "fulfilled" ? (Array.isArray(om.value) ? om.value[i] : i === 0 ? om.value : null) : null;
+      const h = loc?.hourly;
+      if (!h?.time?.length) return null;
+      const nowIdx = h.time.findIndex((t) => Date.parse(`${t}:00+08:00`) > Date.now()) - 1;
+      const end = nowIdx > 24 ? nowIdx : h.time.length - 1;
+      const last24 = (arr) => arr.slice(Math.max(0, end - 23), end + 1);
+      const prev24 = (arr) => arr.slice(Math.max(0, end - 47), Math.max(0, end - 23));
+      const mean = (arr) => { const v = arr.filter((x) => x != null); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length * 10) / 10 : null; };
+      const m1 = mean(last24(h.pressure_msl)), m0 = mean(prev24(h.pressure_msl));
+      return { mslMean24: m1, mslChange24: m1 != null && m0 != null ? Math.round((m1 - m0) * 10) / 10 : null,
+        wind850: vecMean(last24(h.wind_speed_850hPa), last24(h.wind_direction_850hPa)), asOf: h.time[end] };
+    };
+    const kuching = point(0), scs = point(1);
+    const inputsOk = (tcList.status === "fulfilled" || warnings.status === "fulfilled") && kuching && scs;
+    const month = Number(new Date(Date.now() + 8 * 3600000).toISOString().slice(5, 7));
+    const result = inputsOk
+      ? classifyRainRegime({ month, cyclones, mmdAdvisory: advisory ? (advisory.warning_issue?.title_en || advisory.heading_en) : null, kuching, scs })
+      : { label: "unknown", confidence: null, evidence: ["One or more inputs unreachable"] };
+    return {
+      status: inputsOk ? "live" : "partial",
+      updatedAt: nowIso(),
+      ...result,
+      inputs: { kuching, scs, cyclones, mmdAdvisory: advisory ? { title: advisory.warning_issue?.title_en, text: advisory.text_en, issued: advisory.warning_issue?.issued } : null },
+      method: "Rule-based (not a published algorithm): MetMalaysia TC advisory + JMA RSMC Tokyo positions; 24 h mean 850 hPa wind at Kuching and 12°N 112°E (NE ≥8 m/s from 0–90°, SW ≥5 m/s from 200–270°); calm (<5 m/s) = local convection. Model winds are Open-Meteo, not observations.",
+      sources: [
+        { name: "JMA RSMC Tokyo", url: "https://www.jma.go.jp/bosai/map.html#contents=typhoon" },
+        { name: "MetMalaysia (data.gov.my)", url: "https://api.data.gov.my/weather/warning/" },
+        { name: "Open-Meteo", url: "https://open-meteo.com/" },
+      ],
+    };
+  }).catch(() => ({ status: "unavailable", label: "unknown", updatedAt: nowIso(), evidence: [] }));
+}
+
+// Who covers this place: MPP's published 2026 maintenance zones and the
+// Trienekens refuse schedule. Company names and published area text only —
+// contact persons and phone numbers (mostly personal mobiles) are dropped.
+const PHONE_RE = /(?:HP\s*[:.]?\s*)?\(?\b0\d{1,3}[-\s]?\d{6,8}\b\)?/gi;
+const scrubContact = (text) => String(text || "").replace(PHONE_RE, "").replace(/\s*;\s*$/, "").replace(/\s{2,}/g, " ").trim();
+
+function parseMppDrainZones(html) {
+  return htmlTableRows(html).filter((r) => /^\d+$/.test(r[0]) && /^PH\d+/i.test(r[1] || "")).map((r) => {
+    const zone = /^(PH\d+)/i.exec(r[1])[1].toUpperCase();
+    const areas = (/\((.*)\)/s.exec(r[1])?.[1] || r[1].replace(zone, "")).split(/,|;/).map((a) => a.trim()).filter(Boolean);
+    return { zone, service: "drains-grass-sweeping", areas, contractor: scrubContact(r[2]) };
+  });
+}
+
+function parseMppTreeZones(html) {
+  return htmlTableRows(html).filter((r) => /^[TL]\d+$/i.test(r[0] || "")).map((r) => ({
+    zone: r[0].toUpperCase(), service: "trees-landscape",
+    areas: [scrubContact(r[1]).slice(0, 600)], contractor: scrubContact(String(r[2] || "").split(";")[0]),
+  }));
+}
+
+function parseMppRefuseCodes(html) {
+  return htmlTableRows(html).filter((r) => /^(PHH|PSC)\s?\S+/i.test(r[0] || "")).map((r) => ({
+    zone: r[0].replace(/\s+/g, " ").trim(), service: "refuse", areas: [scrubContact(r[1]).slice(0, 600)], days: r[2] || null, contractor: "Trienekens",
+  }));
+}
+
+async function loadMppCoverage() {
+  return cached("mpp-coverage", 12 * 60 * 60 * 1000, async () => {
+    const page = (id) => `${MPP_BASE}/web/subpage/webpage_view/${id}`;
+    const [drain, trees, refuse] = await Promise.allSettled([
+      fetchText(page(258), 15000).then(parseMppDrainZones),
+      fetchText(page(257), 15000).then(parseMppTreeZones),
+      fetchText(page(245), 15000).then(parseMppRefuseCodes),
+    ]);
+    const pick = (r, id) => (r.status === "fulfilled" && r.value.length ? { status: "live", url: page(id), items: r.value } : { status: "unavailable", url: page(id), items: [] });
+    const out = { updatedAt: nowIso(), drain: pick(drain, 258), trees: pick(trees, 257), refuse: pick(refuse, 245) };
+    out.status = [out.drain, out.trees, out.refuse].some((x) => x.status === "live") ? "live" : "unavailable";
+    out.note = "Zones are MPP's own, not ward-aligned. Names only; contact numbers withheld — call MPP 082-615566 or use Talikhidmat.";
+    return out;
+  }).catch(() => ({ status: "unavailable", updatedAt: nowIso() }));
+}
+
+// JKM InfoBencana: open relief centres (PPS) for Sarawak, filtered to the
+// Greater Kuching districts. The only verified public pin source with
+// coordinates (13 Oct 2026). Empty list = no centre open, which is good news.
+async function loadReliefCentres() {
+  return cached("jkm-pps", 15 * 60 * 1000, async () => {
+    const url = "https://infobencanajkmv2.jkm.gov.my/api/pusat-buka.php?a=13&b=0";
+    const data = await fetchJson(url, 15000, BROWSER_UA);
+    const points = Array.isArray(data?.points) ? data.points : null;
+    if (!points) throw new Error("bad shape");
+    const local = points.filter((p) => /kuching|samarahan|serian|siburan|padawan|bau/i.test(`${p.daerah} ${p.mukim}`))
+      .map((p) => ({ id: p.id, name: p.name, lat: Number(p.latti), lon: Number(p.longi), district: p.daerah, disaster: p.bencana,
+        evacuees: Number(p.mangsa) || 0, families: Number(p.keluarga) || 0, capacity: Number(p.kapasiti) || null }))
+      .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon));
+    return { status: "live", updatedAt: nowIso(), url: "https://infobencanajkmv2.jkm.gov.my/", sarawakOpen: points.length, items: local };
+  }).catch(() => ({ status: "unavailable", updatedAt: nowIso(), url: "https://infobencanajkmv2.jkm.gov.my/", items: [] }));
 }
 
 async function loadCityReports() {
   return cached("cityReports", 300_000, async () => {
     const supabaseUrl = process.env.CITY_REPORTER_SUPABASE_URL;
     const supabaseKey = process.env.CITY_REPORTER_SUPABASE_KEY;
-    if (!supabaseUrl || !supabaseKey) return buildCityReportsDemoData();
+    if (!supabaseUrl || !supabaseKey) return cityReportsNotConnected();
 
     const qUrl = `${supabaseUrl}/rest/v1/reports?latitude=gte.1.15&latitude=lte.1.85&longitude=gte.109.9&longitude=lte.110.7&select=id,ticket_number,timestamp,problem_type,description,ai_summary,latitude,longitude,urgency,status,location_text&order=timestamp.desc&limit=50`;
     const resp = await fetchWithTimeout(qUrl, {
@@ -3990,7 +4215,7 @@ async function loadCityReports() {
     }, 8000);
     if (!resp.ok) throw new Error(`City Reporter Supabase ${resp.status}`);
     const rows = await resp.json();
-    if (!Array.isArray(rows) || rows.length === 0) return buildCityReportsDemoData();
+    if (!Array.isArray(rows) || rows.length === 0) return { ...cityReportsNotConnected("live"), note: "Feed connected; no reports in the Kuching area." };
 
     const recent = rows.slice(0, 5).map((r) => ({
       id: r.id,
@@ -4014,7 +4239,7 @@ async function loadCityReports() {
       recent,
       updatedAt: nowIso(),
     };
-  }).catch(() => buildCityReportsDemoData());
+  }).catch(() => cityReportsNotConnected("offline"));
 }
 
 // IOC 2.0 — AlphaEarth growth-ring change overlay. Read the newest
@@ -4057,7 +4282,7 @@ async function buildDashboard() {
     padawanZoning, trends, govStats,
     infobanjirRaw, apims, ckanHarvest, exchange, metWarnings, floodForecast,
     mppCouncillors, mppLocalities, forecast, alphaEarth, imperviousData, cityReports,
-    mppService,
+    mppService, waterSupply, rainRegime, mppCoverage, reliefCentres, dosmDistricts,
   ] = await Promise.all([
     loadWeather(),
     loadAirQuality(),
@@ -4082,6 +4307,11 @@ async function buildDashboard() {
     loadImperviousData(),
     loadCityReports(),
     loadMppServiceLedger(),
+    loadWaterSupply(),
+    loadRainRegime(),
+    loadMppCoverage(),
+    loadReliefCentres(),
+    loadDistrictPopulation(),
   ]);
 
   // Catchment enrichment compounds Infobanjir + OSM drainage. Pure post-process,
@@ -4112,7 +4342,11 @@ async function buildDashboard() {
     fires,
     quakes,
     mppService,
-    govStats: { latestSarawakPop: govStats.dosm.latestSarawakPop, year: govStats.dosm.year, datasetCount: govStats.sarawak.datasetCount, updatedAt: govStats.updatedAt, districts: govStats.dosm.districts || [] },
+    waterSupply,
+    rainRegime,
+    mppCoverage,
+    reliefCentres,
+    govStats: { latestSarawakPop: govStats.dosm.latestSarawakPop, year: govStats.dosm.year, datasetCount: govStats.sarawak.datasetCount, updatedAt: govStats.updatedAt, districts: dosmDistricts },
     sarawakStats: govStats.sarawak,
     openDosmStats: govStats.dosm,
     metWarnings,
@@ -4232,6 +4466,10 @@ async function buildDashboard() {
       sourceRecord("google-news-zh", "Google News RSS / Chinese", news.laneStatus?.find((lane) => lane.id === "kuching-press-zh")?.status || news.status, "Chinese media lane so operators do not go blind to the Mandarin conversation.", NEWS_FEEDS.find((feed) => feed.id === "kuching-press-zh")?.url || "https://news.google.com/rss", generatedAt),
       sourceRecord("mbks-news", "MBKS News Collections", news.status, "Official MBKS municipal news lane.", "https://mbks.sarawak.gov.my/web/subpage/news_list/", generatedAt),
       sourceRecord("mpp-announcements", "MPP Announcement List", news.status, "Official MPP announcement lane.", "https://mpp.sarawak.gov.my/web/subpage/announcement_list/", generatedAt),
+      sourceRecord("ihydro-intake", "DID iHYDRO · Batu Kitang intake reach + Intelligent Gauges", waterSupply.status === "live" ? "official" : "offline", "7-day river level at the Batu Kitang intake reach with DID thresholds; Kuching urban flash-flood gauges. Sarawak Water notices are not machine-readable.", waterSupply.intake?.url || IHYDRO_BASE, waterSupply.updatedAt || generatedAt),
+      sourceRecord("rain-regime", "Rain regime (JMA + MetMalaysia + Open-Meteo)", rainRegime.status === "live" ? "live" : "offline", "Rule-based monsoon / tropical system / local convection label with its evidence. Not an official MetMalaysia classification.", "https://www.jma.go.jp/bosai/map.html#contents=typhoon", rainRegime.updatedAt || generatedAt),
+      sourceRecord("mpp-coverage", "MPP maintenance zones + refuse schedule", mppCoverage.status === "live" ? "official" : "offline", "Who covers which area: drains/grass, trees and Trienekens refuse zones from MPP's pages. Names only.", "https://mpp.sarawak.gov.my/web/subpage/webpage_view/258", mppCoverage.updatedAt || generatedAt),
+      sourceRecord("jkm-pps", "JKM InfoBencana · open relief centres", reliefCentres.status === "live" ? "official" : "offline", `Open PPS in Greater Kuching districts: ${reliefCentres.items?.length ?? "—"} (Sarawak-wide: ${reliefCentres.sarawakOpen ?? "—"}).`, reliefCentres.url, reliefCentres.updatedAt || generatedAt),
       sourceRecord("mpp-service-ledger", "MPP Client Charter + service lists", mppService.status, "Quarterly charter achievement, active tenders (count/dates only; titles are images), Grade-A food premises, refuse zones, parks, night markets.", mppService.charter?.url || "https://mpp.sarawak.gov.my/", mppService.updatedAt || generatedAt),
       sourceRecord("dbku-news", "DBKU News Release", news.status, "Official DBKU news release lane.", "https://dbku.sarawak.gov.my/modules/web/pages.php?mod=news&menu_id=0&sub_id=266", generatedAt),
       sourceRecord(

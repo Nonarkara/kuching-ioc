@@ -191,6 +191,10 @@ export const URBAN_LAYERS = [
   { id: "mpp_wards", label: "MPP Wards (Governance)", type: "geojson", url: "/api/layers/mpp_wards", color: "#a78bfa", active: false },
   { id: "growth", label: "Growth 2017→24 (AlphaEarth)", type: "image", color: "#f59e0b", active: false },
   { id: "impervious", label: "Impervious Surface 2024 (AlphaEarth)", type: "image", color: "#f59e0b", active: false },
+  // Live weather tiles, fetched by the browser (both are keyless and CORS-open).
+  // RainViewer requires the visible credit; GIBS Himawari lags ~40 min.
+  { id: "rain_radar", label: "Rain radar (RainViewer)", type: "tile", color: "#38bdf8", active: false },
+  { id: "himawari_ir", label: "Himawari-9 infrared", type: "tile", color: "#e5e7eb", active: false },
 ];
 
 // ILLUSTRATIVE — NOT A COUNCIL RECORD. Audit 29 Sep 2026: none of these
@@ -286,18 +290,22 @@ export const CCTV_FEEDS = [
   { id: "cam-airport", label: "KCH Airport Road", feedUrl: "https://cctv.sarawak.gov.my/feed/kch", status: "degraded", condition: "Intermittent feed" }
 ];
 
+// Sourced 13 Oct 2026. Only what the cited reporting states — no year-by-year
+// phase split (none is published) and no route detail beyond the stated ends.
 export const RIVER_BYPASS_PROJECT = {
-  name: "Sarawak River Bypass Channel",
-  budget: "RM 2.48 billion",
-  anchor: "Batu Kawa → Salak River (South China Sea)",
-  lengthKm: 8,
+  name: "Sungai Sarawak Bypass (Rancangan Tebatan Banjir Bandaraya Kuching Fasa 2)",
+  budget: "RM 2.48 billion federal approval",
+  anchor: "Batu Kawa → Sungai Salak",
+  lengthKm: "6–8",
   phases: [
-    { id: 1, label: "Design & Land Acquisition", period: "2025–2026", status: "active" },
-    { id: 2, label: "Main Excavation & Lining", period: "2027–2030", status: "planned" },
-    { id: 3, label: "Commissioning & Handover", period: "2031–2033", status: "planned" },
+    { id: 1, label: "Phase 1 · 2 km at the Salak end", period: "built", status: "done" },
+    { id: 2, label: "Next phase · design, tender pending", period: "DID 2027–2033", status: "active" },
   ],
-  benefit: "Diverts 60% excess Sarawak River flow, protecting Batu Kawa, Matang, and Kuching South.",
-  batu_kawa_mitigation: { budget: "RM 58.5M", ponds: 4, targetHa: 58, completion: 2027 },
+  benefit: "Up to 60% of Sungai Sarawak flood flow diverted, per Deputy Premier Dr Sim (Feb 2026). Length reported as 8 km (Jan 2026) and 6 km (Feb 2026).",
+  sources: [
+    { name: "DayakDaily, 12 Jan 2026", url: "https://dayakdaily.com/sarawak-river-bypass-crucial-to-long-term-flood-mitigation-for-batu-kawa-surrounding-areas/" },
+    { name: "Borneo Post, 22 Feb 2026", url: "https://www.theborneopost.com/2026/02/22/batu-kawa-flood-mitigation-projects-to-be-completed-by-next-year-says-dr-sim/" },
+  ],
 };
 
 // i18n translations
@@ -349,6 +357,20 @@ export const TRANSLATIONS = {
     gaugeNormal: "Normal", gaugeAlert: "Alert", gaugeWarning: "Warning", gaugeDanger: "Danger",
     briefNext: "Watch next 6 hours",
     briefBlind: "Gaps in the picture",
+    trayCoverage: "Who covers", waterRelief: "Water supply & relief centres", waterReliefSub: "Batu Kitang intake · DID gauges · JKM",
+    intakeReach: "Batu Kitang intake reach · Sg. Sarawak", intakeNote: "River level where the Batu Kitang plant draws water (DID gauge). Not a supply or treatment reading.",
+    band_normal: "Normal", band_alert: "Alert", band_warning: "Warning", band_danger: "Danger", feedUnavailable: "Source unreachable right now — no reading shown.",
+    igGauges: "Kuching urban flash-flood gauges", igNote: "0.00 m = dry", waterUtility: "Sarawak Water notices",
+    utilityNotPublic: "Supply interruptions and dam levels are not published in a machine-readable form. Check Sarawak Water directly.",
+    reliefCentres: "Relief centres open (JKM PPS)", reliefNone: "No relief centre open in Greater Kuching.", reliefElsewhere: "open elsewhere in Sarawak",
+    rainRegime: "What kind of rain?", conf_high: "high confidence", conf_medium: "medium confidence", conf_low: "low confidence",
+    regime_depression: "Tropical system nearby", regime_monsoon_ne: "Northeast monsoon pattern", regime_monsoon_sw: "Southwest monsoon pattern",
+    regime_local: "Local convection — afternoon storms", regime_unknown: "Can't tell from today's data", regimeMethod: "How this is decided", metRadar: "MetMalaysia Borneo radar",
+    covRefuse: "refuse zones", covDrain: "drain & grass zones", covTrees: "tree & landscape zones", covSearch: "Type a taman, kampung, jalan or zone code",
+    covNote: "MPP's own 2026 zones and the Trienekens schedule. Not ward-aligned; contact numbers withheld — call MPP 082-615566 or use Talikhidmat.",
+    covHint: "Type at least 3 letters to see refuse days and the responsible contractor.", covNone: "No published zone lists that name. Try a shorter spelling.",
+    crNotConnected: "No citizen report feed is connected yet. MPP complaints go through",
+    rain_radar: "Rain radar", himawari_ir: "Himawari IR",
     newsSaying: "What people are saying", newsDigestSub: "headlines & language lanes", groundPulse: "Ground pulse", groundPulseSub: "what the field is reporting",
     citizenReportsSub: "field reports & work orders", environmentSub: "weather, air & ground signals", officialDataPulse: "Official data pulse", officialDataPulseSub: "agency updates & provenance", moreDetail: "More detail · councillors, stations, flights",
     posture_stable: "Calm", "posture_steady-watch": "Keep watching", posture_watch: "Stay alert", posture_stretched: "Under pressure",
@@ -425,6 +447,20 @@ export const TRANSLATIONS = {
     gaugeNormal: "Normal", gaugeAlert: "Waspada", gaugeWarning: "Amaran", gaugeDanger: "Bahaya",
     briefNext: "Perhatikan 6 jam akan datang",
     briefBlind: "Kekurangan maklumat",
+    trayCoverage: "Siapa urus", waterRelief: "Bekalan air & pusat pemindahan", waterReliefSub: "Muka sauk Batu Kitang · tolok JPS · JKM",
+    intakeReach: "Muka sauk Batu Kitang · Sg. Sarawak", intakeNote: "Paras sungai di tempat loji Batu Kitang mengambil air (tolok JPS). Bukan bacaan bekalan atau rawatan.",
+    band_normal: "Normal", band_alert: "Waspada", band_warning: "Amaran", band_danger: "Bahaya", feedUnavailable: "Sumber tidak dapat dicapai sekarang — tiada bacaan ditunjukkan.",
+    igGauges: "Tolok banjir kilat bandar Kuching", igNote: "0.00 m = kering", waterUtility: "Notis Sarawak Water",
+    utilityNotPublic: "Gangguan bekalan dan paras empangan tidak diterbitkan dalam bentuk boleh baca mesin. Semak terus dengan Sarawak Water.",
+    reliefCentres: "Pusat pemindahan dibuka (PPS JKM)", reliefNone: "Tiada pusat pemindahan dibuka di Kuching Raya.", reliefElsewhere: "dibuka di tempat lain di Sarawak",
+    rainRegime: "Jenis hujan apa?", conf_high: "keyakinan tinggi", conf_medium: "keyakinan sederhana", conf_low: "keyakinan rendah",
+    regime_depression: "Sistem tropika berhampiran", regime_monsoon_ne: "Corak monsun timur laut", regime_monsoon_sw: "Corak monsun barat daya",
+    regime_local: "Perolakan setempat — ribut petang", regime_unknown: "Tidak dapat dipastikan dari data hari ini", regimeMethod: "Cara ini ditentukan", metRadar: "Radar Borneo MetMalaysia",
+    covRefuse: "zon sampah", covDrain: "zon longkang & rumput", covTrees: "zon pokok & landskap", covSearch: "Taip nama taman, kampung, jalan atau kod zon",
+    covNote: "Zon 2026 MPP sendiri dan jadual Trienekens. Tidak sejajar dengan wad; nombor telefon tidak dipaparkan — hubungi MPP 082-615566 atau Talikhidmat.",
+    covHint: "Taip sekurang-kurangnya 3 huruf untuk melihat hari kutipan sampah dan kontraktor bertanggungjawab.", covNone: "Tiada senarai zon yang menyebut nama itu. Cuba ejaan lebih pendek.",
+    crNotConnected: "Belum ada suapan laporan rakyat disambungkan. Aduan MPP melalui",
+    rain_radar: "Radar hujan", himawari_ir: "Himawari IR",
     newsSaying: "Apa kata orang ramai", newsDigestSub: "tajuk berita & lorong bahasa", groundPulse: "Denyut lapangan", groundPulseSub: "apa yang dilaporkan di lapangan",
     citizenReportsSub: "laporan lapangan & arahan kerja", environmentSub: "cuaca, udara & isyarat tanah", officialDataPulse: "Denyut data rasmi", officialDataPulseSub: "kemas kini agensi & sumber", moreDetail: "Butiran lanjut · ahli majlis, stesen, penerbangan",
     posture_stable: "Tenang", "posture_steady-watch": "Terus pantau", posture_watch: "Berjaga-jaga", posture_stretched: "Di bawah tekanan",
@@ -501,6 +537,20 @@ export const TRANSLATIONS = {
     gaugeNormal: "正常", gaugeAlert: "警戒", gaugeWarning: "警告", gaugeDanger: "危险",
     briefNext: "未来6小时留意",
     briefBlind: "信息缺口",
+    trayCoverage: "谁负责", waterRelief: "供水与疏散中心", waterReliefSub: "Batu Kitang 取水口 · 水利灌溉局水位站 · 福利局",
+    intakeReach: "Batu Kitang 取水河段 · 砂拉越河", intakeNote: "Batu Kitang 水厂取水处的河流水位（水利灌溉局水位站）。不是供水或净水读数。",
+    band_normal: "正常", band_alert: "警戒", band_warning: "警告", band_danger: "危险", feedUnavailable: "暂时无法连接数据源——不显示读数。",
+    igGauges: "古晋市区暴洪水位计", igNote: "0.00 m = 无积水", waterUtility: "砂拉越水务公告",
+    utilityNotPublic: "停水通知与水坝水位没有以机器可读形式公开。请直接查询砂拉越水务。",
+    reliefCentres: "已开放的疏散中心（福利局 PPS）", reliefNone: "大古晋目前没有开放疏散中心。", reliefElsewhere: "个在砂拉越其他地区开放",
+    rainRegime: "这是什么类型的雨？", conf_high: "高可信度", conf_medium: "中等可信度", conf_low: "低可信度",
+    regime_depression: "附近有热带气旋系统", regime_monsoon_ne: "东北季风型", regime_monsoon_sw: "西南季风型",
+    regime_local: "局部对流——午后雷雨", regime_unknown: "今天的数据无法判断", regimeMethod: "判断方法", metRadar: "大马气象局婆罗洲雷达",
+    covRefuse: "垃圾收集区", covDrain: "排水与割草区", covTrees: "树木与园林区", covSearch: "输入花园、甘榜、路名或区号",
+    covNote: "MPP 自己的 2026 年分区与 Trienekens 收集时间表。与选区不对应；不显示联系电话——请致电 MPP 082-615566 或使用 Talikhidmat。",
+    covHint: "至少输入 3 个字母，查看垃圾收集日和负责承包商。", covNone: "没有分区名单提到这个地名。请尝试更短的拼写。",
+    crNotConnected: "尚未接入市民投诉数据。MPP 投诉请通过",
+    rain_radar: "降雨雷达", himawari_ir: "向日葵卫星红外",
     newsSaying: "民众在说什么", newsDigestSub: "头条与语言频道", groundPulse: "基层脉搏", groundPulseSub: "现场正在报告的情况",
     citizenReportsSub: "现场报告与工单", environmentSub: "天气、空气与地面信号", officialDataPulse: "官方数据动态", officialDataPulseSub: "机构更新与数据来源", moreDetail: "更多详情 · 议员、测站、航班",
     posture_stable: "平稳", "posture_steady-watch": "持续留意", posture_watch: "保持警惕", posture_stretched: "承受压力",

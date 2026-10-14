@@ -3,23 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/png" href="./assets/brand/app-icon-192.png?v=fed614432bf9-153109" />
-    <link rel="apple-touch-icon" href="./assets/brand/apple-touch-icon.png?v=fed614432bf9-153109" />
+    <link rel="icon" type="image/png" href="./assets/brand/app-icon-192.png?v=f20ea62d320d-055227" />
+    <link rel="apple-touch-icon" href="./assets/brand/apple-touch-icon.png?v=f20ea62d320d-055227" />
     <link rel="manifest" href="./manifest.json" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Kuching IOC" />
-    <link rel="mask-icon" href="./favicon.svg?v=fed614432bf9-153109" color="#1f4e79" />
+    <link rel="mask-icon" href="./favicon.svg?v=f20ea62d320d-055227" color="#1f4e79" />
     <meta name="theme-color" content="#f6f5f2" />
     <title>Greater Kuching IOC</title>
     <meta name="description" content="Greater Kuching Intelligent Operation Center — a municipal command surface for Secretary Daniel Goh, MPP." />
     <!-- Typography per 25 Sep 2026 decision: Helvetica + Georgia system stacks.
          No Google Fonts request — no third-party font leak, tokens in styles.css. -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="" />
-    <link rel="stylesheet" href="./styles.css?v=fed614432bf9-153109" />
-    <link rel="stylesheet" href="./brand.css?v=fed614432bf9-153109" />
+    <link rel="stylesheet" href="./styles.css?v=f20ea62d320d-055227" />
+    <link rel="stylesheet" href="./brand.css?v=f20ea62d320d-055227" />
+    <link rel="stylesheet" href="./reading.css?v=f20ea62d320d-055227" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin=""></script>
-    <script>window.__IOC_BOOT__ = {"version":"0.2.0","assetVersion":"fed614432bf9-153109","builtAt":"2026-10-11T15:31:43.305Z","deploymentMode":"pages-static","boardLabel":"SNAPSHOT BOARD","pagesUrl":"https://kuching.nonarkara.org/","liveUrl":"https://kuching.nonarkara.org/"};</script>
+    <script>window.__IOC_BOOT__ = {"version":"0.2.0","assetVersion":"f20ea62d320d-055227","builtAt":null,"deploymentMode":"live-service","boardLabel":"LIVE BOARD","pagesUrl":"https://kuching.nonarkara.org/","liveUrl":"https://kuching.nonarkara.org/"};</script>
   </head>
   <body>
     <div class="dashboard-shell">
@@ -91,20 +92,25 @@
           <div class="brief-kicker" data-i18n="briefNow">Do this today</div>
           <div id="briefNow" class="brief-list"></div>
         </article>
-        <article class="brief-card" data-tone="watch">
-          <div class="brief-kicker" data-i18n="briefNext">Watch next 6 hours</div>
+        <details class="brief-card brief-disclosure" data-tone="watch">
+          <summary class="brief-kicker" data-i18n="briefNext">Watch next 6 hours</summary>
           <div id="briefNext" class="brief-list"></div>
-        </article>
-        <article class="brief-card" data-tone="blind">
-          <div class="brief-kicker" data-i18n="briefBlind">Gaps in the picture</div>
+        </details>
+        <details class="brief-card brief-disclosure" data-tone="blind" open>
+          <summary class="brief-kicker" data-i18n="briefBlind">Gaps in the picture</summary>
           <div id="briefBlind" class="brief-list"></div>
-        </article>
+        </details>
+        <details class="brief-card brief-disclosure">
+          <summary class="brief-kicker" data-i18n="briefEvidence">Supporting directives · original language</summary>
+          <div id="briefEvidence" class="brief-list"></div>
+        </details>
       </section>
 
       <!-- INSIGHTS · what the data says (computed connections, not decoration) -->
-      <section id="insightsBar" class="insights-bar" aria-label="Insights">
+      <details id="insightsBar" class="insights-bar">
+        <summary class="brief-kicker" data-i18n="briefInsights">Connections · supporting evidence</summary>
         <div class="insights-bar-inner"></div>
-      </section>
+      </details>
 
         <aside class="panel news-rail" aria-label="What people are saying">
           <div class="panel-head">
@@ -113,7 +119,7 @@
           </div>
           <div class="panel-inner">
             <div id="newsIntakePanel" class="sentiment-panel"></div>
-            <details class="rail-disclosure" open>
+            <details class="rail-disclosure">
               <summary class="rail-disclosure-summary"><span data-i18n="newsDigest">News digest</span><span data-i18n="newsDigestSub">headlines &amp; language lanes</span></summary>
               <div id="newsDigest" class="news-digest rail-disclosure-body"></div>
             </details>
@@ -138,6 +144,24 @@
             <div class="map-controls">
               <div id="layerToggle" class="segmented-control"></div>
             </div>
+          </div>
+          <div class="building-tools">
+            <div class="building-buttons">
+              <button id="buildingsToggle" type="button" aria-pressed="false" disabled>3D buildings · pilot</button>
+              <button id="buildingsFocus" type="button" disabled>Focus pilot</button>
+              <a id="arnisDownload" href="./data/buildings/kota-padawan-arnis.zip" download>Download Arnis world</a>
+            </div>
+            <p id="buildingsStatus" role="status" aria-live="polite"></p>
+            <details id="buildingsDetails">
+              <summary data-i18n="buildingsEvidence">Buildings · coverage &amp; sources</summary>
+              <p id="arnisWorldNote"></p>
+              <p id="buildingsDataDates"></p>
+              <p data-i18n="buildingsCoverage">Pilot only, not all Padawan. Footprints may be incomplete; default 6 m heights are estimates. No flood-depth simulation.</p>
+              <a href="./data/buildings/manifest.json" target="_blank" rel="noopener" data-i18n="buildingsManifest">Building data manifest</a>
+              <a href="./data/buildings/world-manifest.json" target="_blank" rel="noopener" data-i18n="arnisManifest">Arnis world manifest</a>
+            </details>
+            <p id="buildingSelection" hidden></p>
+            <a id="buildingsAttribution" href="https://docs.overturemaps.org/attribution/" target="_blank" rel="noopener">© OpenStreetMap contributors, Overture Maps Foundation</a>
           </div>
           <div class="map-frame" data-dim="2d">
             <div id="mapCanvas" class="map-canvas"></div>
@@ -167,9 +191,11 @@
               <button type="button" role="tab" class="tray-tab" data-pane="growth" aria-selected="false" data-i18n="trayGrowth">Growth vs drains</button>
               <button type="button" role="tab" class="tray-tab" data-pane="localities" aria-selected="false" data-i18n="trayLocalities">525 localities</button>
               <button type="button" role="tab" class="tray-tab" data-pane="economy" aria-selected="false" data-i18n="trayEconomy">Economy · pulse</button>
+              <button type="button" role="tab" class="tray-tab" data-pane="coverage" aria-selected="false" data-i18n="trayCoverage">Who covers</button>
               <button type="button" role="tab" class="tray-tab" data-pane="sources" aria-selected="false" data-i18n="traySources">Sources</button>
             </div>
             <div class="tray-pane" role="tabpanel" data-pane="outlook">
+      <section id="rainRegime" class="rain-regime" aria-live="polite"></section>
       <section id="deltaStrip" class="delta-strip" data-empty="true">
         <div class="delta-stamp">DELTA //</div>
         <div id="deltaSince" class="delta-since"></div>
@@ -261,6 +287,9 @@
       </section>
 
             </div>
+            <div class="tray-pane" role="tabpanel" data-pane="coverage" hidden>
+      <section id="coveragePanel" class="coverage-panel"></section>
+            </div>
             <div class="tray-pane" role="tabpanel" data-pane="sources" hidden>
         <section class="panel source-panel">
           <div class="panel-head">
@@ -292,6 +321,11 @@
               <div class="section-label" data-i18n="directives">What to do</div>
               <div id="operationList" class="operation-list"></div>
             </div>
+
+            <details class="rail-disclosure">
+              <summary class="rail-disclosure-summary"><span data-i18n="waterRelief">Water supply &amp; relief centres</span><span data-i18n="waterReliefSub">Batu Kitang intake · DID gauges · JKM</span></summary>
+              <div id="waterSupply" class="water-supply rail-disclosure-body"></div>
+            </details>
 
             <details class="rail-disclosure">
               <summary class="rail-disclosure-summary"><span data-i18n="citizenReports">Citizen reports</span><span data-i18n="citizenReportsSub">field reports &amp; work orders</span></summary>
@@ -390,8 +424,8 @@
         </footer>
       </div>
     </div>
-    <script src="./app.js?v=fed614432bf9-153109" type="module"></script>
-    <script src="./web-app.js?v=fed614432bf9-153109" type="module"></script>
+    <script src="./app.js?v=f20ea62d320d-055227" type="module"></script>
+    <script src="./web-app.js?v=f20ea62d320d-055227" type="module"></script>
 
     <!-- Visitor beacon removed 28 Sep 2026: the Apps Script endpoint returned
          401 (collecting nothing) while still egressing visitor IP/geo to

@@ -77,7 +77,8 @@ function fakeCesium() {
   class Source {constructor(){this.entities={items:[],add:e=>{this.entities.items.push(e);return e;}};this.show=true;}}
   return {CustomDataSource:Source,PolygonHierarchy:class {constructor(outer,holes=[]){this.positions=outer;this.holes=holes;}},
     Cartesian3:{fromDegreesArray:a=>a,fromDegrees:(lon,lat,h=0)=>[lon,lat,h]},Color:{fromCssColorString:x=>x},
-    BoundingSphere:{fromRectangle3D:r=>r},Rectangle:{fromDegrees:(...v)=>v},
+    BoundingSphere:class { constructor(center, radius){ this.center=center; this.radius=radius; } static fromRectangle3D(r){ return r; } },
+    Rectangle:{fromDegrees:(...v)=>v},
     HeadingPitchRange:class {},Math:{toRadians:x=>x*Math.PI/180},
     ScreenSpaceEventHandler:class {setInputAction(){}},ScreenSpaceEventType:{LEFT_CLICK:1}};
 }
@@ -93,7 +94,7 @@ test('building toggle uses a separate source, survives refreshes and preserves 2
     attribution:'© OpenStreetMap contributors',
     assembly:{osmId:1357531465,lat:1.5618153,lon:110.3479024,name:'Dewan Undangan Negeri Sarawak',model:'dun-sarawak.glb'}};
   const viewer={entities:{removeAll:()=>operationalClears++},dataSources:{add:async s=>dataSources.push(s)},
-    camera:{flyToBoundingSphere:()=>frames++},scene:{canvas:{},requestRender(){},pick:()=>null}};
+    camera:{flyToBoundingSphere:()=>frames++},scene:{canvas:{},requestRender(){},pick:()=>null,globe:{tilesLoaded:true}}};
   globalThis.fetch=async url=>{requests++;
     if (url.includes('.json.gz')) return {ok:true,arrayBuffer:async()=>gzipSync(Buffer.from(JSON.stringify(tile)))};
     return {ok:true,json:async()=>url.includes('world-manifest')?
@@ -159,6 +160,8 @@ test('city tiles cover Padawan and Greater Kuching within the first-view budget'
   const css = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
   assert.match(css, /max-height:\s*48px/);
   assert.match(css, /max-height:\s*56px/);
+  assert.match(css, /\.dashboard-shell\.bldg-map \.map-frame \{[^}]*z-index:\s*160/);
+  assert.match(css, /\.dashboard-shell\.bldg-map \.building-tools \{[^}]*z-index:\s*200/);
   const glb = await readFile(new URL('../public/data/buildings/dun-sarawak.glb', import.meta.url));
   assert.equal(glb.subarray(0, 4).toString(), 'glTF');
   assert.ok(glb.length > 1000 && glb.length < 3 * 1024 * 1024);

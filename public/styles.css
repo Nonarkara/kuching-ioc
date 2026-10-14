@@ -5121,7 +5121,8 @@ a.pulse-stat:focus-visible strong {
   right: 0;
   bottom: 56px;
   left: 0;
-  z-index: 40;
+  /* Above the masthead (z-index 100), which otherwise paints over the globe. */
+  z-index: 160;
   height: auto !important;
   min-height: 0 !important;
 }
@@ -5130,7 +5131,7 @@ a.pulse-stat:focus-visible strong {
   top: 0;
   right: 0;
   left: 0;
-  z-index: 50;
+  z-index: 200;
   height: 48px;
   max-height: 48px;
   box-sizing: border-box;
@@ -5173,7 +5174,7 @@ a.pulse-stat:focus-visible strong {
   right: 0;
   bottom: 0;
   left: 0;
-  z-index: 50;
+  z-index: 200;
   display: flex;
   align-items: center;
   box-sizing: border-box;

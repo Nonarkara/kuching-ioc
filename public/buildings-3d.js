@@ -95,7 +95,7 @@ const COPY = {
   },
 };
 
-const COLORS = ["#6f8ea3", "#7f9aab", "#93aaba", "#b7c5ce", "#c9d2d8"];
+const COLORS = ["#d7e4ea", "#f0d7a8", "#e7d3b0", "#efe8dc", "#f7f4ee"];
 const PLACES = {
   padawan: { west: 110.318, south: 1.421, east: 110.336, north: 1.436 },
   assembly: { west: 110.341, south: 1.555, east: 110.355, north: 1.569 },
@@ -192,12 +192,12 @@ export function setupBuildings3D({ getViewer, getDimension, setDimension, getLan
     const title = document.createElement("strong");
     title.textContent = c.floatTitle;
     const line = document.createElement("p");
-    line.textContent = summary;
+    line.textContent = manifest && enabled
+      ? `${inView} ${c.inView}${truncated ? " · " + c.truncated : ""}`
+      : summary;
     const credit = document.createElement("p");
-    credit.textContent = c.assembly;
-    const hint = document.createElement("p");
-    hint.textContent = c.zoom;
-    el.append(title, line, credit, hint);
+    credit.textContent = c.assemblyShort;
+    el.append(title, line, credit);
     if (selection) {
       const detail = document.createElement("p");
       const sourceName = HEIGHT_SOURCES[selection.s] || "default-estimate";
@@ -251,13 +251,24 @@ export function setupBuildings3D({ getViewer, getDimension, setDimension, getLan
       node.setAttribute("aria-pressed", String(node.dataset.lang === getLang()));
     });
   }
+  function paintContinuously(on) {
+    const viewer = getViewer();
+    if (!viewer?.scene) return;
+    viewer.scene.requestRenderMode = on ? false : !!viewer.scene.globe?.tilesLoaded;
+    viewer.scene.requestRender();
+  }
   function focus(bounds) {
     const viewer = getViewer(), C = window.Cesium;
     if (!viewer || !C || !bounds) return;
     currentPlace = bounds;
-    const sphere = C.BoundingSphere.fromRectangle3D(C.Rectangle.fromDegrees(bounds.west, bounds.south, bounds.east, bounds.north));
+    const lon = (bounds.west + bounds.east) / 2;
+    const lat = (bounds.south + bounds.north) / 2;
+    // Frame the centre from a few hundred metres out. Fitting the whole
+    // district sphere left 6 m houses a couple of pixels tall.
+    const sphere = new C.BoundingSphere(C.Cartesian3.fromDegrees(lon, lat, 0), 40);
+    paintContinuously(true);
     viewer.camera.flyToBoundingSphere(sphere, {
-      offset: new C.HeadingPitchRange(C.Math.toRadians(24), C.Math.toRadians(-42), 980),
+      offset: new C.HeadingPitchRange(C.Math.toRadians(28), C.Math.toRadians(-45), 420),
       duration: 1.1,
     });
     viewer.scene.requestRender();
@@ -402,6 +413,7 @@ export function setupBuildings3D({ getViewer, getDimension, setDimension, getLan
       if (layer) layer.show = false;
       selection = null;
       setMapFirst(false);
+      paintContinuously(false);
       render();
       getViewer()?.scene.requestRender();
       return;

@@ -5152,7 +5152,7 @@ function initCesium() {
   // finished loading, then drop back to on-demand rendering for perf.
   viewer.scene.requestRenderMode = false;
   const stopWatchingTiles = viewer.scene.globe.tileLoadProgressEvent.addEventListener(() => {
-    if (viewer.scene.globe.tilesLoaded) {
+    if (viewer.scene.globe.tilesLoaded && !document.querySelector(".dashboard-shell.bldg-map")) {
       viewer.scene.requestRenderMode = true;
       stopWatchingTiles();
     }

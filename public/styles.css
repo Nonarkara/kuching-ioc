@@ -4894,3 +4894,23 @@ a.pulse-stat:focus-visible strong {
 .cov-hint, .cov-note { font-size: 11px; color: var(--soft); margin-top: 8px; }
 .bypass-src { font-size: 11px; color: var(--soft); margin-top: 4px; }
 @media (max-width: 720px) { .cov-search { min-height: 44px; font-size: 16px; } }
+
+/* === Pin a problem (14 Oct 2026) — top-right corner, never over the catchment story === */
+.spot-report { position: absolute; top: 12px; right: 12px; z-index: 1250; width: min(340px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow-y: auto;
+  background: var(--hud-bg); border: 1px solid var(--line-strong); border-top: 3px solid var(--amber); padding: 10px 12px; font-size: 13px; color: var(--ink); }
+.spot-report[hidden] { display: none; }
+.sr-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sr-close { background: none; border: 1px solid var(--line); color: var(--ink); min-width: 32px; min-height: 32px; cursor: pointer; }
+.sr-where { font-size: 11px; color: var(--soft); margin: 4px 0 8px; }
+.sr-field { display: grid; gap: 2px; margin-bottom: 8px; font-size: 11px; color: var(--soft); }
+.sr-field select, .sr-field textarea { font: 13px var(--font-sans); color: var(--ink); background: var(--bg); border: 1px solid var(--line-strong); border-radius: 0; padding: 6px; min-height: 32px; }
+.sr-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.sr-actions button, .sr-actions a { min-height: 32px; padding: 0 10px; display: inline-flex; align-items: center; border: 1px solid var(--cyan); background: transparent; color: var(--cyan); font: 600 12px var(--font-sans); cursor: pointer; text-decoration: none; }
+.sr-actions .sr-copy { background: var(--cyan); color: var(--bg); }
+.sr-privacy { font-size: 11px; color: var(--soft); margin: 8px 0 0; line-height: 1.4; }
+.coord-report { border-color: var(--amber) !important; color: var(--amber) !important; }
+@media (max-width: 720px) {
+  .spot-report { left: 8px; right: 8px; width: auto; top: 8px; }
+  .sr-actions button, .sr-actions a, .sr-close, .sr-field select { min-height: 44px; }
+  .sr-field textarea { font-size: 16px; }
+}

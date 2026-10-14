@@ -1470,6 +1470,8 @@ function renderMap(payload) {
       .addTo(state.markerLayerGroup);
   });
 
+  renderMyPins();
+
   // Coordinate HUD — lat/lng overlay with one-tap copy for field ops.
   // Created once per map init; click snaps the coord, COPY button writes to clipboard.
   const mapFrame = mc.closest('.map-frame');
@@ -1479,7 +1481,8 @@ function renderMap(payload) {
     hud.innerHTML = `
       <span class="coord-label">LAT / LNG</span>
       <span class="coord-value" id="coordValue">—</span>
-      <button class="coord-copy" id="coordCopy">COPY</button>`;
+      <button class="coord-copy" id="coordCopy">COPY</button>
+      <button class="coord-copy coord-report" id="coordReport" title="Prepare a Talikhidmat report for this spot">REPORT</button>`;
     mapFrame.appendChild(hud);
 
     let lastCoord = null;
@@ -1502,6 +1505,13 @@ function renderMap(payload) {
       hud.querySelector('#coordValue').textContent = lastCoord;
       hud.classList.add('is-active', 'is-snapped');
       hud.classList.remove('is-copied');
+    });
+
+    hud.querySelector('#coordReport').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (!lastCoord) return;
+      const [la, lo] = lastCoord.split(",").map(Number);
+      openSpotReport(la, lo);
     });
 
     hud.querySelector('#coordCopy').addEventListener('click', (ev) => {
@@ -4817,7 +4827,11 @@ async function setDimension(dim, { silent = false } = {}) {
     // WebGL framebuffer matches the now-visible container.
     if (state.cesiumViewer) {
       state.cesiumViewer.resize();
-      state.cesiumViewer.scene.requestRender();
+      // On-demand rendering never asks for the first imagery tiles by itself;
+      // repaint for ~6 s so the globe loads instead of sitting on a starfield.
+      const v = state.cesiumViewer;
+      let n = 0;
+      const burst = setInterval(() => { v.scene.requestRender(); if (++n >= 24 || v.isDestroyed?.()) clearInterval(burst); }, 250);
     }
   } else {
     // Back to 2D — Leaflet needs an invalidateSize after the container
@@ -4932,6 +4946,9 @@ function initCesium() {
     orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-35), roll: 0 },
   });
 
+  // requestRenderMode only repaints on demand; without this the first switch
+  // to 3D can sit on a black starfield until the user touches the scene.
+  viewer.scene.globe.tileLoadProgressEvent.addEventListener(() => viewer.scene.requestRender());
   state.cesiumViewer = viewer;
   // Expose the viewer (and the state object) for headless tests +
   // browser dev-tools inspection. Harmless in production.
@@ -5036,6 +5053,46 @@ function renderCesiumEntities(payload) {
         ? `${s.name}\n${s.humanBrief}`
         : `${s.name} — ${s.basin || ""} · ${s.council || ""}\nLevel: ${s.waterLevelM != null ? s.waterLevelM + " m" : "reference"}\n${s.bandLabel || "Reference"}`,
     });
+  });
+
+  // 4) MPP wards — ground outlines with the ward code and its councillor, so
+  //    the 3D view answers "whose area is this?" the same way the 2D map does.
+  (state.wardFeatures || []).forEach((f) => {
+    const g = f.geometry;
+    const rings = g?.type === "Polygon" ? [g.coordinates[0]] : g?.type === "MultiPolygon" ? g.coordinates.map((p) => p[0]) : [];
+    const code = f.properties?.wardCode;
+    const color = Cesium.Color.fromCssColorString(f.properties?.color || "#a78bfa");
+    rings.forEach((ring) => {
+      if (!ring || ring.length < 3) return;
+      viewer.entities.add({
+        name: `ward-${code}`,
+        polyline: { positions: Cesium.Cartesian3.fromDegreesArray(ring.flat()), width: 2, material: color.withAlpha(0.9), clampToGround: true },
+      });
+    });
+    const c = f.properties?.centroid;
+    if (Array.isArray(c) && c.length === 2) {
+      const w = (payload.mppCouncillors?.wards || []).find((x) => x.code === code || (x.codeGroup || []).includes(code));
+      const who = w?.councillors?.[0] ? [w.councillors[0].title, w.councillors[0].name].filter(Boolean).join(" ") : "";
+      viewer.entities.add({
+        name: `ward-label-${code}`,
+        position: Cesium.Cartesian3.fromDegrees(c[0], c[1], 40),
+        label: { text: `${w?.label || code}${who ? "\n" + who : ""}`, font: "12px sans-serif", fillColor: Cesium.Color.WHITE,
+          outlineColor: Cesium.Color.BLACK, outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          showBackground: true, backgroundColor: color.withAlpha(0.55), disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          scaleByDistance: new Cesium.NearFarScalar(3000, 1.0, 90000, 0.4) },
+      });
+    }
+  });
+
+  // 5) JKM open relief centres and this browser's saved report pins.
+  (payload.reliefCentres?.status === "live" ? payload.reliefCentres.items || [] : []).forEach((rc) => {
+    viewer.entities.add({ name: `pps-${rc.id}`, position: Cesium.Cartesian3.fromDegrees(rc.lon, rc.lat, 30),
+      point: { pixelSize: 14, color: Cesium.Color.fromCssColorString("#1f4e79"), outlineColor: Cesium.Color.WHITE, outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+      label: { text: `JKM PPS · ${rc.name}`, font: "11px sans-serif", pixelOffset: new Cesium.Cartesian2(0, -18), showBackground: true, disableDepthTestDistance: Number.POSITIVE_INFINITY } });
+  });
+  loadPins().forEach((p) => {
+    viewer.entities.add({ name: `pin-${p.id}`, position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 20),
+      point: { pixelSize: 11, color: Cesium.Color.WHITE, outlineColor: Cesium.Color.fromCssColorString("#b45309"), outlineWidth: 3, disableDepthTestDistance: Number.POSITIVE_INFINITY } });
   });
 
   // Land-use extrusions intentionally omitted in 3D — they painted the
@@ -5174,6 +5231,104 @@ async function boot() {
     // catches internally).
     renderInsights(payload);
   } catch (err) { console.error("IOC SYNC FAILURE", err); }
+}
+
+// --- Pin a problem: map spot -> Talikhidmat-ready report --------------------
+// No server, no account, no personal data leaves the browser. The board fills
+// in what it knows about the spot (coordinates, ward, councillor, map link) and
+// hands the text to the official channel. Saved pins live in localStorage only.
+const PIN_KEY = "kch-ioc-pins-v1";
+const PIN_CATEGORIES = ["drain", "flood", "tree", "refuse", "road", "light", "other"];
+
+function loadPins() {
+  try { const v = JSON.parse(localStorage.getItem(PIN_KEY) || "[]"); return Array.isArray(v) ? v.slice(0, 50) : []; }
+  catch { return []; }
+}
+function savePins(pins) {
+  try { localStorage.setItem(PIN_KEY, JSON.stringify(pins.slice(0, 50))); } catch { /* private mode: pins stay in memory */ }
+}
+
+function spotContext(lat, lon) {
+  let ward = null, councillor = null;
+  const feat = (state.wardFeatures || []).find((f) => pointInRing([lon, lat], f.geometry));
+  const code = feat?.properties?.wardCode || null;
+  if (code) {
+    const w = (state.payload?.mppCouncillors?.wards || []).find((x) => x.code === code || (x.codeGroup || []).includes(code));
+    ward = { code, label: w?.label || feat.properties.wardLabel || code };
+    const c = w?.councillors?.[0];
+    if (c) councillor = [c.title, c.name].filter(Boolean).join(" ");
+  }
+  return { ward, councillor, inMpp: !!code };
+}
+
+function spotReportText(lat, lon, category, note) {
+  const ctx = spotContext(lat, lon);
+  const L = state.lang;
+  const cat = t("pinCat_" + category);
+  const lines = [
+    `${t("pinReportHead")}: ${cat}`,
+    note ? `${t("pinNote")}: ${note}` : null,
+    `${t("pinLocation")}: ${lat.toFixed(6)}, ${lon.toFixed(6)}`,
+    `Google Maps: https://maps.google.com/?q=${lat.toFixed(6)},${lon.toFixed(6)}`,
+    ctx.ward ? `${t("pinWard")}: ${ctx.ward.label}${ctx.councillor ? ` · ${ctx.councillor}` : ""}` : t("pinOutsideMpp"),
+    `${t("pinTime")}: ${new Date().toLocaleString(L === "zh" ? "zh-CN" : L === "ms" ? "ms-MY" : "en-MY", { timeZone: "Asia/Kuching" })}`,
+  ].filter(Boolean);
+  return { text: lines.join("\n"), ctx };
+}
+
+function openSpotReport(lat, lon) {
+  const frame = document.querySelector(".map-frame");
+  if (!frame) return;
+  let panel = document.getElementById("spotReport");
+  if (!panel) {
+    panel = document.createElement("aside");
+    panel.id = "spotReport";
+    panel.className = "spot-report";
+    panel.setAttribute("role", "dialog");
+    frame.appendChild(panel);
+  }
+  const ctx = spotContext(lat, lon);
+  panel.hidden = false;
+  panel.innerHTML = `
+    <div class="sr-head"><strong>${escapeHtml(t("pinTitle"))}</strong><button type="button" class="sr-close" aria-label="${escapeHtml(t("csClose"))}">✕</button></div>
+    <div class="sr-where">${lat.toFixed(6)}, ${lon.toFixed(6)} · ${ctx.ward ? escapeHtml(ctx.ward.label) + (ctx.councillor ? " · " + escapeHtml(ctx.councillor) : "") : escapeHtml(t("pinOutsideMpp"))}</div>
+    <label class="sr-field"><span>${escapeHtml(t("pinCategory"))}</span>
+      <select class="sr-cat">${PIN_CATEGORIES.map((c) => `<option value="${c}">${escapeHtml(t("pinCat_" + c))}</option>`).join("")}</select></label>
+    <label class="sr-field"><span>${escapeHtml(t("pinNote"))}</span><textarea class="sr-note" rows="2" maxlength="280" placeholder="${escapeHtml(t("pinNoteHint"))}"></textarea></label>
+    <div class="sr-actions">
+      <button type="button" class="sr-copy">${escapeHtml(t("pinCopy"))}</button>
+      <a class="sr-open" href="https://talikhidmat.sarawak.gov.my/" target="_blank" rel="noopener noreferrer">Talikhidmat ↗</a>
+      <button type="button" class="sr-save">${escapeHtml(t("pinSave"))}</button>
+    </div>
+    <p class="sr-privacy">${escapeHtml(t("pinPrivacy"))}</p>`;
+  const cat = () => panel.querySelector(".sr-cat").value;
+  const note = () => panel.querySelector(".sr-note").value.trim();
+  panel.querySelector(".sr-close").addEventListener("click", () => { panel.hidden = true; });
+  panel.querySelector(".sr-copy").addEventListener("click", async (ev) => {
+    const { text } = spotReportText(lat, lon, cat(), note());
+    try { await navigator.clipboard.writeText(text); ev.target.textContent = t("pinCopied"); }
+    catch { window.prompt(t("pinCopy"), text); }
+  });
+  panel.querySelector(".sr-save").addEventListener("click", (ev) => {
+    const pins = loadPins();
+    pins.unshift({ id: Date.now(), lat, lon, category: cat(), note: note(), at: new Date().toISOString(), ward: ctx.ward?.code || null });
+    savePins(pins);
+    renderMyPins();
+    ev.target.textContent = t("pinSaved");
+  });
+}
+
+function renderMyPins() {
+  if (!state.map || !window.L) return;
+  if (!state.pinLayer) state.pinLayer = window.L.layerGroup().addTo(state.map);
+  state.pinLayer.clearLayers();
+  loadPins().forEach((p) => {
+    window.L.circleMarker([p.lat, p.lon], { radius: 7, color: "#b45309", weight: 2, fillColor: "#ffffff", fillOpacity: 0.9, dashArray: "3 2" })
+      .bindTooltip(`<strong>${escapeHtml(t("pinCat_" + p.category))}</strong>${p.note ? "<br>" + escapeHtml(p.note) : ""}<br><em>${escapeHtml(t("pinMine"))}</em>`, { className: "marker-tooltip", direction: "top" })
+      .on("click", () => openSpotReport(p.lat, p.lon))
+      .addTo(state.pinLayer);
+  });
+  if (state.cesiumViewer) renderCesiumEntities(state.payload);
 }
 
 // --- Water supply context + JKM relief centres (rail) ------------------------

@@ -136,3 +136,15 @@ Per §13: the same mistake never happens twice.
 - **What went wrong:** The board showed hand-made ward projects (real contractor names, RM costs, % complete, places outside MPP) as a council "Ledger", plus directives citing things that don't exist ("compliance audit pending for Ward G", "gridlock within 20 minutes", "Sentinel-2 NDVI telemetry"), permanent fake GDP/CPI figures, and CCTV cards marked LIVE with invented conditions. The data.js comment even claimed the projects came from tender notices.
 - **Correct behaviour:** Before any demo, grep rendered text for specific numbers, company names and "telemetry/live" claims, and trace each to a fetch. Anything that can't be traced is deleted (directives) or flagged *_ILLUSTRATIVE and not rendered as a record (ledgers, feeds). A provenance comment is a claim to verify, not evidence.
 - **How to recognise:** `grep -n "Hock Seng\|WCT\|gridlock\|telemetry\|● LIVE\|FY20" public/*.js server.mjs`; a `feedUrl` that no code reads; a "fallback" object that the server never overrides.
+
+## 2026-10-14 · Local bake green, CI bake empty: concurrency, not blocking
+
+- **What went wrong:** Five new loaders (iHYDRO intake, rain regime, MPP coverage, JKM PPS, DOSM districts) were live locally but all came back unavailable on the CI bake, at the same instant ~10 s in, while older loaders on the same hosts succeeded.
+- **Correct behaviour:** ~30 loaders in one Promise.all saturate the runner; latecomers hit undici's 10 s connect timeout. New loaders run as a second wave after the main batch and retry once with the cache key deleted. Always read the *production* payload after a deploy — a local bake proves nothing about the runner.
+- **How to recognise:** several sources share an identical failure timestamp ≈ bake start + 10 s; `fetch failed` lines in the CI log; hosts that other loaders reached fine.
+
+## 2026-10-14 · Demo fallbacks leak onto the map
+
+- **What went wrong:** `buildCityReportsDemoData()` returned six invented complaints when no Supabase env was set; the list badged them DEMO but the map pinned them unlabelled. The river-flow fallback also invented a discharge curve labelled "Seasonal estimate".
+- **Correct behaviour:** a missing feed returns `status: "not-connected"` with no rows; renderers draw pins and curves only from `status: "live"`. "No data" is a valid, honest state.
+- **How to recognise:** `grep -n "Demo\|demo\|fallback" server.mjs` near any function that returns arrays of plausible records.

@@ -4092,7 +4092,14 @@ async function loadRainRegime() {
     const [tcList, warnings, om] = await Promise.allSettled([
       fetchJson("https://www.jma.go.jp/bosai/typhoon/data/targetTc.json", 12000),
       fetchJson("https://api.data.gov.my/weather/warning/?limit=50", 12000),
-      fetchJson("https://api.open-meteo.com/v1/forecast?latitude=1.55,12.0&longitude=110.35,112.0&hourly=pressure_msl,wind_speed_850hPa,wind_direction_850hPa&wind_speed_unit=ms&past_days=2&forecast_days=1&timezone=Asia%2FKuching", 15000),
+      // api.open-meteo.com intermittently refuses shared CI runner IPs; back off and retry.
+      (async () => {
+        const url = "https://api.open-meteo.com/v1/forecast?latitude=1.55,12.0&longitude=110.35,112.0&hourly=pressure_msl,wind_speed_850hPa,wind_direction_850hPa&wind_speed_unit=ms&past_days=2&forecast_days=1&timezone=Asia%2FKuching";
+        for (let attempt = 0; ; attempt += 1) {
+          try { return await fetchJson(url, 15000); }
+          catch (err) { if (attempt >= 2) throw err; await new Promise((r) => setTimeout(r, 3000 * (attempt + 1))); }
+        }
+      })(),
     ]);
     const cyclones = [];
     if (tcList.status === "fulfilled" && Array.isArray(tcList.value)) {
@@ -4125,9 +4132,22 @@ async function loadRainRegime() {
     const kuching = point(0), scs = point(1);
     const inputsOk = (tcList.status === "fulfilled" || warnings.status === "fulfilled") && kuching && scs;
     const month = Number(new Date(Date.now() + 8 * 3600000).toISOString().slice(5, 7));
-    const result = inputsOk
-      ? classifyRainRegime({ month, cyclones, mmdAdvisory: advisory ? (advisory.warning_issue?.title_en || advisory.heading_en) : null, kuching, scs })
-      : { label: "unknown", confidence: null, evidence: ["One or more inputs unreachable"] };
+    const mmdTitle = advisory ? (advisory.warning_issue?.title_en || advisory.heading_en) : null;
+    let result;
+    if (inputsOk) {
+      result = classifyRainRegime({ month, cyclones, mmdAdvisory: mmdTitle, kuching, scs });
+    } else {
+      // No wind data: still say what the cyclone feeds show. A tropical system
+      // is detectable without wind; monsoon vs local convection is not.
+      const partial = classifyRainRegime({ month, cyclones, mmdAdvisory: mmdTitle, kuching: null, scs: null });
+      result = partial.label === "depression" ? partial : {
+        label: "unknown", confidence: null, season: partial.season,
+        evidence: [
+          tcList.status === "fulfilled" || warnings.status === "fulfilled" ? "No tropical system within 1,500 km (JMA / MetMalaysia)" : "Cyclone feeds unreachable",
+          "Wind data unreachable this cycle — monsoon vs local convection not assessed",
+        ],
+      };
+    }
     return {
       status: inputsOk ? "live" : "partial",
       updatedAt: nowIso(),

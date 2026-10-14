@@ -22,6 +22,8 @@ const {
 const { dataHealth, observationHealth, warningHealth } = await import(`./data-health.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { morningBrief } = await import(`./morning-brief.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { classifyRainRegime, summariseOpenMeteo, RAIN_REGIME_OPEN_METEO_URL } = await import(`./rain-regime.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { gridUrl, backTrajectory, firesAlongPath, originSector } = await import(`./air-path.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { summariseTide, TIDE_URL } = await import(`./tide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupBuildings3D } = await import(`./buildings-3d.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupOperatorGuide } = await import(`./operator-guide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 
@@ -1673,6 +1675,7 @@ function renderUrbanLayerToggle() {
     btn.classList.toggle("active", layer.active);
 
     if (layer.type === "tile") { await toggleWeatherTiles(layer, btn); return; }
+    if (layer.type === "fires" || layer.type === "airpath") { await toggleHazeLayer(layer, btn); return; }
 
     // AlphaEarth raster overlays — route by layer id.
     if (layer.type === "image") {
@@ -4423,6 +4426,8 @@ function renderDashboard(payload) {
   renderOfficialPulse(payload);
   renderWaterSupply(payload);
   renderRainRegime(payload);
+  renderHazeSource(payload);
+  renderTide(payload);
   renderCoverage(payload);
   renderMppServicesDirectory();
   renderMppCouncillors(payload);
@@ -4615,6 +4620,8 @@ function setLang(lang) {
     renderOfficialPulse(state.payload);
     renderWaterSupply(state.payload);
     renderRainRegime(state.payload);
+    renderHazeSource(state.payload);
+    renderTide(state.payload);
     renderCoverage(state.payload);
     renderMppLocalities(state.payload);
     renderMppServicesDirectory();
@@ -5379,6 +5386,113 @@ function renderWaterSupply(payload) {
       : `<div class="ws-note">${escapeHtml(t("reliefNone"))}${pps.sarawakOpen ? ` (${pps.sarawakOpen} ${escapeHtml(t("reliefElsewhere"))})` : ""}</div>`}
   </div>`);
   el.innerHTML = parts.join("");
+}
+
+// --- Regional haze: fire detections + where today's air came from ------------
+let airPathCache = null;
+async function computeAirPath() {
+  if (airPathCache && Date.now() - Date.parse(airPathCache.at) < 3600 * 1000) return airPathCache;
+  const json = await fetch(gridUrl()).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  const path = backTrajectory(json);
+  airPathCache = { path, sector: originSector(path), at: new Date().toISOString() };
+  return airPathCache;
+}
+
+// Leaflet's fly animations produce NaN when the 2D map is hidden (3D view on).
+function fitIfVisible(bounds) {
+  if (state.map && state.map.getSize().x > 0) state.map.fitBounds(bounds);
+}
+
+async function toggleHazeLayer(layer, btn) {
+  const existing = state.urbanLayerGroups.get(layer.id);
+  if (!layer.active) {
+    if (existing) state.map.removeLayer(existing);
+    // Back to the Kuching frame once no regional layer is showing.
+    if (!URBAN_LAYERS.some((l) => (l.type === "fires" || l.type === "airpath") && l.active)) {
+      state.map.setMinZoom(SITE.minZoom);
+      state.map.setMaxBounds(SITE.mapMaxBounds);
+      if (state.map.getSize().x > 0) state.map.setView([1.53, 110.35], 12);
+    }
+    return;
+  }
+  try {
+    let group;
+    if (layer.type === "fires") {
+      const pts = state.payload?.regionalFires?.status === "live" ? state.payload.regionalFires.points || [] : [];
+      if (!pts.length) throw new Error("no fire data");
+      group = window.L.layerGroup(pts.map((p) => window.L.circleMarker([p.lat, p.lon], {
+        radius: p.frp >= 50 ? 5 : 3, weight: 0, fillColor: p.frp >= 50 ? "#b91c1c" : "#f97316", fillOpacity: 0.8,
+      }).bindTooltip(`VIIRS ${escapeHtml(p.at)} UTC · FRP ${p.frp} MW`, { className: "marker-tooltip" })));
+      // Fires sit over Kalimantan, beyond the Kuching map bounds — widen them while the layer is on.
+      state.map.setMaxBounds(null);
+      state.map.setMinZoom(5);
+      fitIfVisible([[-3.5, 108.5], [3.5, 116]]);
+    } else {
+      const { path } = await computeAirPath();
+      if (path.length < 2) throw new Error("no path");
+      const line = window.L.polyline(path.map((p) => [p.lat, p.lon]), { color: "#7c3aed", weight: 3, dashArray: "6 4" });
+      const ticks = path.filter((p) => p.hoursAgo % 12 === 0 && p.hoursAgo > 0).map((p) =>
+        window.L.circleMarker([p.lat, p.lon], { radius: 4, color: "#7c3aed", fillColor: "#fff", fillOpacity: 1, weight: 2 })
+          .bindTooltip(`−${p.hoursAgo} h`, { permanent: true, direction: "right", className: "marker-tooltip" }));
+      group = window.L.layerGroup([line, ...ticks]);
+      state.map.setMaxBounds(null);
+      state.map.setMinZoom(5);
+      fitIfVisible(line.getBounds().pad(0.2));
+    }
+    if (existing) state.map.removeLayer(existing);
+    state.urbanLayerGroups.set(layer.id, group);
+    group.addTo(state.map);
+  } catch (err) {
+    console.warn("haze layer unavailable", layer.id, err);
+    layer.active = false; btn.classList.remove("active"); btn.title = "Unavailable right now — try again later";
+  }
+}
+
+function renderHazeSource(payload) {
+  const el = $("hazeSource");
+  if (!el) return;
+  const rf = payload.regionalFires;
+  const aqi = payload.metrics?.find((m) => m.id === "aqi")?.value;
+  const counts = rf?.status === "live"
+    ? `<div class="hz-counts"><span><strong>${num(rf.kalimantan, 0)}</strong> ${escapeHtml(t("hazeKal"))}</span><span><strong>${num(rf.sarawak, 0)}</strong> ${escapeHtml(t("hazeSar"))}</span><a href="${escapeHtml(rf.url)}" target="_blank" rel="noopener noreferrer">NASA FIRMS ↗</a></div>`
+    : `<div class="hz-note">${escapeHtml(t("feedUnavailable"))}</div>`;
+  const paint = (inner) => {
+    el.innerHTML = `<div class="rr-kicker">${escapeHtml(t("hazeSource"))}</div>${inner}${counts}
+      <details class="rr-method"><summary>${escapeHtml(t("regimeMethod"))}</summary><p>${escapeHtml(t("hazeMethod"))} <a href="https://www.ready.noaa.gov/HYSPLIT.php" target="_blank" rel="noopener noreferrer">HYSPLIT ↗</a></p></details>`;
+  };
+  paint(`<div class="hz-note">${escapeHtml(t("hazeComputing"))}</div>`);
+  computeAirPath().then(({ path, sector }) => {
+    if (!sector) { paint(`<div class="hz-note">${escapeHtml(t("feedUnavailable"))}</div>`); return; }
+    const n = rf?.status === "live" ? firesAlongPath(path, rf.cells || {}) : null;
+    const likely = n != null && n >= 50 && /S|W/.test(sector);
+    const verdict = n == null ? "" : `<div class="hz-verdict" data-likely="${likely}">${escapeHtml(likely ? t("hazeLikely") : t("hazeUnlikely"))}${likely && aqi != null ? ` · AQI ${escapeHtml(aqi)}` : ""}</div>`;
+    paint(`${verdict}<div class="hz-line">${escapeHtml(t("hazeFrom"))} <strong>${escapeHtml(t("dir_" + sector))}</strong>${n != null ? ` · <strong>${num(n, 0)}</strong> ${escapeHtml(t("hazeFires"))}` : ""}</div>`);
+  }).catch(() => paint(`<div class="hz-note">${escapeHtml(t("feedUnavailable"))}</div>`));
+}
+
+let tideClientTried = false;
+function renderTide(payload) {
+  const el = $("tidePanel");
+  if (!el) return;
+  let tide = payload.tide;
+  if ((!tide || tide.status !== "live") && !tideClientTried) {
+    tideClientTried = true;
+    fetch(TIDE_URL).then((r) => r.json()).then((json) => {
+      const s2 = summariseTide(json);
+      if (s2) { payload.tide = { status: "live", computedIn: "browser", ...s2 }; renderTide(payload); }
+    }).catch(() => {});
+  }
+  if (!tide || tide.status !== "live") { el.innerHTML = `<div class="rr-kicker">${escapeHtml(t("tideTitle"))}</div><div class="hz-note">${escapeHtml(t("feedUnavailable"))}</div>`; return; }
+  const pts = tide.points || [];
+  const W = 240, H = 40, vals = pts.map((p) => p.v), lo = Math.min(...vals), hi = Math.max(...vals);
+  const nowI = pts.findIndex((p) => Date.parse(p.t) > Date.now());
+  const poly = pts.map((p, i) => `${(i / (pts.length - 1) * W).toFixed(1)},${(H - (p.v - lo) / (hi - lo || 1) * H).toFixed(1)}`).join(" ");
+  const nowX = nowI > 0 ? (nowI / (pts.length - 1) * W).toFixed(1) : null;
+  const fmt = (iso) => new Date(iso).toLocaleString(state.lang === "zh" ? "zh-CN" : state.lang === "ms" ? "ms-MY" : "en-MY", { timeZone: "Asia/Kuching", weekday: "short", hour: "2-digit", minute: "2-digit" });
+  el.innerHTML = `<div class="rr-kicker">${escapeHtml(t("tideTitle"))}</div>
+    <svg class="ws-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Sea level, 4 days">${nowX ? `<line class="ws-normal" x1="${nowX}" x2="${nowX}" y1="0" y2="${H}"/>` : ""}<polyline points="${poly}"/></svg>
+    <div class="hz-line">${escapeHtml(t("tideNextHigh"))}: ${(tide.highs || []).slice(0, 3).map((h) => `<strong>${escapeHtml(fmt(h.t))}</strong> ${h.v.toFixed(2)} m`).join(" · ") || "—"}</div>
+    <div class="hz-note">${escapeHtml(t("tideNote"))} <a href="https://open-meteo.com/en/docs/marine-weather-api" target="_blank" rel="noopener noreferrer">Open-Meteo ↗</a></div>`;
 }
 
 // --- Rain regime (Outlook tray) -------------------------------------------------

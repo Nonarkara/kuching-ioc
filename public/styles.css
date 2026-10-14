@@ -4914,3 +4914,13 @@ a.pulse-stat:focus-visible strong {
   .sr-actions button, .sr-actions a, .sr-close, .sr-field select { min-height: 44px; }
   .sr-field textarea { font-size: 16px; }
 }
+
+/* === Regional haze + tide cards (Outlook tray) === */
+.haze-source, .tide-panel { padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.hz-verdict { font-size: 16px; font-weight: 700; margin: 2px 0; color: var(--ink); }
+.hz-verdict[data-likely="true"] { color: var(--amber); }
+.hz-line { font-size: 13px; color: var(--ink); margin-top: 2px; }
+.hz-counts { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 11px; color: var(--soft); margin-top: 4px; }
+.hz-counts strong { color: var(--ink); font-size: 13px; }
+.hz-note { font-size: 11px; color: var(--soft); margin-top: 2px; line-height: 1.4; }
+.tide-panel .ws-spark { max-width: 360px; }

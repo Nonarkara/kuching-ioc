@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { renderIndexHtml, resolveAssetVersion } from "./site-build.mjs";
 import { normalizeMetWeather } from "./public/met-weather.js";
 import { classifyRainRegime, summariseOpenMeteo, RAIN_REGIME_OPEN_METEO_URL } from "./public/rain-regime.js";
+import { summariseTide, TIDE_URL } from "./public/tide.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
@@ -3334,7 +3335,7 @@ function withI18n(item, ms, zh) {
   return { ...item, i18n: { ms, zh } };
 }
 
-function buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast, floodMatrix, mppService }) {
+function buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast, floodMatrix, mppService, tide }) {
   const rain6h = round(weather.nextHours.reduce((sum, hour) => sum + hour.precipitationMm, 0), 1);
   const padawan = jurisdictions.items.find((item) => item.id === "mpp");
   const sarawakStats = govStats.sarawak;
@@ -3401,6 +3402,31 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
       title: `承诺第 ${charterGap.no} 项达成 ${charterGap.score}%（${q}）`,
       detail: `${pledge}。MPP 公布的达成率，更新于 ${upd}。`,
       humanContext: "来源：MPP 客户服务承诺达成页面。这是市议会公布的数字，不是本看板的估算。",
+    }));
+  }
+
+  // Rain on a high tide: Kuching's river floods worst when heavy rain meets a
+  // high tide that slows the outflow. Fires only when both are present.
+  const highSoon = tide?.status === "live" ? (tide.highs || []).find((h) => Date.parse(h.t) - Date.now() <= 12 * 3600 * 1000 && h.v >= tide.topThird) : null;
+  if (highSoon && rain6h >= 5) {
+    const at = new Date(highSoon.t).toLocaleTimeString("en-MY", { timeZone: "Asia/Kuching", hour: "2-digit", minute: "2-digit" });
+    const lv = highSoon.v.toFixed(2);
+    items.push(withI18n({
+      severity: "medium",
+      owner: "Tide Watch",
+      title: `Rain on a high tide · ${at}`,
+      detail: `${rain6h} mm forecast in 6 h while the sea level at the Sarawak River mouth peaks near ${lv} m (model) at ${at}. Low-lying tidal reaches drain slowly at high water; keep crews on the waterfront and Sg. Maong outfalls through the peak.`,
+      humanContext: "Tide from the Open-Meteo marine model, not the JUPEM gauge. Check the official tide table for exact times.",
+    }, {
+      owner: "Pemantauan Pasang Surut",
+      title: `Hujan semasa air pasang · ${at}`,
+      detail: `${rain6h} mm diramal dalam 6 jam ketika paras laut di muara Sungai Sarawak memuncak sekitar ${lv} m (model) pada ${at}. Kawasan rendah berpasang surut lambat surut ketika air pasang; kekalkan pasukan di tebingan dan saluran keluar Sg. Maong sepanjang puncak.`,
+      humanContext: "Pasang surut daripada model marin Open-Meteo, bukan tolok JUPEM. Semak jadual pasang surut rasmi untuk masa tepat.",
+    }, {
+      owner: "潮汐监测",
+      title: `高潮时降雨 · ${at}`,
+      detail: `预计 6 小时内降雨 ${rain6h} mm，同时砂拉越河口海平面约于 ${at} 达到 ${lv} m（模型）。高潮时低洼感潮河段排水缓慢；高峰期间请在河滨及 Sg. Maong 出水口保留人员。`,
+      humanContext: "潮汐来自 Open-Meteo 海洋模型，不是 JUPEM 潮位站。确切时间请查官方潮汐表。",
     }));
   }
 
@@ -4202,6 +4228,62 @@ async function loadReliefCentres() {
   }).catch(() => ({ status: "unavailable", updatedAt: nowIso(), url: "https://infobencanajkmv2.jkm.gov.my/", items: [] }));
 }
 
+// Regional fire detections (haze is regional first: Kuching's worst API
+// episodes come from Kalimantan peat fires). NASA FIRMS publishes keyless
+// 24 h VIIRS files per region; NOAA-20 has the densest coverage.
+const FIRMS_SEA_24H = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/noaa-20-viirs-c2/csv/J1_VIIRS_C2_SouthEast_Asia_24h.csv";
+// Approximate Sarawak–Kalimantan border (west to east). Coarse on purpose and
+// labelled as such: good enough to split "Kalimantan" from "Sarawak" counts.
+const BORDER_APPROX = [[109.6, 1.95], [110.0, 1.65], [110.5, 1.05], [111.2, 1.15], [112.0, 1.35], [112.5, 1.5], [113.5, 1.4], [114.5, 1.9], [115.2, 2.6], [115.6, 4.3]];
+function northOfBorder(lon, lat) {
+  for (let i = 0; i < BORDER_APPROX.length - 1; i += 1) {
+    const [x1, y1] = BORDER_APPROX[i], [x2, y2] = BORDER_APPROX[i + 1];
+    if (lon >= x1 && lon <= x2) return lat > y1 + ((lon - x1) / (x2 - x1)) * (y2 - y1);
+  }
+  return lon < BORDER_APPROX[0][0] ? lat > 1.95 : false;
+}
+
+async function loadRegionalFires() {
+  return cached("regional-fires", 3 * 60 * 60 * 1000, async () => {
+    const csv = await fetchText(FIRMS_SEA_24H, 60000);
+    const rows = csv.split("\n");
+    const head = rows[0].split(",");
+    const ix = (k) => head.indexOf(k);
+    const [iLat, iLon, iConf, iFrp, iDate, iTime] = ["latitude", "longitude", "confidence", "frp", "acq_date", "acq_time"].map(ix);
+    let kalimantan = 0, sarawak = 0, kFrp = 0;
+    const strong = [];
+    const cells = {}; // 0.5° cell -> detection count, for trajectory checks in the browser
+    for (let r = 1; r < rows.length; r += 1) {
+      const c = rows[r].split(",");
+      const lat = Number(c[iLat]), lon = Number(c[iLon]);
+      if (!(lat > -4.5 && lat < 5.2 && lon > 108.5 && lon < 119.5) || c[iConf] === "l") continue; // Borneo, drop low confidence
+      const frp = Number(c[iFrp]) || 0;
+      if (northOfBorder(lon, lat)) sarawak += 1; else { kalimantan += 1; kFrp += frp; }
+      const key = `${Math.floor(lat * 2) / 2},${Math.floor(lon * 2) / 2}`;
+      cells[key] = (cells[key] || 0) + 1;
+      strong.push({ lat: Math.round(lat * 1000) / 1000, lon: Math.round(lon * 1000) / 1000, frp: Math.round(frp * 10) / 10, at: `${c[iDate]} ${c[iTime]}` });
+    }
+    strong.sort((a, b) => b.frp - a.frp);
+    return { status: "live", updatedAt: nowIso(), source: "NASA FIRMS · NOAA-20 VIIRS · last 24 h", url: "https://firms.modaps.eosdis.nasa.gov/map/",
+      kalimantan, sarawak, kalimantanFrpMw: Math.round(kFrp), points: strong.slice(0, 400), cells,
+      note: "Detections, not confirmed fires; nominal/high confidence only. Sarawak/Kalimantan split uses an approximate border line." };
+  }).catch(() => ({ status: "unavailable", updatedAt: nowIso(), points: [] }));
+}
+
+// Tide + surge at the Sarawak River mouth: Open-Meteo marine model sea level
+// (0.25° grid, offshore Santubong). A model, not the JUPEM tide gauge.
+async function loadTide() {
+  return cached("tide", 60 * 60 * 1000, async () => {
+    let json = null;
+    for (let attempt = 0; attempt < 3 && !json; attempt += 1) {
+      try { json = await fetchJson(TIDE_URL, 15000); } catch { await new Promise((r) => setTimeout(r, 2500 * (attempt + 1))); }
+    }
+    const tide = summariseTide(json);
+    return tide ? { status: "live", updatedAt: nowIso(), url: TIDE_URL, source: "Open-Meteo marine model · sea level incl. tide (offshore Santubong)", ...tide }
+      : { status: "unavailable", updatedAt: nowIso(), url: TIDE_URL };
+  });
+}
+
 async function loadCityReports() {
   return cached("cityReports", 300_000, async () => {
     const supabaseUrl = process.env.CITY_REPORTER_SUPABASE_URL;
@@ -4314,6 +4396,7 @@ async function buildDashboard() {
   const wave2 = [
     ["water-supply", loadWaterSupply], ["rain-regime", loadRainRegime], ["mpp-coverage", loadMppCoverage],
     ["jkm-pps", loadReliefCentres], ["dosm-districts", loadDistrictPopulation],
+    ["regional-fires", loadRegionalFires], ["tide", loadTide],
   ];
   const ok = (v) => Array.isArray(v) ? v.some((x) => x.status === "live") : v?.status === "live";
   const wave2Results = await Promise.all(wave2.map(async ([key, fn]) => {
@@ -4323,7 +4406,7 @@ async function buildDashboard() {
     await new Promise((r) => setTimeout(r, 1500));
     return fn();
   }));
-  const [waterSupply, rainRegime, mppCoverage, reliefCentres, dosmDistricts] = wave2Results;
+  const [waterSupply, rainRegime, mppCoverage, reliefCentres, dosmDistricts, regionalFires, tide] = wave2Results;
 
   // Catchment enrichment compounds Infobanjir + OSM drainage. Pure post-process,
   // no extra fetches — only runs if drainage cache is hot.
@@ -4357,6 +4440,8 @@ async function buildDashboard() {
     rainRegime,
     mppCoverage,
     reliefCentres,
+    regionalFires,
+    tide,
     govStats: { latestSarawakPop: govStats.dosm.latestSarawakPop, year: govStats.dosm.year, datasetCount: govStats.sarawak.datasetCount, updatedAt: govStats.updatedAt, districts: dosmDistricts },
     sarawakStats: govStats.sarawak,
     openDosmStats: govStats.dosm,
@@ -4374,7 +4459,7 @@ async function buildDashboard() {
     mppCouncillors,
     mppLocalities,
     osm: getOsmStatusSnapshot(),
-    operations: buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast, floodMatrix: buildFloodRiskMatrix(forecast, imperviousData), mppService }),
+    operations: buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning, trends, fires, quakes, govStats, infobanjir, apims, metWarnings, forecast, floodMatrix: buildFloodRiskMatrix(forecast, imperviousData), mppService, tide }),
     sources: [
       sourceRecord(
         "mpp-reference-map",
@@ -4480,6 +4565,8 @@ async function buildDashboard() {
       sourceRecord("ihydro-intake", "DID iHYDRO · Batu Kitang intake reach + Intelligent Gauges", waterSupply.status === "live" ? "official" : "offline", "7-day river level at the Batu Kitang intake reach with DID thresholds; Kuching urban flash-flood gauges. Sarawak Water notices are not machine-readable.", waterSupply.intake?.url || IHYDRO_BASE, waterSupply.updatedAt || generatedAt),
       sourceRecord("rain-regime", "Rain regime (JMA + MetMalaysia + Open-Meteo)", rainRegime.status === "live" ? "live" : "offline", "Rule-based monsoon / tropical system / local convection label with its evidence. Not an official MetMalaysia classification.", "https://www.jma.go.jp/bosai/map.html#contents=typhoon", rainRegime.updatedAt || generatedAt),
       sourceRecord("mpp-coverage", "MPP maintenance zones + refuse schedule", mppCoverage.status === "live" ? "official" : "offline", "Who covers which area: drains/grass, trees and Trienekens refuse zones from MPP's pages. Names only.", "https://mpp.sarawak.gov.my/web/subpage/webpage_view/258", mppCoverage.updatedAt || generatedAt),
+      sourceRecord("firms-borneo", "NASA FIRMS · Borneo fire detections (24 h)", regionalFires.status === "live" ? "live" : "offline", `VIIRS NOAA-20, nominal/high confidence: Kalimantan ${regionalFires.kalimantan ?? "—"}, Sarawak ${regionalFires.sarawak ?? "—"}. Keyless regional file.`, "https://firms.modaps.eosdis.nasa.gov/map/", regionalFires.updatedAt || generatedAt),
+      sourceRecord("tide", "Tide + surge · Sarawak River mouth (model)", tide.status === "live" ? "live" : "offline", "Open-Meteo marine sea level, offshore Santubong. A model grid point, not the JUPEM tide gauge.", "https://open-meteo.com/en/docs/marine-weather-api", tide.updatedAt || generatedAt),
       sourceRecord("jkm-pps", "JKM InfoBencana · open relief centres", reliefCentres.status === "live" ? "official" : "offline", `Open PPS in Greater Kuching districts: ${reliefCentres.items?.length ?? "—"} (Sarawak-wide: ${reliefCentres.sarawakOpen ?? "—"}).`, reliefCentres.url, reliefCentres.updatedAt || generatedAt),
       sourceRecord("mpp-service-ledger", "MPP Client Charter + service lists", mppService.status, "Quarterly charter achievement, active tenders (count/dates only; titles are images), Grade-A food premises, refuse zones, parks, night markets.", mppService.charter?.url || "https://mpp.sarawak.gov.my/", mppService.updatedAt || generatedAt),
       sourceRecord("dbku-news", "DBKU News Release", news.status, "Official DBKU news release lane.", "https://dbku.sarawak.gov.my/modules/web/pages.php?mod=news&menu_id=0&sub_id=266", generatedAt),

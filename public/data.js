@@ -195,6 +195,9 @@ export const URBAN_LAYERS = [
   // RainViewer requires the visible credit; GIBS Himawari lags ~40 min.
   { id: "rain_radar", label: "Rain radar (RainViewer)", type: "tile", color: "#38bdf8", active: false },
   { id: "himawari_ir", label: "Himawari-9 infrared", type: "tile", color: "#e5e7eb", active: false },
+  // Regional haze: FIRMS VIIRS detections (24 h) and the browser back-trajectory.
+  { id: "fires_viirs", label: "Fire detections 24 h (VIIRS)", type: "fires", color: "#ef4444", active: false },
+  { id: "air_path", label: "Air path 48 h", type: "airpath", color: "#7c3aed", active: false },
 ];
 
 // ILLUSTRATIVE — NOT A COUNCIL RECORD. Audit 29 Sep 2026: none of these
@@ -358,6 +361,12 @@ export const TRANSLATIONS = {
     gaugeNormal: "Normal", gaugeAlert: "Alert", gaugeWarning: "Warning", gaugeDanger: "Danger",
     briefNext: "Watch next 6 hours",
     briefBlind: "Gaps in the picture",
+    fires_viirs: "Fires 24 h", air_path: "Air path 48 h",
+    hazeSource: "Where did today's air come from?", hazeFrom: "Air arrived from the", hazeFires: "fire detections near its path in the last 24 h",
+    hazeLikely: "Transboundary smoke likely", hazeUnlikely: "Little fire activity upwind", hazeKal: "Kalimantan detections (24 h)", hazeSar: "Sarawak",
+    hazeMethod: "Kinematic 925 hPa back-trajectory from Kuching, 1° winds (Open-Meteo), 48 h. An estimate for orientation — not HYSPLIT/FLEXPART. For official attribution run NOAA HYSPLIT.",
+    hazeComputing: "Computing the air path…", tideTitle: "Tide · Sarawak River mouth (model)", tideNextHigh: "Next highs", tideNote: "Open-Meteo marine sea level offshore Santubong — a model, not the JUPEM gauge.",
+    dir_N: "north", dir_NE: "north-east", dir_E: "east", dir_SE: "south-east", dir_S: "south", dir_SW: "south-west", dir_W: "west", dir_NW: "north-west",
     pinTitle: "Report this spot", pinCategory: "What is the problem?", pinNote: "Note", pinNoteHint: "Optional — what you can see",
     pinCat_drain: "Blocked drain", pinCat_flood: "Flooding / ponding", pinCat_tree: "Fallen tree", pinCat_refuse: "Missed rubbish collection", pinCat_road: "Road damage / pothole", pinCat_light: "Streetlight out", pinCat_other: "Other",
     pinCopy: "Copy report", pinCopied: "Copied — paste into Talikhidmat", pinSave: "Save pin on this device", pinSaved: "Saved on this device",
@@ -454,6 +463,12 @@ export const TRANSLATIONS = {
     gaugeNormal: "Normal", gaugeAlert: "Waspada", gaugeWarning: "Amaran", gaugeDanger: "Bahaya",
     briefNext: "Perhatikan 6 jam akan datang",
     briefBlind: "Kekurangan maklumat",
+    fires_viirs: "Kebakaran 24 j", air_path: "Laluan udara 48 j",
+    hazeSource: "Dari mana udara hari ini datang?", hazeFrom: "Udara datang dari arah", hazeFires: "titik panas berhampiran laluannya dalam 24 jam lalu",
+    hazeLikely: "Jerebu rentas sempadan berkemungkinan", hazeUnlikely: "Sedikit aktiviti kebakaran di arah angin", hazeKal: "Titik panas Kalimantan (24 j)", hazeSar: "Sarawak",
+    hazeMethod: "Trajektori balik kinematik 925 hPa dari Kuching, angin 1° (Open-Meteo), 48 jam. Anggaran untuk orientasi — bukan HYSPLIT/FLEXPART. Untuk atribusi rasmi gunakan NOAA HYSPLIT.",
+    hazeComputing: "Mengira laluan udara…", tideTitle: "Pasang surut · muara Sungai Sarawak (model)", tideNextHigh: "Air pasang seterusnya", tideNote: "Paras laut marin Open-Meteo di luar Santubong — model, bukan tolok JUPEM.",
+    dir_N: "utara", dir_NE: "timur laut", dir_E: "timur", dir_SE: "tenggara", dir_S: "selatan", dir_SW: "barat daya", dir_W: "barat", dir_NW: "barat laut",
     pinTitle: "Lapor lokasi ini", pinCategory: "Apakah masalahnya?", pinNote: "Catatan", pinNoteHint: "Pilihan — apa yang anda lihat",
     pinCat_drain: "Longkang tersumbat", pinCat_flood: "Banjir / air bertakung", pinCat_tree: "Pokok tumbang", pinCat_refuse: "Sampah tidak dikutip", pinCat_road: "Jalan rosak / berlubang", pinCat_light: "Lampu jalan padam", pinCat_other: "Lain-lain",
     pinCopy: "Salin laporan", pinCopied: "Disalin — tampal ke Talikhidmat", pinSave: "Simpan pin pada peranti ini", pinSaved: "Disimpan pada peranti ini",
@@ -550,6 +565,12 @@ export const TRANSLATIONS = {
     gaugeNormal: "正常", gaugeAlert: "警戒", gaugeWarning: "警告", gaugeDanger: "危险",
     briefNext: "未来6小时留意",
     briefBlind: "信息缺口",
+    fires_viirs: "24小时火点", air_path: "48小时气流路径",
+    hazeSource: "今天的空气从哪里来？", hazeFrom: "空气来自", hazeFires: "个火点位于其路径附近（过去24小时）",
+    hazeLikely: "很可能是跨境烟霾", hazeUnlikely: "上风方向火点很少", hazeKal: "加里曼丹火点（24小时）", hazeSar: "砂拉越",
+    hazeMethod: "从古晋出发的 925 hPa 运动学后向轨迹，1° 风场（Open-Meteo），48 小时。仅供方向参考——不是 HYSPLIT/FLEXPART。正式溯源请使用 NOAA HYSPLIT。",
+    hazeComputing: "正在计算气流路径…", tideTitle: "潮汐 · 砂拉越河口（模型）", tideNextHigh: "下次高潮", tideNote: "Open-Meteo 海洋模型在 Santubong 外海的海平面——是模型，不是 JUPEM 潮位站。",
+    dir_N: "北方", dir_NE: "东北方", dir_E: "东方", dir_SE: "东南方", dir_S: "南方", dir_SW: "西南方", dir_W: "西方", dir_NW: "西北方",
     pinTitle: "报告此地点", pinCategory: "是什么问题？", pinNote: "备注", pinNoteHint: "选填——您看到的情况",
     pinCat_drain: "排水渠堵塞", pinCat_flood: "淹水 / 积水", pinCat_tree: "树木倒塌", pinCat_refuse: "垃圾未收", pinCat_road: "路面损坏 / 坑洞", pinCat_light: "路灯不亮", pinCat_other: "其他",
     pinCopy: "复制报告", pinCopied: "已复制——请粘贴到 Talikhidmat", pinSave: "在此设备保存标记", pinSaved: "已保存在此设备",

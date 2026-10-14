@@ -63,3 +63,30 @@ test("wind summary averages direction as vectors (350° and 10° is north, not s
   assert.equal(s.wind850.dirMean, 210);
   assert.equal(k.mslChange24, 0);
 });
+
+test("air path: a steady south-westerly traces the air back to the south-west, fires on the path count once", async () => {
+  const { backTrajectory, firesAlongPath, originSector, AIR_PATH_GRID } = await import("../public/air-path.js");
+  const now = Date.parse("2026-10-14T12:00:00Z");
+  const time = Array.from({ length: 72 }, (_, i) => new Date(now - (48 - i) * 3600e3).toISOString().slice(0, 16));
+  const json = [];
+  for (let la = AIR_PATH_GRID.lat0; la <= AIR_PATH_GRID.lat1; la += 1)
+    for (let lo = AIR_PATH_GRID.lon0; lo <= AIR_PATH_GRID.lon1; lo += 1)
+      json.push({ latitude: la, longitude: lo, hourly: { time, wind_speed_925hPa: Array(72).fill(5), wind_direction_925hPa: Array(72).fill(225) } });
+  const path = backTrajectory(json, now, 48);
+  assert.ok(path.length > 20);
+  assert.equal(originSector(path), "SW");
+  const last = path.at(-1);
+  assert.ok(last.lat < 1.55 && last.lon < 110.35);
+  const key = `${Math.floor(last.lat * 2) / 2},${Math.floor(last.lon * 2) / 2}`;
+  assert.equal(firesAlongPath(path, { [key]: 7, "9,99": 500 }), 7);
+});
+
+test("tide summary finds high waters and a sane range", async () => {
+  const { summariseTide } = await import("../public/tide.js");
+  const time = Array.from({ length: 96 }, (_, i) => new Date(Date.UTC(2026, 9, 14, i)).toISOString().slice(0, 16));
+  const sea = time.map((_, i) => Math.round(Math.sin((i / 12.42) * 2 * Math.PI) * 1.8 * 100) / 100);
+  const t = summariseTide({ hourly: { time, sea_level_height_msl: sea } }, Date.parse("2026-10-14T00:00:00+08:00"));
+  assert.ok(t.highs.length >= 3);
+  assert.ok(t.rangeM > 3 && t.rangeM < 4);
+  assert.ok(t.highs.every((h) => h.v > 1.5));
+});

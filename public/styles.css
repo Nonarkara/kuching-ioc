@@ -2005,6 +2005,7 @@ body::before {
 
 /* === Footer === */
 .bottom-bar { flex-shrink: 0; display: flex; justify-content: space-between; padding: 3px 12px; font-size: 9px; border-top: 1px solid var(--line); background: var(--hud-bg); align-items: center; }
+.bottom-bar .bottom-disclaimer { color: var(--soft); font-size: 9px; letter-spacing: 0.02em; flex: 1 1 auto; min-width: 0; padding: 0 8px; }
 .action-btn {
   background: transparent; border: 1px solid var(--cyan); color: var(--cyan);
   font-family: var(--font-mono); font-size: 8px; padding: 3px 10px;

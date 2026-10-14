@@ -17,7 +17,8 @@ const {
   WEATHER_FALLBACK, AIR_FALLBACK, CITY_DEMOGRAPHICS, TRANSLATIONS,
   round, aqiBand, weatherCodeLabel, kmBetween, classifyAircraft,
   sourceRecord, buildMapLayers, URBAN_LAYERS, ECONOMY_FALLBACK, RIVER_BYPASS_PROJECT, MPP_WARD_PROJECTS, MPP_WARD_PROJECTS_ILLUSTRATIVE,
-  WARD_TENSION, WARD_TENSION_ILLUSTRATIVE, MPP_OFFICIAL_SERVICES
+  WARD_TENSION, WARD_TENSION_ILLUSTRATIVE, MPP_OFFICIAL_SERVICES,
+  MPP_WARD_CATEGORIES, WARD_TO_CATEGORY
 } = await import(__dataUrl__);
 const { dataHealth, observationHealth, warningHealth } = await import(`./data-health.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { morningBrief } = await import(`./morning-brief.js?v=${encodeURIComponent(__ASSET_VER__)}`);
@@ -40,17 +41,19 @@ const VALID_SCOPES = ["padawan", "greater_kuching"];
 const SCOPES = {
   padawan: {
     id: "padawan",
-    mapCenter: [1.46, 110.31],
-    mapZoom: 12,
-    label: { en: "PADAWAN FOCUS", ms: "FOKUS PADAWAN", zh: "百大万焦点" },
-    pill: { en: "PADAWAN FOCUS", ms: "FOKUS PADAWAN", zh: "百大万焦点" },
+    mapCenter: [1.42, 110.28],
+    mapZoom: 11,
+    bounds: [[1.14, 110.10], [1.71, 110.43]],
+    label: { en: "MY WARDS (PADAWAN)", ms: "ZON SAYA (PADAWAN)", zh: "我的辖区 (巴达旺)" },
+    pill: { en: "MY WARDS // PADAWAN", ms: "ZON SAYA // PADAWAN", zh: "我的辖区 // 巴达旺" },
   },
   greater_kuching: {
     id: "greater_kuching",
     mapCenter: [1.53, 110.35],
     mapZoom: 11,
-    label: { en: "GREATER KUCHING", ms: "GREATER KUCHING", zh: "古晋大都会" },
-    pill: { en: "GREATER KUCHING", ms: "GREATER KUCHING", zh: "古晋大都会" },
+    bounds: [[1.30, 110.10], [1.75, 110.60]],
+    label: { en: "WHOLE KUCHING", ms: "SELURUH KUCHING", zh: "全古晋大都会" },
+    pill: { en: "WHOLE KUCHING", ms: "SELURUH KUCHING", zh: "全古晋大都会" },
   },
 };
 function readStoredScope() {
@@ -126,6 +129,8 @@ const state = {
   cesiumInitialised: false,
   localityFilter: { ward: null, stateCode: null, parliamentCode: null, propertyType: null, search: "" },
   wardFeatures: null, wardLayerGroup: null, wardHighlightLayer: null,
+  activeWardCategory: null,
+  heroMapMode: false,
 };
 
 // Lock the html data-view attribute to whatever scope was hydrated, so the
@@ -1546,10 +1551,12 @@ function renderMap(payload) {
   }
 
   if (!state.hasInitialMapFit) {
-    // First fit honours the active scope's default extent (Padawan = tighter
-    // zoom on MPP; Greater Kuching = wider 3-council bbox).
-    const cfg = SCOPES[state.scope] || SCOPES.padawan;
-    state.map.setView(cfg.mapCenter, cfg.mapZoom);
+    if (state.scope === "padawan") {
+      fitMapToPadawan();
+    } else {
+      const cfg = SCOPES[state.scope] || SCOPES.padawan;
+      state.map.setView(cfg.mapCenter, cfg.mapZoom);
+    }
     state.hasInitialMapFit = true;
   }
 
@@ -1740,15 +1747,18 @@ function renderUrbanLayerToggle() {
           return { color: c, weight: 2, opacity: 0.9, fillColor: c, fillOpacity: 0.25 };
         }
         if (layer.id === "mpp_wards") {
-          const c = props.color || WARD_COLOR_MAP[props.wardCode] || layer.color;
+          const featCatId = WARD_TO_CATEGORY[props.wardCode];
+          const featCat = featCatId ? MPP_WARD_CATEGORIES[featCatId] : null;
+          const c = featCat?.color || props.color || WARD_COLOR_MAP[props.wardCode] || layer.color;
           const active = state.activeWard === props.wardCode;
+          const inCat = !state.activeWardCategory || state.activeWardCategory === featCatId;
           return {
             color: c,
-            weight: active ? 3 : 2,
-            opacity: 0.95,
+            weight: active ? 3.5 : inCat ? 2 : 1,
+            opacity: inCat ? 0.95 : 0.25,
             fillColor: c,
-            fillOpacity: active ? 0.34 : 0.22,
-            dashArray: active ? null : "4 4",
+            fillOpacity: active ? 0.38 : inCat ? 0.22 : 0.05,
+            dashArray: active ? null : inCat ? "4 4" : "2 2",
           };
         }
         if (layer.id === "land_use" || layer.id === "flood_risk") {
@@ -1770,10 +1780,12 @@ function renderUrbanLayerToggle() {
         onEachFeature: (feat, lyr) => {
           const p = feat.properties || {};
           if (layer.id === "mpp_wards") {
-            // All OSM-derived properties are escaped at the HTML boundary.
-            // Audit #10: tags.name from Overpass was interpolated into the
-            // tooltip raw, leaving the surface open to a hostile tags.name.
-            const tooltip = `<strong>Ward ${escapeHtml(p.wardCode ?? "")}${p.wardLabel ? " // " + escapeHtml(p.wardLabel) : ""}</strong><br>${escapeHtml(p.area || "")}<br><em>Click to filter councillors + localities</em>`;
+            const featCatId = WARD_TO_CATEGORY[p.wardCode];
+            const featCat = featCatId ? MPP_WARD_CATEGORIES[featCatId] : null;
+            const lang = state.lang || "en";
+            const catName = featCat ? (featCat.name[lang] || featCat.name.en) : "";
+            const catBadge = featCat ? ` <span class="ward-tooltip-cat" style="color:${featCat.color}; font-size:11px;">· ${featCat.icon} ${escapeHtml(catName)}</span>` : "";
+            const tooltip = `<strong>Ward ${escapeHtml(p.wardCode ?? "")}${p.wardLabel ? " // " + escapeHtml(p.wardLabel) : ""}</strong>${catBadge}<br>${escapeHtml(p.area || "")}<br><em>Click to filter councillors + localities</em>`;
             lyr.bindTooltip(tooltip, { className: "marker-tooltip", sticky: true });
             lyr.on("click", () => setActiveWard(state.activeWard === p.wardCode ? null : p.wardCode));
             return;
@@ -3351,15 +3363,24 @@ function renderMppCouncillors(payload) {
     accentColor: "var(--cyan)",
   }) : "";
 
+  const activeCatWards = state.activeWardCategory ? (MPP_WARD_CATEGORIES[state.activeWardCategory]?.wardCodes || null) : null;
   const wardChips = WARD_CODE_ORDER.map(code => {
     const w = wardsByCode.get(code);
     if (!w) return "";
     const localityCount = localityCounts[code] ?? 0;
-    const color = WARD_COLOR_MAP[code] || "#a78bfa";
+    const catId = WARD_TO_CATEGORY[code];
+    const cat = catId ? MPP_WARD_CATEGORIES[catId] : null;
+    const inCategory = !activeCatWards || activeCatWards.includes(code);
+    const color = cat?.color || WARD_COLOR_MAP[code] || "#a78bfa";
     const active = state.activeWard === code ? "true" : "false";
+    const dimStyle = inCategory ? "" : "opacity:0.35; filter:grayscale(0.7);";
+    const catName = cat ? (cat.name[state.lang] || cat.name.en) : "";
     return `
-      <button class="ward-chip" data-ward="${code}" data-active="${active}" style="--ward-color:${color}">
-        <div class="ward-chip-code">${escapeHtml(code)}</div>
+      <button class="ward-chip" data-ward="${code}" data-active="${active}" style="--ward-color:${color}; ${dimStyle}">
+        <div class="ward-chip-code">
+          <span>${escapeHtml(code)}</span>
+          ${cat ? `<span class="ward-chip-cat-icon" title="${escapeHtml(catName)}">${cat.icon}</span>` : ""}
+        </div>
         <div class="ward-chip-area">${escapeHtml(w.area)}</div>
         <div class="ward-chip-stats">
           <span>${w.councillorCount} councillor${w.councillorCount === 1 ? "" : "s"}</span>
@@ -3412,8 +3433,10 @@ function localityConstituencyBadge(item) {
 
 function filterLocalities(items, f) {
   const q = (f.search || "").trim().toUpperCase();
+  const catWards = state.activeWardCategory ? MPP_WARD_CATEGORIES[state.activeWardCategory]?.wardCodes : null;
   return items.filter(it => {
     if (f.ward && it.wardCode !== f.ward) return false;
+    if (!f.ward && catWards && !catWards.includes(it.wardCode)) return false;
     if (f.stateCode) {
       const codes = (it.constituency?.parsed || []).map(p => p.stateCode);
       if (!codes.includes(f.stateCode)) return false;
@@ -3630,6 +3653,7 @@ function setActiveWard(code) {
   renderMppCouncillors(state.payload);
   renderMppLocalities(state.payload);
   renderWardBrief(code, state.payload);
+  applyWardCategoryFilter();
   if (code) {
     highlightWard(code);
     if (typeof history !== "undefined" && history.replaceState) {
@@ -3641,6 +3665,187 @@ function setActiveWard(code) {
       history.replaceState(null, "", location.pathname + location.search);
     }
   }
+}
+
+// --- Ward Categorization & Hero Map Controls (Padawan Command Surface) ---
+
+function fitMapToPadawan() {
+  if (!state.map) return;
+  if (state.wardLayerGroup && typeof state.wardLayerGroup.getBounds === "function") {
+    try {
+      const b = state.wardLayerGroup.getBounds();
+      if (b && typeof b.isValid === "function" && b.isValid()) {
+        state.map.fitBounds(b.pad(0.04), { animate: true });
+        return;
+      }
+    } catch (_) {}
+  }
+  try {
+    state.map.fitBounds(SCOPES.padawan.bounds, { animate: true });
+  } catch (_) {
+    state.map.setView(SCOPES.padawan.mapCenter, SCOPES.padawan.mapZoom);
+  }
+}
+
+function updateMapKicker() {
+  const kicker = $("mapKicker");
+  if (!kicker) return;
+  const isPadawan = state.scope === "padawan";
+  kicker.textContent = isPadawan ? t("radarPadawan") : t("radarGreater");
+}
+
+function renderWardCategoryBar() {
+  const bar = $("wardCategoryBar");
+  if (!bar) return;
+
+  if (state.scope !== "padawan") {
+    bar.hidden = true;
+    bar.innerHTML = "";
+    return;
+  }
+
+  bar.hidden = false;
+  const lang = state.lang || "en";
+  const allLabel = t("wardCategoryAll");
+  const isAllActive = !state.activeWardCategory;
+
+  let html = `<div class="ward-cat-track">
+    <button type="button" class="ward-cat-chip ${isAllActive ? "active" : ""}" data-category="all" title="Show all 10 MPP resident councillor wards">
+      <span class="ward-cat-icon">🏛️</span>
+      <span class="ward-cat-name">${escapeHtml(allLabel)}</span>
+      <span class="ward-cat-count">10</span>
+    </button>`;
+
+  for (const [id, cat] of Object.entries(MPP_WARD_CATEGORIES)) {
+    const isActive = state.activeWardCategory === id;
+    const catName = cat.shortLabel?.[lang] || cat.shortLabel?.en || cat.name[lang] || cat.name.en;
+    const count = cat.wardCodes.length;
+    html += `
+      <button type="button" class="ward-cat-chip ${isActive ? "active" : ""}" data-category="${id}" style="--cat-color: ${cat.color};" title="${escapeHtml(cat.description[lang] || cat.description.en)}">
+        <span class="ward-cat-dot" style="background: ${cat.color};"></span>
+        <span class="ward-cat-icon">${cat.icon}</span>
+        <span class="ward-cat-name">${escapeHtml(catName)}</span>
+        <span class="ward-cat-count">${count}</span>
+      </button>`;
+  }
+
+  html += `</div>`;
+  bar.innerHTML = html;
+
+  bar.querySelectorAll(".ward-cat-chip").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const catId = btn.dataset.category === "all" ? null : btn.dataset.category;
+      if (state.activeWardCategory === catId) {
+        setWardCategory(null);
+      } else {
+        setWardCategory(catId);
+      }
+    });
+  });
+}
+
+function setWardCategory(catId) {
+  state.activeWardCategory = catId || null;
+
+  // If an active ward is outside the new category, deselect it
+  if (state.activeWard && catId) {
+    const cat = MPP_WARD_CATEGORIES[catId];
+    if (!cat?.wardCodes.includes(state.activeWard)) {
+      setActiveWard(null);
+    }
+  }
+
+  renderWardCategoryBar();
+  applyWardCategoryFilter();
+
+  if (state.payload) {
+    renderMppCouncillors(state.payload);
+    renderMppLocalities(state.payload);
+  }
+}
+
+function applyWardCategoryFilter() {
+  if (!state.map) return;
+  const catId = state.activeWardCategory;
+  const activeCat = catId ? MPP_WARD_CATEGORIES[catId] : null;
+
+  // Restyle ward polygons
+  if (state.wardLayerGroup && state.wardFeatures) {
+    state.wardLayerGroup.eachLayer(layer => {
+      const feat = layer.feature;
+      const p = feat?.properties || {};
+      const code = p.wardCode;
+      const featCatId = WARD_TO_CATEGORY[code];
+      const featCat = featCatId ? MPP_WARD_CATEGORIES[featCatId] : null;
+      const baseColor = featCat?.color || p.color || WARD_COLOR_MAP[code] || "#a78bfa";
+
+      const inCategory = !catId || featCatId === catId;
+      const isSelectedWard = state.activeWard === code;
+
+      layer.setStyle({
+        color: baseColor,
+        weight: isSelectedWard ? 3.5 : inCategory ? 2 : 1,
+        opacity: inCategory ? 0.95 : 0.25,
+        fillColor: baseColor,
+        fillOpacity: isSelectedWard ? 0.45 : inCategory ? 0.24 : 0.05,
+        dashArray: isSelectedWard ? null : inCategory ? "4 4" : "2 2",
+      });
+    });
+
+    if (activeCat && activeCat.wardCodes.length) {
+      const matchingLayers = [];
+      state.wardLayerGroup.eachLayer(lyr => {
+        if (activeCat.wardCodes.includes(lyr.feature?.properties?.wardCode)) {
+          matchingLayers.push(lyr);
+        }
+      });
+      if (matchingLayers.length > 0) {
+        try {
+          const group = window.L.featureGroup(matchingLayers);
+          state.map.fitBounds(group.getBounds().pad(0.12), { animate: true });
+        } catch (_) {}
+      }
+    } else if (!state.activeWard) {
+      fitMapToPadawan();
+    }
+  }
+
+  if (activeCat) {
+    const lang = state.lang || "en";
+    const name = activeCat.name[lang] || activeCat.name.en;
+    showToast(`🏛️ ${name}: ${activeCat.wardCodes.join(", ")}`, "ok");
+  }
+}
+
+function toggleHeroMapMode(force) {
+  const colMap = document.querySelector(".col-map");
+  if (!colMap) return;
+
+  state.heroMapMode = typeof force === "boolean" ? force : !state.heroMapMode;
+  colMap.classList.toggle("hero-map-active", state.heroMapMode);
+
+  const heroBtn = $("heroMapToggleBtn");
+  if (heroBtn) {
+    heroBtn.classList.toggle("active", state.heroMapMode);
+    const labelEl = heroBtn.querySelector(".hero-label");
+    const iconEl = heroBtn.querySelector(".hero-icon");
+    if (labelEl) labelEl.textContent = state.heroMapMode ? t("deepTrayToggle") : t("heroMapToggle");
+    if (iconEl) iconEl.textContent = state.heroMapMode ? "⤡" : "⤢";
+  }
+
+  const collapseBtn = $("trayCollapseBtn");
+  if (collapseBtn) {
+    collapseBtn.classList.toggle("collapsed", state.heroMapMode);
+    const icon = collapseBtn.querySelector(".collapse-icon");
+    if (icon) icon.textContent = state.heroMapMode ? "▴" : "▾";
+  }
+
+  queueMapResize();
+}
+
+function setupHeroMapControls() {
+  $("heroMapToggleBtn")?.addEventListener("click", () => toggleHeroMapMode());
+  $("trayCollapseBtn")?.addEventListener("click", () => toggleHeroMapMode());
 }
 
 // Pass 2.4: Per-ward briefing — read derived stats from the existing payload + mpp_wards features.
@@ -3740,12 +3945,21 @@ function renderWardBrief(wardCode, payload) {
     : "";
   const tensionLine = `<span class="glyph" data-tone="${tension.tone}">${tensionGlyph}</span> <strong style="color: var(--${tension.tone === 'alert' ? 'red' : tension.tone === 'watch' ? 'amber' : 'cyan'})">${tension.score}/100</strong> · ${escapeHtml(tension.topIssue)}${tensionSourceBadge}`;
 
+  const catId = WARD_TO_CATEGORY[wardCode];
+  const cat = catId ? MPP_WARD_CATEGORIES[catId] : null;
+  const catBadgeHtml = cat
+    ? `<span class="ward-brief-cat-pill" style="display:inline-flex; align-items:center; gap:4px; padding:1px 6px; font-size:11px; font-weight:600; border-radius:3px; background:${cat.color}22; color:${cat.color}; border:1px solid ${cat.color}55;"><span class="cat-icon">${cat.icon}</span> ${escapeHtml(cat.name[lang] || cat.name.en)}</span>`
+    : "";
+
   el.hidden = false;
   el.dataset.active = "true";
   el.innerHTML = `
     <div class="ward-brief-head">
       <div class="ward-brief-title" style="border-left:3px solid ${color}; padding-left:8px;">
-        <span class="ward-brief-code">WARD ${escapeHtml(wardCode)}</span>
+        <div class="ward-brief-top-line" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span class="ward-brief-code">WARD ${escapeHtml(wardCode)}</span>
+          ${catBadgeHtml}
+        </div>
         <span class="ward-brief-area">${escapeHtml((wardLabel || "") + (area ? " · " + area : ""))}</span>
       </div>
       <button type="button" class="ward-brief-close" aria-label="Close ward brief">✕</button>
@@ -4417,6 +4631,8 @@ function renderDashboard(payload) {
   const curated = metricOrder.map(id => payload.metrics.find(m => m.id === id)).filter(Boolean);
   renderMetrics(curated.length >= 4 ? curated : payload.metrics.slice(0, 6));
   renderMap(payload);
+  updateMapKicker();
+  renderWardCategoryBar();
   if (state.activeStation && state.activeWaterPath) {
     const fresh = (payload.infobanjir?.stations || []).find((station) => station.id === state.activeStation);
     if (fresh) highlightCatchment({ ...fresh, catchment: state.activeWaterPath }, { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" }[fresh.band] || "#8aa2c8");
@@ -4631,6 +4847,13 @@ function setLang(lang) {
   }
   // Highlight active lang button
   document.querySelectorAll(".lang-btn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
+  updateMapKicker();
+  renderWardCategoryBar();
+  const heroBtn = $("heroMapToggleBtn");
+  if (heroBtn) {
+    const labelEl = heroBtn.querySelector(".hero-label");
+    if (labelEl) labelEl.textContent = state.heroMapMode ? t("deepTrayToggle") : t("heroMapToggle");
+  }
 }
 
 // --- Keyboard shortcuts + help overlay ---
@@ -4707,8 +4930,15 @@ function setScope(scope, { silent = false } = {}) {
 
   // Re-fit the map to the new scope's default extent.
   if (state.map) {
-    const cfg = SCOPES[scope];
-    state.map.setView(cfg.mapCenter, cfg.mapZoom, { animate: true });
+    if (scope === "padawan") {
+      fitMapToPadawan();
+      // In Padawan scope, ensure wards layer is active
+      const wardsBtn = document.querySelector(`#urbanLayerToggle button[data-id="mpp_wards"]`);
+      if (wardsBtn && !wardsBtn.classList.contains("active")) wardsBtn.click();
+    } else {
+      const cfg = SCOPES[scope];
+      state.map.setView(cfg.mapCenter, cfg.mapZoom, { animate: true });
+    }
     state.hasInitialMapFit = true;
   }
 
@@ -4722,6 +4952,9 @@ function setScope(scope, { silent = false } = {}) {
       renderCesiumEntities(state.payload);
     }
   }
+
+  updateMapKicker();
+  renderWardCategoryBar();
 
   // Re-render the dashboard panels that branch on scope. No reload needed.
   if (state.payload) {
@@ -4740,7 +4973,7 @@ function toggleViewMode() {
   setScope(state.scope === "padawan" ? "greater_kuching" : "padawan");
 }
 
-// Wire the masthead scope toggle + the inline pill to setScope().
+// Wire the scope toggles (masthead + hero map header) + the inline pill to setScope().
 function renderScopeToggle() {
   document.querySelectorAll(".scope-btn").forEach(btn => {
     btn.addEventListener("click", () => setScope(btn.dataset.scope));
@@ -4757,6 +4990,9 @@ function renderScopeToggle() {
   document.querySelectorAll(".scope-btn").forEach(b => {
     b.classList.toggle("active", b.dataset.scope === state.scope);
   });
+  setupHeroMapControls();
+  updateMapKicker();
+  renderWardCategoryBar();
 }
 
 // --- 2D / 3D dimension toggle ---

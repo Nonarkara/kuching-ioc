@@ -37,8 +37,12 @@
         <div class="status-block">
           <div class="controls-row">
             <div class="scope-toggle segmented-control" role="group" aria-label="Geographic scope">
-              <button class="scope-btn active" data-scope="padawan" title="Focus on MPP jurisdiction (984 km²) — Padawan-only hydro, news, and wards.">PADAWAN</button>
-              <button class="scope-btn" data-scope="greater_kuching" title="Expand to all 3 councils (MPP, MBKS, DBKU) — Greater Kuching hydro, news, and stations.">GREATER KUCHING</button>
+              <button class="scope-btn active" data-scope="padawan" title="Focus on MPP jurisdiction (984 km²) — Secretary Goh's 10 wards.">
+                <span class="scope-icon">🏛️</span> <span data-i18n="scopeMyWards">My Wards (Padawan)</span>
+              </button>
+              <button class="scope-btn" data-scope="greater_kuching" title="Expand to all 3 councils (MPP, MBKS, DBKU) — Greater Kuching.">
+                <span class="scope-icon">🌐</span> <span data-i18n="scopeWholeKuching">Whole Kuching</span>
+              </button>
             </div>
             <div class="dim-toggle segmented-control" role="group" aria-label="Map dimension">
               <button class="dim-btn active" data-dim="2d" title="2D Leaflet view.">2D</button>
@@ -138,13 +142,27 @@
         <section class="panel map-panel">
           <div class="panel-head map-head">
             <div class="title-wrap">
-              <div class="kicker" data-i18n="radar">Map · Greater Kuching</div>
+              <div class="kicker" id="mapKicker" data-i18n="radar">Map · Greater Kuching</div>
               <div id="mapSummary" class="map-summary"><span class="skeleton" style="min-width:260px"></span></div>
+            </div>
+            <div class="map-scope-switcher segmented-control" role="group" aria-label="Command Scope">
+              <button type="button" class="scope-btn map-scope-btn active" data-scope="padawan" title="Focus on MPP jurisdiction (984 km²) — Secretary Goh's 10 wards.">
+                <span class="scope-icon">🏛️</span>
+                <span class="scope-label" data-i18n="scopeMyWards">My Wards (Padawan)</span>
+              </button>
+              <button type="button" class="scope-btn map-scope-btn" data-scope="greater_kuching" title="Expand to all 3 councils (MPP, MBKS, DBKU) — Greater Kuching.">
+                <span class="scope-icon">🌐</span>
+                <span class="scope-label" data-i18n="scopeWholeKuching">Whole Kuching</span>
+              </button>
             </div>
             <div class="map-controls">
               <div id="layerToggle" class="segmented-control"></div>
+              <button id="heroMapToggleBtn" type="button" class="ctrl-btn hero-map-toggle" title="Toggle full height hero map">
+                <span class="hero-icon">⤢</span> <span class="hero-label" data-i18n="heroMapToggle">Hero Map</span>
+              </button>
             </div>
           </div>
+          <div id="wardCategoryBar" class="ward-category-bar" role="toolbar" aria-label="Filter Padawan Wards by Category"></div>
           <div class="building-tools">
             <div class="building-buttons">
               <button id="buildingsToggle" type="button" aria-pressed="false" disabled>3D buildings · pilot</button>
@@ -193,6 +211,9 @@
               <button type="button" role="tab" class="tray-tab" data-pane="economy" aria-selected="false" data-i18n="trayEconomy">Economy · pulse</button>
               <button type="button" role="tab" class="tray-tab" data-pane="coverage" aria-selected="false" data-i18n="trayCoverage">Who covers</button>
               <button type="button" role="tab" class="tray-tab" data-pane="sources" aria-selected="false" data-i18n="traySources">Sources</button>
+              <button type="button" id="trayCollapseBtn" class="tray-collapse-btn" aria-label="Toggle evidence tray" title="Collapse or expand evidence tray">
+                <span class="collapse-icon">▾</span>
+              </button>
             </div>
             <div class="tray-pane" role="tabpanel" data-pane="outlook">
       <section id="rainRegime" class="rain-regime" aria-live="polite"></section>

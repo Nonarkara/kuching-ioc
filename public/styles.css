@@ -4706,7 +4706,7 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
   .watchpoint-list { flex-wrap: nowrap; min-width: 0; overflow-x: auto; scrollbar-width: none; }
   .watchpoint-list span { font-size: 11px; white-space: nowrap; }
   .deep-tray {
-    flex: 0 0 clamp(150px, 21vh, 250px);
+    flex: 0 0 clamp(120px, 16vh, 200px);
     min-height: 0;
     display: flex;
     flex-direction: column;
@@ -4924,3 +4924,174 @@ a.pulse-stat:focus-visible strong {
 .hz-counts strong { color: var(--ink); font-size: 13px; }
 .hz-note { font-size: 11px; color: var(--soft); margin-top: 2px; line-height: 1.4; }
 .tide-panel .ws-spark { max-width: 360px; }
+
+/* === Hero Scope Switcher (Prominent Center-Map Switch for Secretary Goh) === */
+.map-scope-switcher {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  padding: 2px;
+  gap: 2px;
+  border-radius: 4px;
+}
+.map-scope-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 10px;
+  font: 600 12px var(--font-sans);
+  color: var(--soft);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.map-scope-btn:hover {
+  color: var(--ink);
+  background: var(--card-bg);
+}
+.map-scope-btn.active {
+  color: var(--ink);
+  background: var(--hud-bg);
+  border-color: var(--cyan);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.map-scope-btn.active[data-scope="padawan"] {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+.map-scope-btn .scope-icon {
+  font-size: 13px;
+}
+
+/* === Hero Map Toggle Button === */
+.hero-map-toggle {
+  min-height: 22px;
+  font-size: 11px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  color: var(--soft);
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 3px;
+}
+.hero-map-toggle:hover, .hero-map-toggle.active {
+  color: var(--cyan);
+  border-color: var(--cyan);
+  background: var(--hud-bg);
+}
+
+/* === Ward Category Filter Bar (Padawan Operational Clusters) === */
+.ward-category-bar {
+  display: flex;
+  align-items: center;
+  background: var(--hud-bg);
+  border-bottom: 1px solid var(--line-strong);
+  padding: 5px 10px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.ward-category-bar[hidden] {
+  display: none !important;
+}
+.ward-cat-track {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.ward-cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 9px;
+  font: 500 11px var(--font-sans);
+  color: var(--soft);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.ward-cat-chip:hover {
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+.ward-cat-chip.active {
+  color: var(--ink);
+  font-weight: 600;
+  border-color: var(--cat-color, var(--cyan));
+  background: color-mix(in srgb, var(--cat-color, var(--cyan)) 14%, var(--card-bg));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.ward-cat-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ward-cat-count {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: var(--line);
+  color: var(--ink);
+}
+.ward-cat-chip.active .ward-cat-count {
+  background: var(--cat-color, var(--cyan));
+  color: #fff;
+}
+
+/* === Hero Map Mode (Collapses tray to tab bar, map expands to full height) === */
+.col-map.hero-map-active .deep-tray {
+  flex: 0 0 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  overflow: hidden !important;
+}
+.col-map.hero-map-active .deep-tray .tray-pane {
+  display: none !important;
+}
+.tray-collapse-btn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--soft);
+  font-size: 13px;
+  padding: 0 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s ease;
+}
+.tray-collapse-btn:hover {
+  color: var(--ink);
+}
+.tray-collapse-btn.collapsed .collapse-icon {
+  transform: rotate(180deg);
+}
+
+/* === Ward Category Badges in Councillors & Ward Brief === */
+.ward-chip-code {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.ward-chip-cat-icon {
+  font-size: 11px;
+}
+.ward-brief-cat-pill {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}

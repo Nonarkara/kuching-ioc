@@ -200,6 +200,117 @@ export const URBAN_LAYERS = [
   { id: "air_path", label: "Air path 48 h", type: "airpath", color: "#7c3aed", active: false },
 ];
 
+// --- MPP Ward Categorization (Operational Clustering for Secretary Goh) ---
+// Groups the 10 MPP resident councillor wards into 4 functional civic clusters:
+// 1. Urban Core & Commercial Hubs (Batu Kawah Township, Kota Sentosa, 10th Mile)
+// 2. Suburban & Rapid Growth Ring (Matang, Batu Kawah corridor, 3rd Mile / Sg. Maong)
+// 3. Riverine & Catchment Corridor (Bengoh Dam water supply, Biperoh, Telaga Air estuary)
+// 4. Rural Foothills & Hinterland (Upper Padawan highland spine, Annah Rais, Mambong)
+export const MPP_WARD_CATEGORIES = {
+  urban_core: {
+    id: "urban_core",
+    code: "CORE",
+    icon: "🏢",
+    name: {
+      en: "Urban Core & Commercial",
+      ms: "Pusat Bandar & Komersial",
+      zh: "城市核心与商圈",
+    },
+    shortLabel: {
+      en: "Urban Core",
+      ms: "Pusat Bandar",
+      zh: "商圈核心",
+    },
+    description: {
+      en: "High-density commercial hubs, major markets, trade corridors & municipal services",
+      ms: "Hab komersial berkepadatan tinggi, pasar utama, koridor perdagangan & perkhidmatan perbandaran",
+      zh: "高密度商业枢纽、主要市镇集市、商贸走廊与市政服务核心",
+    },
+    color: "#0284c7",
+    wardCodes: ["M", "I", "FG"],
+  },
+  suburban_growth: {
+    id: "suburban_growth",
+    code: "GROWTH",
+    icon: "🏡",
+    name: {
+      en: "Suburban & Growth Ring",
+      ms: "Pinggir Bandar & Lingkaran Pertumbuhan",
+      zh: "郊区与增长环圈",
+    },
+    shortLabel: {
+      en: "Suburban & Growth",
+      ms: "Pinggir Bandar",
+      zh: "郊区与增长",
+    },
+    description: {
+      en: "Rapid residential expansion, housing developments & dense suburban corridors",
+      ms: "Peluasan kediaman pesat, skim perumahan & koridor pinggir bandar padat",
+      zh: "快速住宅扩张区、新建住宅区与密集郊区走廊",
+    },
+    color: "#f59e0b",
+    wardCodes: ["JL", "H", "K"],
+  },
+  riverine_catchment: {
+    id: "riverine_catchment",
+    code: "WATER",
+    icon: "🌊",
+    name: {
+      en: "Riverine & Catchment Corridor",
+      ms: "Lembangan & Koridor Sungai",
+      zh: "水系流域与河岸走廊",
+    },
+    shortLabel: {
+      en: "Riverine Catchment",
+      ms: "Lembangan Sungai",
+      zh: "水系流域",
+    },
+    description: {
+      en: "Bengoh Dam water supply catchment, Sarawak River tributaries & coastal estuary delta",
+      ms: "Tadahan bekalan air Empangan Bengoh, cawangan Sungai Sarawak & delta muara pantai",
+      zh: "本哥水坝水源集水区、砂拉越河支流与沿海入海三角洲",
+    },
+    color: "#0d9488",
+    wardCodes: ["B", "NPQ"],
+  },
+  rural_foothills: {
+    id: "rural_foothills",
+    code: "HINTERLAND",
+    icon: "⛰️",
+    name: {
+      en: "Rural Foothills & Hinterland",
+      ms: "Pedalaman & Kaki Bukit",
+      zh: "高地乡村与生态腹地",
+    },
+    shortLabel: {
+      en: "Rural Foothills",
+      ms: "Pedalaman",
+      zh: "高地乡村",
+    },
+    description: {
+      en: "Borneo highland spine, eco-tourism villages, cultural heritage & agro-forestry",
+      ms: "Kaki bukit Borneo, perkampungan eko-pelancongan, warisan budaya & perhutanan tani",
+      zh: "婆罗洲高原丘陵、生态旅游村落、文化遗产与农林地带",
+    },
+    color: "#8b5cf6",
+    wardCodes: ["A", "D"],
+  },
+};
+
+export const WARD_TO_CATEGORY = {
+  M: "urban_core",
+  I: "urban_core",
+  FG: "urban_core",
+  JL: "suburban_growth",
+  H: "suburban_growth",
+  K: "suburban_growth",
+  B: "riverine_catchment",
+  NPQ: "riverine_catchment",
+  A: "rural_foothills",
+  D: "rural_foothills",
+};
+
+
 // ILLUSTRATIVE — NOT A COUNCIL RECORD. Audit 29 Sep 2026: none of these
 // entries traces to a published MPP tender, and several wards/places are
 // outside MPP (Tebedu → Serian, Siniawan → Bau). Real contractor names appear
@@ -410,6 +521,17 @@ export const TRANSLATIONS = {
     kchAirspace: "Flights near KCH",
     scopePadawan: "PADAWAN FOCUS",
     scopeGreater: "GREATER KUCHING",
+    scopeMyWards: "My Wards (Padawan)",
+    scopeWholeKuching: "Whole Kuching",
+    radarPadawan: "Map · Padawan Municipal Council (10 Wards)",
+    radarGreater: "Map · Greater Kuching (All Councils)",
+    wardCategoryAll: "All Wards (10)",
+    cat_urban_core: "Urban Core & Commercial",
+    cat_suburban_growth: "Suburban & Growth Ring",
+    cat_riverine_catchment: "Riverine & Catchment Corridor",
+    cat_rural_foothills: "Rural Foothills & Hinterland",
+    heroMapToggle: "Hero Map",
+    deepTrayToggle: "Evidence Tray",
     scopeToggleHint: "Geographic scope: click to toggle between MPP focus and 3-council Greater Kuching.",
     dim2d: "2D",
     dim3d: "3D",
@@ -512,6 +634,17 @@ export const TRANSLATIONS = {
     kchAirspace: "Penerbangan berhampiran KCH",
     scopePadawan: "FOKUS PADAWAN",
     scopeGreater: "GREATER KUCHING",
+    scopeMyWards: "Zon Saya (Padawan)",
+    scopeWholeKuching: "Seluruh Kuching",
+    radarPadawan: "Peta · Majlis Perbandaran Padawan (10 Zon)",
+    radarGreater: "Peta · Greater Kuching (Semua Majlis)",
+    wardCategoryAll: "Semua Zon (10)",
+    cat_urban_core: "Pusat Bandar & Komersial",
+    cat_suburban_growth: "Pinggir Bandar & Lingkaran Pertumbuhan",
+    cat_riverine_catchment: "Lembangan & Koridor Sungai",
+    cat_rural_foothills: "Pedalaman & Kaki Bukit",
+    heroMapToggle: "Peta Utama",
+    deepTrayToggle: "Talam Bukti",
     scopeToggleHint: "Skop geografi: klik untuk tukar antara fokus MPP dan Greater Kuching 3 majlis.",
     dim2d: "2D",
     dim3d: "3D",
@@ -612,8 +745,19 @@ export const TRANSLATIONS = {
     newsDigest: "新闻摘要",
     events24h: "24小时内变化",
     kchAirspace: "古晋机场附近航班",
-    scopePadawan: "百大万焦点",
+    scopePadawan: "巴达旺焦点",
     scopeGreater: "古晋大都会",
+    scopeMyWards: "我的辖区 (巴达旺)",
+    scopeWholeKuching: "全古晋大都会",
+    radarPadawan: "地图 · 巴达旺市议会管辖区 (10个选区)",
+    radarGreater: "地图 · 大古晋都会区 (全部议会)",
+    wardCategoryAll: "全部选区 (10)",
+    cat_urban_core: "城市核心与商圈",
+    cat_suburban_growth: "郊区与增长环圈",
+    cat_riverine_catchment: "水系流域与河岸走廊",
+    cat_rural_foothills: "高地乡村与生态腹地",
+    heroMapToggle: "主焦全屏",
+    deepTrayToggle: "数据托盘",
     scopeToggleHint: "地理范围：点击切换 MPP 焦点与 3 议会古晋大都会。",
     dim2d: "2D",
     dim3d: "3D",

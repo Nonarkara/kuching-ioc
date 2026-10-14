@@ -90,6 +90,16 @@ html[data-text-scale="large"] .dashboard-shell .controls-row button { font-size:
   .dashboard-shell .deep-tray { flex-basis: 220px; }
   .dashboard-shell .title-block h1 { font-size: 24px; white-space: normal; }
   .dashboard-shell .operator-tools { flex-wrap: wrap; }
+  /* Desktop building-tools compacting so 2D map doesn't lose vertical space */
+  .dashboard-shell .building-tools { padding: 5px 10px; font-size: 11px; }
+  .dashboard-shell .building-tools button,
+  .dashboard-shell .building-tools .building-buttons a { min-height: 22px; padding: 2px 8px; font-size: 11px; }
+  .dashboard-shell .building-tools p { font-size: 11px; margin: 2px 0; }
+  .dashboard-shell .building-tools summary { min-height: 22px; padding: 2px 0; font-size: 11px; }
+  /* Hero Map Mode overrides: collapse tray & building-tools, give full height to center map */
+  .dashboard-shell .col-map.hero-map-active .building-tools { display: none !important; }
+  .dashboard-shell .col-map.hero-map-active .map-panel { height: clamp(700px, calc(100svh - 80px), 1200px) !important; }
+  .dashboard-shell .col-map.hero-map-active .deep-tray { flex-basis: 32px !important; max-height: 32px !important; min-height: 32px !important; }
 }
 @media screen and (min-width: 1041px) and (max-width: 1599px) {
   .dashboard-shell .board-grid.war-room {

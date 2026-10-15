@@ -1,8 +1,8 @@
 {
-  "builtAt": "2026-10-15T07:09:14.199Z",
-  "buildDurationMs": 61942,
-  "dashboardSizeKb": 403,
-  "assetVersion": "ea95dae646f6-070812",
+  "builtAt": "2026-10-15T07:58:46.308Z",
+  "buildDurationMs": 86649,
+  "dashboardSizeKb": 405,
+  "assetVersion": "1d3bc74df1f8",
   "deploymentMode": "pages-static",
   "boardLabel": "SNAPSHOT BOARD",
   "pagesUrl": "https://kuching.nonarkara.org/",

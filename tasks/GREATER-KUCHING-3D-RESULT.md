@@ -1,7 +1,8 @@
 # Map-first geographic city model · 15 October 2026
 
-Implemented locally, preview and tests verified. Public release is held for the
-native-language review requested in chat; do not call this live until CPDT runs.
+Implemented and verified in preview. User confirmed native-language review on
+15 October 2026, clearing the copy gate. Release now proceeds through the existing
+Pages workflow; final deployment and live verification evidence is in the chat.
 
 ## Verified data
 
@@ -42,7 +43,8 @@ the existing confidentiality checks; this is not a full security certification.
 Not every physical building is mapped. Source geometry is dated, simplified MVT.
 Flat ellipsoid ground, not terrain-aligned flood modelling. Roof facets are
 schematic, not a laser scan. No municipal coordinate/control-point acceptance,
-real-phone hardware test, Minecraft play test or native-speaker approval yet.
+real-phone hardware test or Minecraft play test yet. User confirmed native-speaker
+review of the new civic copy on15 October2026.
 `npx axiom-audit . --strict` could not run: package registry returns404; no passing
 design-audit claim. Browser inspection and executable layout/data checks used.
 

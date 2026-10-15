@@ -1648,6 +1648,17 @@ body::before {
   color: var(--soft);
 }
 .flood-peak-warn { color: var(--amber); }
+.flood-spark {
+  display: block;
+  width: 100%;
+  height: 36px;
+  margin: 2px 0 1px;
+}
+.flood-spark-band { fill: var(--cyan, #00f3ff); fill-opacity: 0.18; stroke: none; }
+.flood-spark-line { stroke: var(--cyan, #00f3ff); stroke-width: 1.2; }
+.flood-spark-today { stroke: var(--soft); stroke-width: 0.5; stroke-dasharray: 1 1; }
+.flood-reaches { border-top: 1px solid var(--line, #d6d2c5); padding-top: 3px; }
+.flood-spread-wide { color: var(--amber); }
 .flood-days {
   display: flex;
   gap: 6px;

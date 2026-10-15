@@ -45,6 +45,53 @@ test("water supply and river forecast show readings or nothing — never a made-
   if (d.floodForecast?.status === "fallback") assert.equal(d.floodForecast.forecast.length, 0);
 });
 
+test("GloFAS flood forecast carries the ensemble band across the Sarawak River basin", () => {
+  const ff = d.floodForecast;
+  assert.ok(ff, "floodForecast must be present");
+  if (ff.status === "fallback") {
+    assert.equal(ff.forecast.length, 0);
+    return;
+  }
+  // Live: every forecast day must carry the min/max/mean ensemble band so the
+  // sparkline can draw a real confidence interval, not just a single line.
+  assert.equal(ff.model.includes("ensemble"), true, "model description must mention the ensemble");
+  assert.ok(ff.forecast.length >= 7, "at least 7 days of forecast");
+  for (const day of ff.forecast) {
+    assert.ok(Number.isFinite(day.dischargeCms), `dischargeCms must be numeric (${day.date})`);
+    assert.ok(Number.isFinite(day.minCms), `minCms must be numeric (${day.date})`);
+    assert.ok(Number.isFinite(day.maxCms), `maxCms must be numeric (${day.date})`);
+    assert.ok(day.minCms <= day.dischargeCms && day.dischargeCms <= day.maxCms,
+      `band must bracket the deterministic value (${day.date}: ${day.minCms}/${day.dischargeCms}/${day.maxCms})`);
+  }
+  // Reaches cover the urban corridor and the upper basin.
+  const ids = (ff.reaches || []).map((r) => r.id);
+  assert.ok(ids.includes("kuching"), "primary reach (Kuching) must be present");
+  assert.ok(ids.includes("batu-kitang"), "Batu Kitang reach must be present");
+  assert.ok(ids.includes("kpg-git"), "upper-basin reach (Kpg. Git) must be present for early warning");
+  // Every reach gets a numeric spread so a wide-band warning can fire.
+  for (const r of ff.reaches) {
+    assert.ok(Number.isFinite(r.todayCms), `reach ${r.id} todayCms must be numeric`);
+    assert.ok(Number.isFinite(r.spreadCms), `reach ${r.id} spreadCms must be numeric`);
+    assert.ok(r.spreadCms >= 0, `spread cannot be negative (${r.id})`);
+  }
+});
+
+// The flood sparkline is small enough to write as a pure function check on
+// the data shape — every forecast day must carry the four numbers the
+// renderer needs to draw the band, the line, and the today marker. This
+// guards against a partial upstream change that would leave the sparkline
+// rendering nothing or a misleading flat line.
+test("flood sparkline data shape supports an honest ensemble band", () => {
+  const ff = d.floodForecast;
+  if (ff?.status !== "live") { assert.ok(true, "fallback path; sparkline skipped"); return; }
+  const usable = (ff.forecast || []).filter((d) => d.dischargeCms != null);
+  assert.ok(usable.length >= 2, "sparkline needs at least two points");
+  // The widest of the four ensemble numbers must be a real extreme — a
+  // honest band, not zero width. A zero band means we lost the spread.
+  const widest = Math.max(...usable.map((d) => (d.maxCms ?? 0) - (d.minCms ?? 0)));
+  assert.ok(widest > 0, `ensemble band collapsed to zero width (${widest})`);
+});
+
 test("district population comes from DOSM or is marked missing", () => {
   for (const x of d.govStats.districts) {
     if (x.status === "live") assert.ok(x.population > 10000 && x.population < 2_000_000, x.name);

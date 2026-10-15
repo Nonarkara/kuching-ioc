@@ -3678,24 +3678,47 @@ async function loadMetWarnings() {
 
 async function loadFloodForecast() {
   return cached("flood-forecast", 6 * 60 * 60 * 1000, async () => {
-    // Multi-point GloFAS: city centre + Padawan focus (water ignores council lines).
+    // Multi-point GloFAS: city centre + Padawan focus + lower-basin tributaries
+    // (water ignores council lines). Ensemble band (min / mean / max) gives
+    // operators a confidence spread — a tight band is a "low uncertainty"
+    // forecast; a wide band means the model is hedging on a real risk.
     const points = [
       { id: "kuching", label: "Sarawak River at Kuching", lat: 1.5533, lon: 110.3592 },
       { id: "batu-kitang", label: "Batu Kitang (Padawan)", lat: 1.4524, lon: 110.2823 },
       { id: "batu-kawa", label: "Batu Kawa Bridge", lat: 1.5087, lon: 110.2703 },
+      // Lower urban reaches where flooding shows up first at street level.
+      { id: "sg-maong", label: "Sg. Maong confluence (Kuching)", lat: 1.5450, lon: 110.3680 },
+      { id: "astana", label: "Jln Astana / Waterfront", lat: 1.5500, lon: 110.3700 },
+      // Upper-basin rainfall signal ~4–6 h upstream of Batu Kitang.
+      { id: "kpg-git", label: "Kpg. Git (upper Sg. Sarawak)", lat: 1.3555, lon: 110.2667 },
     ];
     try {
       const results = await Promise.all(points.map(async (p) => {
-        const url = `https://flood-api.open-meteo.com/v1/flood?latitude=${p.lat}&longitude=${p.lon}&daily=river_discharge&forecast_days=10&models=seamless_v4`;
+        const url = `https://flood-api.open-meteo.com/v1/flood?latitude=${p.lat}&longitude=${p.lon}`
+          + `&daily=river_discharge,river_discharge_min,river_discharge_max,river_discharge_mean`
+          + `&forecast_days=10&models=seamless_v4`;
         const data = await fetchJson(url, 12000);
         const dates = data.daily?.time ?? [];
-        const discharge = data.daily?.river_discharge ?? [];
-        const valid = discharge.filter((v) => v != null);
+        const dis = data.daily?.river_discharge ?? [];
+        const min = data.daily?.river_discharge_min ?? [];
+        const max = data.daily?.river_discharge_max ?? [];
+        const mean = data.daily?.river_discharge_mean ?? [];
         return {
           ...p,
-          forecast: dates.map((d, i) => ({ date: d, dischargeCms: round(discharge[i] ?? null, 1) })),
-          peakCms: valid.length ? round(Math.max(...valid), 1) : null,
-          todayCms: round(discharge[0] ?? null, 1),
+          forecast: dates.map((d, i) => ({
+            date: d,
+            dischargeCms: round(dis[i] ?? null, 1),
+            minCms: round(min[i] ?? null, 1),
+            maxCms: round(max[i] ?? null, 1),
+            meanCms: round(mean[i] ?? null, 1),
+          })),
+          // Peak computed off the ensemble max so a single high-member
+          // doesn't get averaged away — operators want the worst case.
+          peakCms: max.length ? round(Math.max(...max.filter((v) => v != null)), 1) : null,
+          todayCms: round(dis[0] ?? null, 1),
+          spreadCms: max.length && min.length
+            ? round((max.find((v) => v != null) ?? 0) - (min.find((v) => v != null) ?? 0), 1)
+            : null,
         };
       }));
       const primary = results.find((r) => r.id === "kuching") || results[0];
@@ -3704,12 +3727,13 @@ async function loadFloodForecast() {
         updatedAt: nowIso(),
         station: primary.label,
         units: "m³/s",
-        model: "GloFAS seamless v4 via Open-Meteo",
+        model: "GloFAS seamless v4 via Open-Meteo (50-member ensemble)",
         forecast: primary.forecast,
         peakCms: primary.peakCms,
         todayCms: primary.todayCms,
         reaches: results.map((r) => ({
-          id: r.id, label: r.label, todayCms: r.todayCms, peakCms: r.peakCms,
+          id: r.id, label: r.label, lat: r.lat, lon: r.lon,
+          todayCms: r.todayCms, peakCms: r.peakCms, spreadCms: r.spreadCms,
         })),
       };
     } catch {

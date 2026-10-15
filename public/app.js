@@ -3105,18 +3105,43 @@ function renderFloodForecast(floodForecast) {
   const peak = floodForecast?.peakCms;
   const next4 = (floodForecast?.forecast ?? []).slice(1, 5);
   const warnPeak = peak != null && peak > 200;
-  const reaches = (floodForecast?.reaches || []).map((r) =>
-    `<div class="flood-day" title="${escapeHtml(r.label)}">
+  // Sparkline across the full 10-day horizon. The band (min→max) shows how
+  // confident the 50-member ensemble is — a tight band is a steady forecast,
+  // a wide band means the model is hedging on real uncertainty.
+  const series = (floodForecast?.forecast ?? []).filter((d) => d.dischargeCms != null);
+  const W = 240, H = 36, P = 2;
+  let spark = "";
+  if (series.length >= 2) {
+    const vals = series.flatMap((d) => [d.minCms, d.maxCms, d.dischargeCms]).filter((v) => v != null);
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    const span = hi - lo || 1;
+    const x = (i) => P + (i / (series.length - 1)) * (W - 2 * P);
+    const y = (v) => H - P - ((v - lo) / span) * (H - 2 * P);
+    const bandPath = series.map((d, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(d.maxCms ?? lo).toFixed(1)}`).join(" ")
+      + " " + series.slice().reverse().map((d, i) => `L${x(series.length - 1 - i).toFixed(1)},${y(d.minCms ?? lo).toFixed(1)}`).join(" ")
+      + " Z";
+    const linePath = series.map((d, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(d.dischargeCms).toFixed(1)}`).join(" ");
+    const todayX = x(0).toFixed(1);
+    spark = `<svg class="flood-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="River discharge 10-day forecast with ensemble band">
+      <path class="flood-spark-band" d="${bandPath}"/>
+      <line class="flood-spark-today" x1="${todayX}" x2="${todayX}" y1="0" y2="${H}"/>
+      <path class="flood-spark-line" d="${linePath}" fill="none"/>
+    </svg>`;
+  }
+  const reaches = (floodForecast?.reaches || []).map((r) => {
+    const spread = r.spreadCms != null && r.spreadCms > 50 ? "flood-spread-wide" : "";
+    return `<div class="flood-day" title="${escapeHtml(r.label)}">
       <span class="flood-day-label">${escapeHtml((r.id || "").replace(/-/g, " ").slice(0, 10))}</span>
-      <span class="flood-day-val">${r.todayCms ?? "—"}</span>
-    </div>`,
-  ).join("");
+      <span class="flood-day-val ${spread}">${r.todayCms ?? "—"}${r.spreadCms != null ? ` ±${r.spreadCms}` : ""}</span>
+    </div>`;
+  }).join("");
   el.innerHTML = `
     <div class="flood-station">${floodForecast?.station ?? "Sarawak River"}</div>
     <div class="flood-today">
       <span class="flood-value ${warnPeak ? "flood-peak-warn" : ""}">${today != null ? today : "—"}</span>
       <span class="flood-unit">m³/s now · peak ${peak ?? "—"} m³/s over the outlook</span>
     </div>
+    ${spark}
     <div class="flood-days">
       ${next4.map(d => {
         const label = d.date && d.date !== "—" ? new Date(d.date).toLocaleDateString("en-MY", { weekday: "short" }) : "—";
@@ -3127,8 +3152,8 @@ function renderFloodForecast(floodForecast) {
         </div>`;
       }).join("")}
     </div>
-    ${reaches ? `<div class="flood-days" style="margin-top:4px">${reaches}</div>` : ""}
-    <div class="flood-model">${isFallback ? "River model unreachable — no forecast shown" : "River model via Open-Meteo / GloFAS"}</div>`;
+    ${reaches ? `<div class="flood-days flood-reaches" style="margin-top:4px">${reaches}</div>` : ""}
+    <div class="flood-model">${isFallback ? "River model unreachable — no forecast shown" : "River model via Open-Meteo / GloFAS (ensemble)"}</div>`;
 }
 
 function renderBypassTracker() {

@@ -230,3 +230,73 @@ Six commits, 3121f9a → bacd40e, all deployed to Cloudflare Pages by CI:
 - [x] CDPT verified live (2026-09-23): boot payload on kuching.nonarkara.org carries
       assetVersion `bacd40e00d9...`; live styles.css contains the phone-layout rules.
       Commit+push+deploy+live-test all green — session closed.
+
+## ✅ COMPLETED — Research-driven improvements (2026-10-15)
+
+- [x] `b499991` Auto-retry transient manifest/tile failures + activation busy guard +
+      sticky error state in 2D. 4 new tests. 63/63 → 74/74 after Codex's bc30c11 audit.
+- [x] GLOFAS ensemble band (`river_discharge_min/max/mean`) on the existing 10-day
+      flood forecast. The 3-point coverage expanded to 6 reaches on the Sarawak River
+      basin: Kuching (primary), Batu Kitang, Batu Kawa, Sg. Maong, Jln Astana,
+      and the upper-basin Kpg. Git canary. New SVG sparkline draws the band as a
+      faint fill under the deterministic line, with a today-marker.
+- [x] Wide-band warning: any reach whose day-1 ensemble spread exceeds 50 m³/s
+      flips to amber on the reaches rail. Confirms the user's "loading timeout
+      recovered on retry" feedback is now automatic on both the manifest and the
+      tile fetch.
+- [x] Tests: `GloFAS flood forecast carries the ensemble band across the Sarawak
+      River basin` + `flood sparkline data shape supports an honest ensemble band`.
+      Full suite still green.
+
+## 🔭 BACKLOG — research findings, queued for next rounds
+
+### A. New data sources confirmed available (free, CORS-friendly, real Sarawak)
+- [ ] **BAS.MY Kuching live buses** — `https://api.data.gov.my/gtfs-realtime/vehicle-position/mybas-kuching`
+  returns GTFS-RT protobuf updated every 30s. Decoding is small (gtfs-realtime-bindings npm).
+  Wire as moving markers on the 2D map and a follow-camera view in 3D. This is the
+  single most "impressive" thing missing from the digital twin — a live city in motion.
+- [ ] **Biaramas Express GTFS static** — 13 bus routes in Kuching (Q01–Q16 plus
+  City Public Link S19 cross-border to Tebedu). 50+ named stops. Wire as the route
+  polylines under the bus markers, so the chief can see the network, not just dots.
+- [ ] **DID Sarawak rainfall station catalog** — `data.sarawak.gov.my` publishes
+  347 rainfall stations and 153 water level stations (Kuching division alone has
+  15+). Currently we read 15 live iHYDRO stations. The static catalog gives
+  documented coverage of every station in the basin, not just the live ones, with
+  lat/lon we can drop on the map as a layered rainfall / water-level grid.
+- [ ] **APIMS Sarawak expansion** — add Sibu, Bintulu, Miri, Limbang, ILP Miri
+  ground stations (currently 2: Kuching + Samarahan). Lets the haze story read
+  Sarawak-wide, not just Kuching.
+- [ ] **Sentinel-5P atmospheric composition** — NO2, SO2, CO, AOD (aerosol
+  optical depth = the satellite's direct view of haze). Free, CORS via NASA GIBS
+  tiles. Would add a 7-day satellite haze track overlay alongside the FIRMS fires.
+- [ ] **Open-Meteo Marine** (already have) — add wave height/period as a coastal
+  panel for the Bako/Santubong/Muara Tebas littoral.
+
+### B. 3D city / digital twin — make it impressive
+- [ ] **Terrain DEM** — SRTM 30m via Open-Meteo Elevation API; the current 3D
+  sits on a flat ellipsoid. Real terrain behind the 307,684 buildings makes
+  flood story spatially honest (Sg. Sarawak actually goes downhill).
+- [ ] **3D road network** — render the OSM `roads` GeoJSON as 3D polylines on
+  the existing ellipsoid, with the main arterials (Jln Kuching-Serian, Jln
+  Penrissen, Jln Batu Kawa) at a wider stroke.
+- [ ] **Time-of-day sun** — Cesium clock-driven sun position. The map at dawn
+  vs midnight tells a different story; secretary can use this to brief
+  community groups.
+- [ ] **Live buses in 3D** — once BAS.MY is wired, project the bus markers
+  into the 3D camera so a flythrough shows a moving city.
+- [ ] **Haze layer in 3D** — translucent AQI band tinted amber/red over the
+  affected footprint. Today the haze story lives in a panel; in 3D it lives
+  in space.
+
+### C. Visualization upgrades (no new data)
+- [ ] **Haze wind trajectory animation** — `computeAirPath()` already exists;
+  add a moving arrow overlay on the regional fires layer so the direction
+  of arrival is visually obvious.
+- [ ] **AQI heatmap** — current renderHazeSource shows one number. Plot the
+  multi-station APIMS as a heatmap overlay with cell counts per AQI band.
+- [ ] **Catchment drainage flow arrows** — the OSM drainage layer is a static
+  network; arrows on the segments at gauge time show where the water actually
+  goes. Useful for the chief briefing the public during a flood event.
+- [ ] **Cumulative rainfall last 24h** — sum the iHYDRO / Open-Meteo hourly
+  rainfall into a single number with a colored bar (0–10mm green, 10–30 yellow,
+  30+ amber). Already in the data; not surfaced.

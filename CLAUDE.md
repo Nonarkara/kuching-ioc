@@ -111,6 +111,28 @@ Local-only pipelines (`scripts/forecast/.venv`, `scripts/alphaearth/.venv`, `scr
 - **Coordinate HUD**: hover shows lat/lng 6 d.p. bottom-left, click snaps (amber), COPY writes `"lat, lng"` to clipboard (green) — for field ops sharing via WhatsApp/Telegram
 - **Catchment routing**: drainage layer active + gauge click → highlights upstream segments
 
+### 3D buildings (Kota Padawan pilot)
+
+- **Loader**: `public/buildings-3d.js` is loaded as an ES module after Cesium is ready; it adds a CustomDataSource to the existing viewer so operational markers stay intact on refresh.
+- **Pilot data**: `public/data/buildings/padawan-pilot.geojson` + `manifest.json` + `world-manifest.json`. The pilot is a 1.2 km² rectangle around the MPP office (`bounds: south 1.4225 / west 110.3205 / north 1.4325 / east 110.3305`).
+- **Source**: OpenStreetMap (way ids validated) + Overture Maps 2026-09-23.1 release, 4 vector tiles at z=14, supplemented via `scripts/arnis/supplement-overture.mjs`. Heights are Overture `height` when present, otherwise `min_height + 3m × levels`, otherwise a 6 m default — the source is recorded on every feature.
+- **Minecraft world**: the Arnis v3.3.0 generator output is bundled as `data/buildings/kota-padawan-arnis.zip` and downloadable from the bottom bar. The world file is structurally checked (header, level.dat, region layout) but **not** game-play tested; the dashboard model is independent of the Minecraft blocks.
+- **Limit**: the pilot covers 609 footprints. The secretary asked for the full Greater Kuching extent. The path to that is documented in §"3D coverage roadmap" below.
+
+### 3D coverage roadmap (full Greater Kuching)
+
+Greater Kuching bounds: south 1.30 / west 110.10 / north 1.75 / east 110.60 — about 2,750 km² of bounding rectangle (~1,415 km² of council area). One pre-baked GeoJSON of every building in that rectangle is too large to ship: Overture z=14 alone would be ~570 tiles, ~50-200 MB. The on-demand loader is the right architecture.
+
+**Planned architecture (next pass):**
+
+1. `public/buildings-3d.js` keeps the Cesium CustomDataSource pattern but **loads tiles by visible camera rectangle** instead of a single GeoJSON. Watch `viewer.camera.changed`, compute the visible bbox at the current zoom, and fetch only the Overture vector tiles that intersect it.
+2. Tiles are cached in a `Map<zxy, { features, fetchedAt }>`. The 3D `World` primitive reuses cached features; a 24 h `freshness` is shown in the bottom-bar buildings status line.
+3. A pre-baked `padawan-mpp.geojson` covers the secretary's jurisdiction (984 km²) at z=13 so the most-asked-for extent is in the first request, no network wait.
+4. `scripts/arnis/supplement-overture.mjs` is generalised to `scripts/arnis/bake-area.mjs` taking a bbox + zoom; the manifest records total area, feature count by source, and the release hash.
+5. Tests: `tests/buildings-3d.test.mjs` (already present) grows to cover the on-demand loader — bbox → tile math, cache eviction, freshness, and the failure path when the Overture CDN is offline.
+
+**Do not** ship a single 50 MB buildings file as the answer; that re-introduces the "deploy on every urban change" cost that the Overture pipeline was designed to avoid.
+
 ---
 
 ## Design system

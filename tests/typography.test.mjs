@@ -12,8 +12,12 @@ test('reading surfaces override legacy mono faces with the requested Helvetica s
 test('operational controls and primary summaries keep a readable minimum scale', async () => {
   const css = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
   const readingScale = css.slice(css.indexOf('Operational reading scale'));
+  // Compact masthead (28 Sep 2026): chrome is quiet, not loud. The default
+  // board reads in a war room at 1920×1080, so the masthead reserves only
+  // ~30px for the title row and the controls sit at a thumb-friendly 22-28px.
+  // The PHONE block (≤720px) still grows to 44-48px so a phone tap lands.
   assert.match(readingScale, /html,\s*body\s*\{\s*font-size:\s*16px/);
-  assert.match(readingScale, /\.ctrl-btn,[\s\S]*?min-height:\s*36px;\s*font-size:\s*14px/);
+  assert.match(readingScale, /\.ctrl-btn,[\s\S]*?min-height:\s*22px;\s*font-size:\s*10px/);
   assert.match(readingScale, /\.brief-item[^}]*font-size:\s*14px/);
   assert.match(readingScale, /@media \(max-width: 720px\)[\s\S]*?\.ctrl-btn,[\s\S]*?min-height:\s*48px;\s*font-size:\s*15px/);
 });

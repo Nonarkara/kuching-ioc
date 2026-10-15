@@ -111,39 +111,43 @@ body::before {
 /* === Masthead === */
 .masthead {
   display: grid;
-  grid-template-columns: minmax(280px, 4fr) minmax(0, 8fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  padding: 8px 16px; border-bottom: 2px solid var(--line-strong);
+  padding: 3px 12px; border-bottom: 1px solid var(--line-strong);
   background: var(--hud-bg); backdrop-filter: blur(12px); z-index: 100;
-  column-gap: 12px;
+  column-gap: 10px;
   flex: 0 0 auto;
+  min-height: 30px;
+  gap: 8px;
 }
 
-.title-block { min-width: 0; padding-right: 12px; border-right: 1px solid var(--line); }
+.title-block { min-width: 0; padding: 0 8px 0 0; border-right: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
 .title-block h1 {
-  font-family: var(--font-display); font-weight: 700; font-size: 17px;
+  font-family: var(--font-display); font-weight: 700; font-size: 13px;
   text-transform: none; letter-spacing: 0.01em; margin: 0;
   color: var(--cyan); text-shadow: none;
-  line-height: 1.14;
+  line-height: 1.1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.eyebrow { font-size: 10px; letter-spacing: 0.16em; color: var(--cyan); opacity: 0.8; margin-bottom: 2px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.eyebrow > span:first-child { flex: 0 1 auto; }
-.summary-lead { font-size: 11px; color: var(--soft); margin-top: 2px; line-height: 1.4; }
+.eyebrow { display: none; }
+.summary-lead { display: none; }
+.ioc-brand-mark { display: none; }
 
 .status-block {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  grid-template-areas:
-    "controls payload system"
-    "runtime runtime partners";
+  display: flex;
   align-items: center;
-  gap: 5px 8px;
+  gap: 6px;
   min-width: 0;
+  flex-wrap: nowrap;
 }
-.controls-row { grid-area: controls; min-width: 0; }
-.runtime-meta { grid-area: runtime; }
-#generatedAt { grid-area: payload; }
-#sysStatus { grid-area: system; }
+.controls-row { display: flex; gap: 3px; align-items: center; flex: 0 0 auto; }
+.runtime-meta { display: flex; gap: 4px; align-items: center; }
+#generatedAt { display: none; }
+#sysStatus { display: none; }
+.runtime-detail { display: none; }
+.runtime-badges { display: flex; gap: 3px; }
+.runtime-badge { padding: 0 6px; min-height: 18px; font-size: 9px; }
+.partner-row { display: none; }
 .partner-row { grid-area: partners; justify-self: end; }
 .controls-row { display: flex; gap: 4px; align-items: center; }
 .ctrl-btn, .lang-btn {
@@ -3691,30 +3695,38 @@ body {
 }
 
 .masthead {
-  grid-template-columns: minmax(360px, 4fr) minmax(0, 8fr);
-  padding: 16px 24px;
-  column-gap: 24px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 3px 12px;
+  column-gap: 10px;
+  min-height: 30px;
+  gap: 8px;
 }
-.title-block { padding-right: 24px; }
+.title-block { padding: 0 8px 0 0; gap: 8px; }
 .title-block h1 {
-  font-size: clamp(26px, 2vw, 34px);
-  letter-spacing: 0.035em;
-  line-height: 1.08;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
 }
-.eyebrow { font-size: 12px; letter-spacing: 0.08em; margin-bottom: 6px; }
-.summary-lead { font-size: 15px; line-height: 1.45; margin-top: 6px; }
+.eyebrow { display: none; }
+.summary-lead { display: none; }
+.ioc-brand-mark { display: none; }
 
-.status-block { gap: 10px 12px; }
-.controls-row { gap: 8px; flex-wrap: wrap; }
+.status-block { gap: 6px; flex-wrap: nowrap; }
+.controls-row { gap: 3px; flex-wrap: nowrap; }
+.partner-row { display: none; }
+#generatedAt { display: none; }
+#sysStatus { display: none; }
+.runtime-detail { display: none; }
+.runtime-badge { padding: 0 6px; min-height: 18px; font-size: 9px; }
 .ctrl-btn,
 .lang-btn,
 .scope-btn,
 .dim-btn,
 .segmented-control button,
 .action-btn {
-  min-height: 36px;
-  font-size: 14px;
-  letter-spacing: 0.02em;
+  min-height: 22px;
+  font-size: 10px;
+  letter-spacing: 0.01em;
 }
 .ctrl-btn,
 .lang-btn,
@@ -4793,35 +4805,24 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
    Scope on one row, the seven small toggles on the next, then one status line
    and the logos — every target stays 44px tall. */
 @media (max-width: 720px) {
-  .masthead { padding: 10px 12px; gap: 8px; }
-  .summary-lead { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .masthead { padding: 3px 10px; gap: 6px; min-height: 30px; }
+  .summary-lead { display: none; }
   .status-block {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "controls" "runtime" "system" "partners";
-    gap: 6px;
-  }
-  .controls-row {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "controls runtime";
     gap: 4px;
   }
-  .controls-row .scope-toggle { grid-column: 1 / -1; height: 44px; }
-  .controls-row .dim-toggle { grid-column: span 2; height: 44px; }
-  .controls-row .scope-toggle button, .controls-row .dim-toggle button { flex: 1 1 0; }
-  .controls-row .lang-btn:last-child { grid-column: auto; }
-  /* Verdict before the shortcut buttons, so the first screen answers "do I act?" */
-  .dashboard-shell > .masthead { order: -2; }
-  .dashboard-shell > .ticker-bar, .dashboard-shell > .verdict-strip { order: -1; }
-  .controls-row .ctrl-btn, .controls-row .lang-btn {
-    min-width: 0; padding: 0 2px; font-size: 12px; white-space: nowrap;
+  .controls-row {
+    display: flex; gap: 3px; flex-wrap: nowrap;
   }
-  #generatedAt { display: none; }
-  .runtime-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 6px 8px; }
-  .runtime-badge { min-height: 24px; font-size: 11px; }
-  .runtime-detail { font-size: 11px; white-space: normal; }
-  #sysStatus { min-height: 32px; font-size: 12px; justify-content: center; }
-  .partner-row { justify-content: space-between; flex-wrap: nowrap; }
-  .partner-row img { height: 26px; }
+  .controls-row .scope-toggle, .controls-row .dim-toggle { height: 28px; }
+  .controls-row .scope-toggle button, .controls-row .dim-toggle button { flex: 1 1 0; }
+  .controls-row .ctrl-btn, .controls-row .lang-btn {
+    min-width: 0; padding: 0 6px; font-size: 10px; white-space: nowrap; min-height: 28px;
+  }
+  .runtime-meta { display: flex; align-items: center; gap: 3px; }
+  .runtime-badge { min-height: 18px; font-size: 9px; padding: 0 5px; }
+  .runtime-detail { display: none; }
 }
 
 /* MPP service ledger (ported from codex/mpp-trilingual-review) */

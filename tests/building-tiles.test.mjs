@@ -45,7 +45,7 @@ test('manifest rejects unsafe paths, duplicate tiles and unrealistic budgets',as
     const bad=structuredClone(m);modify(bad);assert.throws(()=>validateRegionManifest(bad));
   }
 });
-test('regional loader renders independently, cancels stale work and keeps 2D usable on failure',async t=>{
+test('regional loader preserves operational entities, reuses cache and toggles back to 2D',async t=>{
   const old={document:globalThis.document,window:globalThis.window,fetch:globalThis.fetch,matchMedia:globalThis.matchMedia};t.after(()=>Object.assign(globalThis,old));
   const nodes=new Map(),events={};
   const make=()=>({textContent:'',hidden:false,events:{},children:[],setAttribute(k,v){this[k]=v;},addEventListener(k,v){this.events[k]=v;},replaceChildren(){this.children=[];},append(...c){this.children.push(...c);}});
@@ -53,7 +53,7 @@ test('regional loader renders independently, cancels stale work and keeps 2D usa
   globalThis.document={getElementById:k=>nodes.get(k),createElement:make,addEventListener:(k,f)=>events[k]=f,dispatchEvent(){},querySelector:()=>null};
   globalThis.matchMedia=()=>({matches:true});
   const event=()=>({addEventListener(fn){this.fn=fn;}}),prim=[];let operationalClears=0,dim='2d';
-  const camera={moveStart:event(),moveEnd:event(),flyToBoundingSphere(){},pickEllipsoid:p=>({longitude:110.347+p.x*.000001,latitude:1.561+p.y*.000001})};
+  const camera={moveStart:event(),moveEnd:event(),flyToBoundingSphere(_,options){setTimeout(options.complete,0);},pickEllipsoid:p=>({longitude:110.347+p.x*.000001,latitude:1.561+p.y*.000001})};
   const viewer={camera,entities:{removeAll(){operationalClears++;}},scene:{canvas:{clientWidth:100,clientHeight:100},globe:{ellipsoid:{}},requestRender(){},primitives:{add:p=>{prim.push(p);return p;},remove:p=>prim.splice(prim.indexOf(p),1)}}};
   const C={Math:{toDegrees:n=>n,toRadians:n=>n},Cartesian2:class{constructor(x,y){this.x=x;this.y=y;}},Cartographic:{fromCartesian:x=>x},Cartesian3:{fromDegrees:()=>({}),fromDegreesArray:x=>x,fromDegreesArrayHeights:x=>x},
     BoundingSphere:class{},HeadingPitchRange:class{},ScreenSpaceEventHandler:class{setInputAction(){}},ScreenSpaceEventType:{LEFT_CLICK:1},
@@ -108,7 +108,7 @@ test('map-first shell retains maps, disclosures, manual and compact non-shrinkin
   assert.match(css,/\.view-tools button[^}]*min-height:44px/);
   const guide=await readFile(new URL('../public/operator-guide.js',import.meta.url),'utf8');assert.match(guide,/getElementById\('viewToolsBody'\)/);
 });
-test('regional loader retries transient tile failures, locks button while busy, recovers from one 5xx',async t=>{
+test('regional loader retries one transient manifest 502 and releases activation controls',async t=>{
   // The user pointed out: "A loading timeout recovered on retry." This test
   // guarantees the recovery is automatic, not manual. The first manifest
   // response 5xx's, the second succeeds.
@@ -157,41 +157,5 @@ test('regional loader retries transient tile failures, locks button while busy, 
   assert.match(nodes.get('regionalStatus').textContent,/mapped pieces/,'successful retry shows real count');
   assert.equal(dim,'3d');
 });
-test('regional loader refuses a double-click while activation is in flight',async t=>{
-  const old={document:globalThis.document,window:globalThis.window,fetch:globalThis.fetch,matchMedia:globalThis.matchMedia};
-  t.after(()=>Object.assign(globalThis,old));
-  const nodes=new Map(),events={};
-  const make=()=>({textContent:'',hidden:false,events:{},children:[],disabled:false,
-    setAttribute(k,v){this[k]=v;},addEventListener(k,v){this.events[k]=v;},
-    replaceChildren(){this.children=[];},append(...c){this.children.push(...c);}});
-  for(const id of ['regionalBuildings','assemblyFocus','regionalStatus','viewToolsLabel','mapOptionsLabel','regionalAttribution','regionalSelection','regionalEvidenceTitle','regionalEvidenceText','regionalManifest'])nodes.set(id,make());
-  globalThis.document={getElementById:k=>nodes.get(k),createElement:make,addEventListener:(k,f)=>events[k]=f,dispatchEvent(){},querySelector:()=>null};
-  globalThis.matchMedia=()=>({matches:true});
-  const event=()=>({addEventListener(fn){this.fn=fn;}});
-  const camera={moveStart:event(),moveEnd:event(),flyToBoundingSphere(){},pickEllipsoid:()=>null};
-  const viewer={camera,entities:{removeAll(){}},scene:{canvas:{clientWidth:100,clientHeight:100},globe:{ellipsoid:{}},requestRender(){},primitives:{add:p=>p,remove:p=>{}}}};
-  const C={Math:{toDegrees:n=>n,toRadians:n=>n},Cartesian2:class{constructor(){};},Cartographic:{fromCartesian:x=>x},Cartesian3:{fromDegrees:()=>({}),fromDegreesArray:x=>x,fromDegreesArrayHeights:x=>x},
-    BoundingSphere:class{},HeadingPitchRange:class{},ScreenSpaceEventHandler:class{setInputAction(){}},ScreenSpaceEventType:{LEFT_CLICK:1},
-    PolygonHierarchy:class{},GeometryInstance:class{constructor(o){Object.assign(this,o);}},PolygonGeometry:class{},Primitive:class{},PerInstanceColorAppearance:class{static VERTEX_FORMAT={};},ColorGeometryInstanceAttribute:{fromColor:x=>x},Color:{fromCssColorString:x=>x}};
-  globalThis.window={Cesium:C};
-  globalThis.fetch=async url=>{const raw=url.includes('manifest')?await readFile(new URL('manifest.json',root)):await readFile(new URL(url.split('greater-kuching/')[1].split('?')[0],root));return{ok:true,text:async()=>raw.toString()};};
-  setupRegionalBuildings({getViewer:()=>viewer,getDimension:()=>'2d',setDimension:async d=>{},getLang:()=> 'en'});
-  // Fire three clicks back-to-back before the first activation settles.
-  const p1=nodes.get('regionalBuildings').events.click();
-  const p2=nodes.get('regionalBuildings').events.click();
-  const p3=nodes.get('regionalBuildings').events.click();
-  await Promise.all([p1,p2,p3]);
-  // The button must not have been left disabled in a stuck state.
-  assert.equal(nodes.get('regionalBuildings').disabled,false);
-});
-test('viewport corners off-globe still produce a usable bounds (>=2 points)',()=>{
-  // 9 corners, but corners over the sea are off-globe and drop out.
-  // Strict `===9` would have rejected the load; `>=2` is enough to bracket
-  // a useful rectangle that the tilesForBounds clipper can further trim.
-  const xs=[1,5,9],ys=[1,5,9];
-  const points=[];for(const x of xs)for(const y of ys){if(x+y<12)points.push([x,y]);}
-  assert.ok(points.length>=2&&points.length<9);
-  const bounds=points.length>=2?{south:Math.min(...points.map(p=>p[1])),north:Math.max(...points.map(p=>p[1])),west:Math.min(...points.map(p=>p[0])),east:Math.max(...points.map(p=>p[0]))}:null;
-  assert.equal(bounds.south,1);assert.equal(bounds.west,1);
-  assert.ok(bounds.north>1&&bounds.east>1);
-});
+// Activation, partial-globe viewports and cancellation are exercised through
+// the real loader with deferred requests in regional-loader.test.mjs.

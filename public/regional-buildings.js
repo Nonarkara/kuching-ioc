@@ -34,35 +34,53 @@ export function setupRegionalBuildings({getViewer,getDimension,setDimension,getL
   const $=id=>document.getElementById(id),button=$('regionalBuildings'),assembly=$('assemblyFocus');
   if(!button||!assembly)return null;
   const cache=new TileCache(),primitives=new Map(),metaById=new Map();
-  let enabled=false,manifest=null,active=null,generation=0,state='idle',count=0,destination=false,handler=null,busy=false;
+  let enabled=false,manifest=null,active=null,generation=0,state='idle',count=0,destination=false,handler=null,activation=null;
   const c=()=>COPY[getLang()]||COPY.en;
   const base='./data/buildings/greater-kuching/';
-  // AbortSignal.any landed in Node 20 and modern browsers; fall back to a
-  // manual combination so an older runtime still gets a per-fetch cancel path.
-  const anySignal=(...signals)=>AbortSignal.any?AbortSignal.any(signals):(()=>{const c=new AbortController();signals.forEach(s=>{if(s?.aborted)c.abort(s.reason);else s?.addEventListener?.('abort',()=>c.abort(s.reason));});return c.signal;})();
-  // Backoff for transient tile-fetch failures (network blips, first-load CDN
-  // warm-up). Two retries with 400ms then 1200ms keeps total wait under 2s.
-  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  const fetchTile=async(meta,signal)=>{let attempt=0,lastErr;const backoff=[400,1200];
-    while(attempt<=backoff.length){try{
-      const response=await fetch(base+meta.key+'.json?v='+version,{signal:anySignal(signal,AbortSignal.timeout(20000))});
-      if(!response.ok)throw Error('Tile HTTP '+response.status);
-      const raw=await response.text();
+  const checkAbort=signal=>{if(signal?.aborted)throw signal.reason||new DOMException('Canceled','AbortError');};
+  const pause=(ms,signal)=>new Promise((resolve,reject)=>{
+    checkAbort(signal);
+    const abort=()=>{clearTimeout(timer);signal.removeEventListener('abort',abort);reject(signal.reason);};
+    const timer=setTimeout(()=>{signal?.removeEventListener('abort',abort);resolve();},ms);
+    signal?.addEventListener('abort',abort,{once:true});
+  });
+  // Backoff is 1.6s total, excluding the network attempts. Every attempt and
+  // wait belongs to its view; no AbortSignal.any/timeout support is required.
+  async function readText(path,signal,timeoutMs){
+    const backoff=[400,1200];
+    for(let attempt=0;;attempt++){
+      checkAbort(signal);
+      const request=new AbortController(),abort=()=>request.abort(signal.reason);
+      signal?.addEventListener('abort',abort,{once:true});
+      const timer=setTimeout(()=>request.abort(new DOMException('Request timed out','TimeoutError')),timeoutMs);
+      try{
+        const response=await fetch(base+path+'?v='+version,{signal:request.signal});
+        if(!response.ok){const error=Error('Building asset HTTP '+response.status);
+          error.retryable=[408,429].includes(response.status)||response.status>=500&&response.status<=599;throw error;}
+        const raw=await response.text();checkAbort(request.signal);checkAbort(signal);return raw;
+      }catch(error){
+        checkAbort(signal);
+        const transient=error.retryable===true||error.name==='TimeoutError'||error instanceof TypeError;
+        if(!transient||attempt===backoff.length)throw error;
+      }finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);}
+      await pause(backoff[attempt],signal);
+    }
+  }
+  const fetchTile=async(meta,signal)=>{
+      const raw=await readText(meta.key+'.json',signal,20000);
       if(raw.length>4*1024*1024||new TextEncoder().encode(raw).length!==meta.bytes)throw Error('Tile size mismatch');
       const digest=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(raw)))].map(b=>b.toString(16).padStart(2,'0')).join('');
       if(digest!==meta.sha256)throw Error('Tile hash mismatch');
       const fc=JSON.parse(raw);
       if(meta.featureCount===0){if(fc.type!=='FeatureCollection'||fc.features?.length!==0)throw Error('Invalid empty tile');}
       else validateBuildingAsset(fc,{...meta,crs:'EPSG:4326'});
-      return fc;
-    }catch(e){if(signal?.aborted)throw e;lastErr=e;if(attempt<backoff.length)await sleep(backoff[attempt++]);else break;}}
-    throw lastErr;};
+      checkAbort(signal);return fc;
+  };
   function render(){const text=c(),visible=enabled&&getDimension()==='3d';
     button.textContent=visible?text.back:text.open;
-    // Lock the button while a fetch is in flight so rapid clicks don't
-    // trigger N parallel activations (each one cancels its predecessor and
-    // burns an Overture round-trip). The visual hint is the busy state below.
-    button.disabled=busy;assembly.disabled=busy;
+    // Deduplicate initial activation, not viewport fetches: Return to 2D must
+    // remain available while tiles are pending. A stale refresh owns no lock.
+    button.disabled=!!activation;assembly.disabled=!!activation;
     button.setAttribute('aria-pressed',String(visible));
     $('viewToolsLabel').textContent=text.tools;$('mapOptionsLabel').textContent=text.layers;assembly.textContent=text.assembly;
     $('regionalEvidenceTitle').textContent=text.about;$('regionalEvidenceText').textContent=text.evidence;
@@ -72,6 +90,7 @@ export function setupRegionalBuildings({getViewer,getDimension,setDimension,getL
     // a stranded user in 2D sees the idle hint and never learns the city model
     // failed. Order matters: error first, then 2D-idle, then 3D-busy/zoom/empty/ready.
     status.textContent=state==='error'?text.error
+      :activation?text.busy
       :!visible?text.idle
       :state==='busy'?text.busy
       :state==='zoom'?text.zoom
@@ -82,18 +101,14 @@ export function setupRegionalBuildings({getViewer,getDimension,setDimension,getL
   }
   function clear(){for(const p of primitives.values())getViewer()?.scene.primitives.remove(p);primitives.clear();metaById.clear();count=0;$('regionalSelection').hidden=true;}
   function cancel(){generation++;active?.abort();active=null;}
-  async function getManifest(){if(manifest)return manifest;
-    // Manifest is small and rarely changes; retry it the same way we retry tiles
-    // so a 502 from the CDN doesn't force a manual button click.
-    let attempt=0,lastErr,backoff=[400,1200];
-    while(attempt<=backoff.length){try{
-      const r=await fetch(base+'manifest.json?v='+version,{signal:AbortSignal.timeout(15000)});
-      if(!r.ok)throw Error('Region manifest HTTP '+r.status);
-      manifest=validateRegionManifest(JSON.parse(await r.text()));
+  function cancelActivation(){activation?.abort();activation=null;}
+  async function getManifest(signal){checkAbort(signal);if(manifest)return manifest;
+      const raw=await readText('manifest.json',signal,15000);
+      const parsed=validateRegionManifest(JSON.parse(raw));checkAbort(signal);
+      manifest=parsed;
       $('regionalAttribution').textContent=manifest.attribution;
       return manifest;
-    }catch(e){lastErr=e;if(attempt<backoff.length)await sleep(backoff[attempt++]);else break;}}
-    throw lastErr;}
+  }
   function addTile(key,fc){const C=window.Cesium,instances=[];
     for(const f of fc.features){const p=f.properties,id='regional:'+f.id;
       const hierarchy=r=>new C.PolygonHierarchy(C.Cartesian3.fromDegreesArray(r[0].slice(0,-1).flat()),r.slice(1).map(h=>new C.PolygonHierarchy(C.Cartesian3.fromDegreesArray(h.slice(0,-1).flat()))));
@@ -110,20 +125,20 @@ export function setupRegionalBuildings({getViewer,getDimension,setDimension,getL
     if(instances.length){const primitive=getViewer().scene.primitives.add(new C.Primitive({geometryInstances:instances,appearance:new C.PerInstanceColorAppearance({closed:true,translucent:false}),asynchronous:true}));primitives.set(key,primitive);}
   }
   async function refresh(){if(!enabled||getDimension()!=='3d')return;
-    cancel();const ticket=generation,controller=new AbortController();active=controller;busy=true;
+    cancel();const ticket=generation,controller=new AbortController();active=controller;
     try{
       render();
-      await getManifest();if(ticket!==generation)return;
+      await getManifest(controller.signal);if(ticket!==generation)return;
       const C=window.Cesium,v=getViewer(),canvas=v.scene.canvas,points=[];
       // computeViewRectangle may include the ellipsoid horizon far outside the
       // visible neighbourhood. Intersect the actual canvas corners instead.
-      // Some corners are off-globe (pan the camera over the sea) — fall back
-      // to whatever corners did intersect rather than dropping the whole load.
+      // Off-globe means sky beyond the horizon, not sea: sea still intersects
+      // the ellipsoid. Use surviving samples conservatively, within budgets.
       for(const x of [0,canvas.clientWidth/2,canvas.clientWidth])for(const y of [0,canvas.clientHeight/2,canvas.clientHeight]){
         const p=v.camera.pickEllipsoid(new C.Cartesian2(x,y),v.scene.globe.ellipsoid);
         if(p){const ll=C.Cartographic.fromCartesian(p);points.push([C.Math.toDegrees(ll.longitude),C.Math.toDegrees(ll.latitude)]);}
       }
-      // Four visible corners (centre + 2 edges) is enough to bracket the view.
+      // Two samples may bracket a useful rectangle; degenerate bounds draw none.
       const bounds=points.length>=2?{south:Math.min(...points.map(p=>p[1])),north:Math.max(...points.map(p=>p[1])),west:Math.min(...points.map(p=>p[0])),east:Math.max(...points.map(p=>p[0]))}:null;
       const keys=tilesForBounds(bounds,14,25);
       clear();
@@ -132,8 +147,8 @@ export function setupRegionalBuildings({getViewer,getDimension,setDimension,getL
       const pending=(keys||[]).filter(k=>wanted.has(k));
       if(pending.reduce((n,k)=>n+wanted.get(k).bytes,0)>16*1024*1024){state='zoom';render();v.scene.requestRender();return;}
       state='busy';render();const results=[];
-      await Promise.all(Array.from({length:4},async()=>{while(pending.length){const key=pending.shift(),meta=wanted.get(key);let item=cache.get(key);
-        if(!item){const fc=await fetchTile(meta,controller.signal);cache.put(key,fc,meta.bytes);item={data:fc};}
+      await Promise.all(Array.from({length:4},async()=>{while(pending.length){checkAbort(controller.signal);const key=pending.shift(),meta=wanted.get(key);let item=cache.get(key);
+        if(!item){const fc=await fetchTile(meta,controller.signal);checkAbort(controller.signal);cache.put(key,fc,meta.bytes);item={data:fc};}
         // Decode complete tiles for cache reuse, draw only geometry intersecting
         // this viewport. Dense neighbours must not inflate the visible budget.
         const features=item.data.features.filter(f=>{
@@ -147,7 +162,7 @@ export function setupRegionalBuildings({getViewer,getDimension,setDimension,getL
       for(const [key,fc] of results){addTile(key,fc);count+=fc.features.length;}
       state=count?'ready':'empty';render();v.scene.requestRender();
     }catch(e){if(ticket!==generation)return;controller.abort();clear();state='error';render();console.warn('Regional buildings unavailable:',e.message);getViewer()?.scene.requestRender();}
-    finally{busy=false;if(ticket===generation)render();}
+    finally{if(ticket===generation)active=null;}
   }
   function inspect(event){if(!enabled)return;const hit=getViewer().scene.pick(event.position),p=metaById.get(hit?.id),node=$('regionalSelection');node.replaceChildren();node.hidden=!p;if(!p)return;
     const text=c(),description=document.createElement('span'),link=document.createElement('a');
@@ -158,25 +173,27 @@ export function setupRegionalBuildings({getViewer,getDimension,setDimension,getL
   async function activate(isAssembly=false){
     // Guard rapid double-clicks that would each cancel the previous one
     // and waste the Overture round-trip.
-    if(busy)return;
+    if(activation)return;
     if(enabled&&getDimension()==='3d'&&!isAssembly){enabled=false;cancel();clear();await setDimension('2d');render();return;}
-    busy=true;render();
-    try{await setDimension('3d');const v=getViewer(),C=window.Cesium;if(!v||getDimension()!=='3d')throw Error('3D unavailable');
-      await getManifest();enabled=true;state='busy';destination=isAssembly;document.dispatchEvent(new Event('regional-buildings-active'));
+    const operation=new AbortController();activation=operation;state='busy';render();
+    try{await setDimension('3d');checkAbort(operation.signal);const v=getViewer(),C=window.Cesium;if(!v||getDimension()!=='3d')throw Error('3D unavailable');
+      await getManifest(operation.signal);checkAbort(operation.signal);
+      if(getDimension()!=='3d')return;
+      enabled=true;state='busy';destination=isAssembly;document.dispatchEvent(new Event('regional-buildings-active'));
       if(!handler){handler=new C.ScreenSpaceEventHandler(v.scene.canvas);handler.setInputAction(inspect,C.ScreenSpaceEventType.LEFT_CLICK);v.camera.moveStart.addEventListener(cancel);v.camera.moveEnd.addEventListener(refresh);}
       // A local-scale camera gives useful neighbourhood detail immediately.
       const lon=isAssembly?110.34786:110.3258,lat=isAssembly?1.56173:1.4277;
       v.camera.flyToBoundingSphere(new C.BoundingSphere(C.Cartesian3.fromDegrees(lon,lat),100),{offset:new C.HeadingPitchRange(C.Math.toRadians(15),C.Math.toRadians(-58),isAssembly?850:1400),duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:.7,complete:refresh});
       document.querySelector('.map-panel')?.scrollIntoView({block:'start',behavior:'instant'});render();
-    }catch(e){state='error';enabled=false;await setDimension('2d');$('regionalStatus').textContent=c().error;console.warn('Regional activation failed:',e.message);}
-    finally{busy=false;render();}
+    }catch(e){if(!operation.signal.aborted){state='error';enabled=false;await setDimension('2d');render();console.warn('Regional activation failed:',e.message);}}
+    finally{if(activation===operation){activation=null;render();}}
   }
   button.addEventListener('click',()=>activate());assembly.addEventListener('click',()=>activate(true));
   document.addEventListener('operator-language',()=>{render();$('regionalSelection').hidden=true;});
-  document.addEventListener('pilot-buildings-active',()=>{enabled=false;cancel();clear();render();});
+  document.addEventListener('pilot-buildings-active',()=>{enabled=false;cancelActivation();cancel();clear();render();});
   document.addEventListener('keydown',event=>{if(event.key==='Escape'){const tools=$('viewTools');if(tools.open){tools.open=false;tools.querySelector('summary').focus();}}});
   let resizeTimer;
   window.addEventListener?.('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(refresh,150);});
   render();
-  return {dimensionChanged(){if(getDimension()!=='3d'){cancel();clear();}else if(enabled)refresh();render();}};
+  return {dimensionChanged(){if(getDimension()!=='3d'){cancelActivation();cancel();clear();}else if(enabled&&!activation)refresh();render();}};
 }

@@ -9,3 +9,9 @@ What: User confirmed native-language review, clearing the regional-model release
 Why: The public civic interface needed a human language check in addition to automated parity tests.
 Diff: tasks/GREATER-KUCHING-3D-RESULT.md; release verification in the associated Codex chat.
 Tags: city-model · release · multilingual-review
+
+Date: 2026-10-15
+What: Audited MiniMax's regional-loader release and corrected cancellation, retry and control-ownership failures; added real deferred-response regression coverage.
+Why: A passing suite did not prove users could leave3D during slow requests or prevent late activations from overriding their selected mode.
+Diff: tasks/REGIONAL-LOADER-REVIEW-RESULT.md; public/regional-buildings.js; tests/regional-loader.test.mjs.
+Tags: city-model · audit · cancellation · regression-tests

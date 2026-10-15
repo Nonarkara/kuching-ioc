@@ -62,6 +62,11 @@ Bounds locked: [[1.15, 109.9], [1.85, 110.7]], zoom 10–18
 Layers: CartoDB dark/light/satellite, Esri satellite, Land Use, Flood Risk, Drainage, Transit
 
 ## Notes
+- **15 October 2026 map-first design:** Civic register; variance 3, motion 2,
+  density 5. A municipal map workbench with the city visible before controls,
+  following Vignelli's transit-map hierarchy. Map dominates; 2px structural
+  boundaries, 1px separators, readable Helvetica. Preserve the source ledger,
+  all maps and panels; collapse tools rather than shrinking phone targets.
 - **25 September 2026 typography decision:** Secretary Goh explicitly requested Helvetica-style reading text. Both legacy font tokens now resolve to Helvetica Neue / Helvetica / Arial, with named Simplified Chinese fallbacks. This supersedes the former mono/display pairing. Design read: a municipal workbench whose map and clear action text lead, following the typographic clarity of the MPP staff directory and Vignelli's information hierarchy. Preserve every map, data panel and interaction; no decorative restyling.
 - See CLAUDE.md for full data sources, design rules, DO/DON'Ts.
 - 3 languages: EN / Bahasa Malaysia / Chinese.

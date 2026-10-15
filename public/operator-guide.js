@@ -47,6 +47,9 @@ const COPY = {
 COPY.en.sections.push(['3D buildings and Arnis', 'Use 3D buildings to view the Kota Padawan pilot, then Focus pilot to return to it. The browser uses dated OSM/Overture footprints on flat ground; default 6 m heights are estimates. Coverage is not complete. Select a building for its source and height assumption. Arnis is a separate downloadable Java world with terrain. Its file structure was checked, but loading it in Minecraft remains untested. Neither view predicts flood depth. Return to 2D if your device struggles.']);
 COPY.ms.sections.push(['Bangunan 3D dan Arnis', 'Gunakan Bangunan 3D untuk melihat rintis Kota Padawan, kemudian Fokus rintis untuk kembali. Pelayar menggunakan tapak OSM/Overture bertarikh di atas tanah rata; ketinggian lalai 6 m ialah anggaran. Liputan tidak lengkap. Pilih bangunan untuk sumber dan andaian ketinggian. Arnis ialah dunia Java berasingan dengan rupa bumi yang boleh dimuat turun. Struktur fail diperiksa, tetapi belum diuji dalam Minecraft. Kedua-dua paparan bukan ramalan kedalaman banjir. Kembali ke 2D jika peranti perlahan.']);
 COPY.zh.sections.push(['3D建筑与Arnis', '使用3D建筑查看Kota Padawan试点，点击定位试点返回。浏览器使用有日期的OSM/Overture轮廓及平地；默认6米高度为估算，覆盖范围并不完整。选择建筑可查看来源与高度假设。Arnis是另行下载、带地形的Java世界。已检查文件结构，但尚未在Minecraft中测试。两个视图都不预测洪水深度。设备运行缓慢时，请返回2D。']);
+COPY.en.sections.unshift(['Find a place first', 'The map opens first on a phone. Tools contains language, reading size, council scope, the manual and Android/iPhone web-app help. 3D city shows mapped buildings beyond the Kota Padawan pilot. Pan and zoom: only nearby neighbourhoods are fetched. Sarawak Assembly opens its mapped building parts and schematic tagged roofs. Select a building for its height assumption and original source. Map layers keeps rivers, drainage, satellite imagery and the original pilot. Return to 2D if your device struggles. Most heights are estimates; the model is not a surveyed inventory or a flood-depth simulation.']);
+COPY.ms.sections.unshift(['Cari tempat dahulu', 'Peta dipaparkan dahulu pada telefon. Alat mengandungi bahasa, saiz teks, skop majlis, panduan dan bantuan aplikasi web Android/iPhone. Bandar 3D memaparkan bangunan di luar rintis Kota Padawan. Gerakkan dan zum peta: hanya kawasan berhampiran dimuatkan. DUN Sarawak membuka bahagian bangunan dipetakan dan bumbung skematik bertag. Pilih bangunan untuk andaian ketinggian dan sumber asal. Lapisan peta mengekalkan sungai, saliran, imej satelit dan rintis asal. Kembali ke 2D jika peranti perlahan. Kebanyakan ketinggian ialah anggaran; model bukan inventori ukur atau simulasi kedalaman banjir.']);
+COPY.zh.sections.unshift(['先找到地点', '手机打开后先显示地图。工具包含语言、字号、市议会范围、指南及Android/iPhone网页应用帮助。探索3D城市可查看Kota Padawan试点以外的已绘制建筑。移动并放大地图，仅加载附近街区。砂拉越州议会按钮定位已绘制的建筑分部与按属性简化的屋顶。选择建筑可查看高度假设及原始来源。地图图层保留河流、排水、卫星影像及原试点。设备运行缓慢时请返回2D。多数高度为估算，此模型并非测绘清单或洪水深度模拟。']);
 COPY.en.sections.splice(1, 0, ['Check observation age', 'Read the time beside each river gauge. Missing times, future times, or readings older than two hours require verification. This is a conservative dashboard review window, not a JPS standard. A new snapshot can contain old observations. Weather warnings may have incomplete validity dates; check the MET bulletin when the status needs review.']);
 COPY.ms.sections.splice(1, 0, ['Semak usia pemerhatian', 'Baca masa di sebelah setiap tolok sungai. Masa yang tiada, masa hadapan atau bacaan melebihi dua jam perlu disahkan. Ini ialah tempoh semakan konservatif papan pemuka, bukan piawaian JPS. Snapshot baharu boleh mengandungi pemerhatian lama. Tarikh sah amaran cuaca mungkin tidak lengkap; semak buletin MET apabila status memerlukan semakan.']);
 COPY.zh.sections.splice(1, 0, ['核对观测时间', '查看每个水位站旁的时间。时间缺失、时间在未来或读数超过两小时，都需要核实。这是仪表板的保守复核窗口，并非水利灌溉局标准。新快照可能包含旧观测。天气警报的有效期可能不完整；状态需复核时，请查看气象局官方公告。']);
@@ -72,6 +75,8 @@ export function setupOperatorGuide(version = '') {
         if (parent.tagName === 'DETAILS') parent.open = true;
       }
       target.tabIndex = -1;
+      const tools = document.getElementById('viewTools');
+      if (tools) tools.open = false;
       target.scrollIntoView({ block: 'center', behavior: 'instant' });
       target.focus({ preventScroll: true });
       window.dispatchEvent(new Event('resize'));
@@ -86,7 +91,7 @@ export function setupOperatorGuide(version = '') {
   bar.append(opener);
   const note = document.createElement('p');
   bar.append(note);
-  document.querySelector('.masthead')?.after(bar);
+  (document.getElementById('viewToolsBody') || document.querySelector('.masthead'))?.append(bar);
   const dialog = document.createElement('dialog');
   dialog.id = 'operatorGuide';
   dialog.className = 'operator-guide';

@@ -121,6 +121,35 @@ Local-only pipelines (`scripts/forecast/.venv`, `scripts/alphaearth/.venv`, `scr
 
 ### 3D coverage roadmap (full Greater Kuching)
 
+**15 October implementation:** the historical proposal below is superseded by
+the regional extract and bounded loader described here. Do not build the proposed
+984 km² single GeoJSON or treat cache age as source freshness.
+
+- `scripts/arnis/bake-area.mjs` extracts the pinned Overture 2026-09-23.1 release
+  through PMTiles range reads. Local dependencies are pinned in scripts/arnis;
+  `npm ci --prefix scripts/arnis --ignore-scripts` then `node scripts/arnis/bake-area.mjs`.
+- `public/data/buildings/greater-kuching/manifest.json` inventories 696 same-origin
+  tiles over south1.14/west110.10/north1.75/east110.60, the union of the existing
+  Padawan and Greater Kuching scope rectangles, **not an official council boundary**.
+  307,684 distinct source building IDs; 310,878 polygon/part fragments. Most
+  heights remain 6m estimates. All tiles have source hashes, bounds and dates.
+- `public/regional-buildings.js` uses native Cesium primitives sharing its depth
+  buffer. It never clears operational entities. 4 concurrent requests, 25 visible
+  tiles, 16MiB per-view input budget, 12,000 visible fragments, 12MiB/48-entry LRU.
+  Pan end and viewport resize refresh geometry; stale results cannot render.
+  Region/pilot toggles are mutually exclusive. 2D remains available on failure.
+- DUN destination is based on the mapped Assembly footprint at110.34786/1.56173,
+  OSM way1357531465. Its13 mapped parts replace the coarse parent; pyramidal roofs
+  are drawn only with a valid tagged roof height. Roofs are schematic, heights
+  source attributes or explicit estimates, not a surveyed architectural twin.
+- The entire extract is ~181MB **on storage**, never one upfront download.
+  Missing tiles and rejected geometry are recorded; this release has neither.
+- `reading.css` owns final layout: Tools holds scope/language/manual/install;
+  Map layers holds overlays and evidence; phone map comes before briefs/metrics.
+  Do not infer final sizes from earlier styles.css rules or regex tests alone.
+
+**Historical proposal, retained for rationale:**
+
 Greater Kuching bounds: south 1.30 / west 110.10 / north 1.75 / east 110.60 — about 2,750 km² of bounding rectangle (~1,415 km² of council area). One pre-baked GeoJSON of every building in that rectangle is too large to ship: Overture z=14 alone would be ~570 tiles, ~50-200 MB. The on-demand loader is the right architecture.
 
 **Planned architecture (next pass):**

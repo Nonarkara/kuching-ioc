@@ -119,3 +119,99 @@ html[data-text-scale="large"] .dashboard-shell .controls-row button { font-size:
   .dashboard-shell .controls-row .ctrl-btn, .dashboard-shell .controls-row .lang-btn { padding: 8px 2px; }
   .dashboard-shell .verdict-strip { padding: 16px; gap: 12px; }
 }
+
+/* Map-first workbench. This final layer owns chrome across all breakpoints;
+   no small-type shortcut: secondary tools expand only when requested. */
+html, body { overflow-x: clip; }
+.dashboard-shell .masthead {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  min-height:48px; padding:0 8px; position:relative; z-index:1002; box-sizing:border-box;
+  border-bottom:2px solid var(--line-strong);
+}
+.dashboard-shell .masthead .title-block { display:block; min-width:0; padding:0; flex:1; }
+.dashboard-shell .masthead .title-block h1 {
+  font-size:16px; line-height:1.25; margin:0; white-space:nowrap; text-overflow:ellipsis;
+  overflow:hidden; letter-spacing:0; text-shadow:none;
+}
+.dashboard-shell .masthead .eyebrow, .dashboard-shell .masthead .summary-lead,
+.dashboard-shell .masthead .ioc-brand-mark { display:none; }
+.view-tools { flex:none; }
+.view-tools > summary, .map-options > summary {
+  cursor:pointer; font:600 14px/1.4 var(--font-sans); min-height:44px;
+  padding:12px 8px; box-sizing:border-box; color:var(--ink);
+}
+.view-tools-body {
+  position:absolute; top:100%; right:0; width:min(540px,100%);
+  max-height:calc(100dvh - 60px); overflow-y:auto; background:var(--card-bg);
+  padding:12px; border:2px solid var(--line-strong); box-sizing:border-box;
+}
+.view-tools:not([open]) > .view-tools-body { display:none; }
+.dashboard-shell .view-tools .status-block { display:flex; flex-direction:column; align-items:stretch; gap:12px; padding:0; }
+.dashboard-shell .view-tools .controls-row { display:flex; flex-wrap:wrap; gap:8px; }
+.dashboard-shell .view-tools .controls-row > button { width:auto; flex:none; min-width:44px; }
+.dashboard-shell .view-tools .segmented-control { display:flex; flex-wrap:wrap; min-height:44px; height:auto; }
+.dashboard-shell .view-tools button, .dashboard-shell .map-options button,
+.dashboard-shell .map-options .building-buttons a {
+  font:600 14px/1.35 var(--font-sans); min-height:44px; min-width:44px; padding:8px 12px;
+}
+.dashboard-shell .view-tools .partner-row { display:flex; flex-wrap:wrap; gap:8px; }
+.dashboard-shell .view-tools .runtime-detail { display:block; font-size:14px; white-space:normal; }
+.dashboard-shell .view-tools .operator-tools {
+  display:flex; gap:8px; flex-wrap:wrap; padding:12px 0 0; margin:12px 0 0;
+  border-top:1px solid var(--line-strong); border-bottom:0;
+}
+.dashboard-shell .view-tools .operator-tools p { font:14px/1.5 var(--font-sans); }
+.dashboard-shell .view-tools .operator-manual-button { margin:0; }
+.dashboard-shell .view-tools .web-app-button { width:auto; font-size:14px; }
+.map-entry { display:flex; gap:8px; padding:4px 8px; align-items:center; flex-wrap:wrap; flex:none; border-bottom:1px solid var(--line-strong); }
+.map-entry > button {
+  background:var(--card-bg); color:var(--ink); border:1px solid var(--line-strong);
+  font:600 14px/1.35 var(--font-sans); min-height:44px; padding:8px; cursor:pointer;
+}
+.map-entry > button[aria-pressed="true"] { border:2px solid var(--cyan); }
+.map-entry > button:disabled { opacity:.6; }
+.map-entry .map-options { margin-left:auto; }
+.map-options[open] { flex:1 0 100%; margin:0; }
+.dashboard-shell .map-options .map-head { padding:8px 0; display:flex; flex-direction:column; align-items:stretch; gap:8px; }
+.dashboard-shell .map-options .map-controls, .dashboard-shell .map-options .segmented-control { display:flex; flex-wrap:wrap; gap:8px; height:auto; }
+.dashboard-shell .map-options .building-tools { display:block !important; padding:8px 0; }
+.dashboard-shell .col-map.hero-map-active .map-options .building-tools { display:block !important; }
+.dashboard-shell .map-options .building-tools p, .dashboard-shell .map-options .building-tools summary { font-size:14px; }
+.regional-status { font:14px/1.4 var(--font-sans); padding:4px 8px; margin:0; flex:none; }
+.regional-selection { font:16px/1.5 var(--font-sans); margin:0; padding:8px; border-left:3px solid var(--cyan); overflow-wrap:anywhere; }
+.regional-selection a { color:var(--cyan); padding:8px; display:inline-block; }
+.regional-attribution { display:block; font:12px/1.5 var(--font-sans); color:var(--ink); white-space:normal; overflow-wrap:anywhere; max-width:100%; }
+.dashboard-shell .map-footer { flex-wrap:wrap; }
+.dashboard-shell .map-footer .regional-attribution { flex:1 0 100%; }
+.dashboard-shell .map-footer .regional-attribution[hidden], .regional-selection[hidden] { display:none; }
+@media(min-width:1041px) {
+  .dashboard-shell .masthead { min-height:46px; padding:0 12px; }
+  .view-tools > summary { min-height:44px; padding:12px 8px; }
+  .dashboard-shell .board-grid.war-room { min-height:0; grid-template-columns:270px minmax(0,1fr); }
+  .dashboard-shell .col-map .map-panel { height:max(560px,calc(100dvh - 160px)); }
+  .dashboard-shell .verdict-strip { padding:6px 12px; gap:6px; }
+  .dashboard-shell .verdict-verb { font-size:20px; }
+  .dashboard-shell .verdict-why { font-size:14px; }
+}
+@media(max-width:1040px) {
+  .dashboard-shell { display:flex; flex-direction:column; height:auto; overflow:visible; }
+  .dashboard-shell .masthead { order:0; }
+  .dashboard-shell .board-grid.war-room { order:1; display:flex; flex-direction:column; min-height:0; }
+  .dashboard-shell .col-now, .dashboard-shell .col-map { display:contents; }
+  .dashboard-shell .map-panel { order:0; height:auto; min-height:0; }
+  .dashboard-shell #metricBand { order:1; }
+  .dashboard-shell .brief-strip { order:2; }
+  .dashboard-shell .insights-bar { order:3; }
+  .dashboard-shell .situation-rail { order:4; }
+  .dashboard-shell .news-rail { order:5; }
+  .dashboard-shell .deep-tray { order:6; }
+  .dashboard-shell .verdict-strip { order:2; }
+  .dashboard-shell .ticker-bar { order:3; }
+  .dashboard-shell .telemetry-strip, .dashboard-shell .bottom-bar { order:4; }
+  .dashboard-shell .map-frame { height:clamp(380px,calc(100dvh - 170px),720px); min-height:380px; flex:none; }
+  .dashboard-shell .map-footer .watchpoint-list { display:none; }
+  .dashboard-shell .map-entry { gap:8px; }
+  .dashboard-shell .map-entry > button { font-size:13px; }
+  .map-options > summary { font-size:13px; padding:12px 0; }
+}
+html:lang(zh) .view-tools, html:lang(zh) .regional-status { letter-spacing:0; line-height:1.6; }

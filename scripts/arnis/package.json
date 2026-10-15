@@ -4,6 +4,8 @@
   "type": "module",
   "dependencies": {
     "@mapbox/vector-tile": "3.0.0",
-    "pbf": "5.1.2"
+    "pbf": "5.1.2",
+    "pmtiles": "4.3.0",
+    "polygon-clipping": "0.15.7"
   }
 }

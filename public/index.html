@@ -3,24 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/png" href="./assets/brand/app-icon-192.png?v=a6e9935381ce-022946" />
-    <link rel="apple-touch-icon" href="./assets/brand/apple-touch-icon.png?v=a6e9935381ce-022946" />
+    <link rel="icon" type="image/png" href="./assets/brand/app-icon-192.png?v=map-first-review" />
+    <link rel="apple-touch-icon" href="./assets/brand/apple-touch-icon.png?v=map-first-review" />
     <link rel="manifest" href="./manifest.json" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Kuching IOC" />
-    <link rel="mask-icon" href="./favicon.svg?v=a6e9935381ce-022946" color="#1f4e79" />
+    <link rel="mask-icon" href="./favicon.svg?v=map-first-review" color="#1f4e79" />
     <meta name="theme-color" content="#f6f5f2" />
     <title>Greater Kuching IOC</title>
     <meta name="description" content="Greater Kuching Intelligent Operation Center — a municipal command surface for Secretary Daniel Goh, MPP." />
     <!-- Typography per 25 Sep 2026 decision: Helvetica + Georgia system stacks.
          No Google Fonts request — no third-party font leak, tokens in styles.css. -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="" />
-    <link rel="stylesheet" href="./styles.css?v=a6e9935381ce-022946" />
-    <link rel="stylesheet" href="./brand.css?v=a6e9935381ce-022946" />
-    <link rel="stylesheet" href="./reading.css?v=a6e9935381ce-022946" />
+    <link rel="stylesheet" href="./styles.css?v=map-first-review" />
+    <link rel="stylesheet" href="./brand.css?v=map-first-review" />
+    <link rel="stylesheet" href="./reading.css?v=map-first-review" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin=""></script>
-    <script>window.__IOC_BOOT__ = {"version":"0.2.0","assetVersion":"a6e9935381ce-022946","builtAt":"2026-10-15T02:32:16.495Z","deploymentMode":"pages-static","boardLabel":"SNAPSHOT BOARD","pagesUrl":"https://kuching.nonarkara.org/","liveUrl":"https://kuching.nonarkara.org/"};</script>
+    <script>window.__IOC_BOOT__ = {"version":"0.2.0","assetVersion":"map-first-review","builtAt":null,"deploymentMode":"pages-static","boardLabel":"SNAPSHOT BOARD","pagesUrl":"https://kuching.nonarkara.org/","liveUrl":"https://kuching.nonarkara.org/"};</script>
   </head>
   <body>
     <div class="dashboard-shell">
@@ -31,9 +31,12 @@
             <span>OFFICE OF SECRETARY DANIEL GOH // MPP</span>
             <span id="scopePill" class="scope-pill" data-scope="padawan">PADAWAN FOCUS</span>
           </div>
-          <h1 id="titleText" title="Padawan · 984 km² · 800,000 lives · 11 wards · 525 localities · the growth ring of Greater Kuching. This board is how the council stays ahead of the weather, the river, and the rooftops.">Greater Kuching Intelligent Operation Center</h1>
+          <h1 id="titleText" title="Greater Kuching Intelligent Operation Center">Greater Kuching IOC</h1>
           <p id="subtitleText" class="summary-lead">In collaboration with depa, PMUA, Axiom, ReTL, Thailand Smart City Office & ASCN</p>
         </div>
+        <details id="viewTools" class="view-tools">
+          <summary id="viewToolsLabel">Tools</summary>
+          <div id="viewToolsBody" class="view-tools-body">
         <div class="status-block">
           <div class="controls-row">
             <div class="scope-toggle segmented-control" role="group" aria-label="Geographic scope">
@@ -72,6 +75,8 @@
             <img src="./assets/ascn.png" alt="ASCN" title="ASEAN Smart Cities Network" />
           </div>
         </div>
+          </div>
+        </details>
       </header>
 
       <div class="ticker-bar">
@@ -140,6 +145,10 @@
       <section id="metricBand" class="metric-band"></section>
 
         <section class="panel map-panel">
+          <div class="map-entry">
+            <button id="regionalBuildings" type="button" aria-pressed="false" disabled>3D city</button>
+            <button id="assemblyFocus" type="button" disabled>Sarawak Assembly</button>
+            <details class="map-options"><summary id="mapOptionsLabel">Map layers</summary>
           <div class="panel-head map-head">
             <div class="title-wrap">
               <div class="kicker" id="mapKicker" data-i18n="radar">Map · Greater Kuching</div>
@@ -164,6 +173,11 @@
           </div>
           <div id="wardCategoryBar" class="ward-category-bar" role="toolbar" aria-label="Filter Padawan Wards by Category"></div>
           <div class="building-tools">
+            <details id="regionalEvidence">
+              <summary id="regionalEvidenceTitle">About this city model</summary>
+              <p id="regionalEvidenceText"></p>
+              <a id="regionalManifest" href="./data/buildings/greater-kuching/manifest.json" target="_blank" rel="noopener">Coverage &amp; methods</a>
+            </details>
             <div class="building-buttons">
               <button id="buildingsToggle" type="button" aria-pressed="false" disabled>3D buildings · pilot</button>
               <button id="buildingsFocus" type="button" disabled>Focus pilot</button>
@@ -181,6 +195,10 @@
             <p id="buildingSelection" hidden></p>
             <a id="buildingsAttribution" href="https://docs.overturemaps.org/attribution/" target="_blank" rel="noopener">© OpenStreetMap contributors, Overture Maps Foundation</a>
           </div>
+            </details>
+          </div>
+          <p id="regionalStatus" class="regional-status" role="status" aria-live="polite"></p>
+          <p id="regionalSelection" class="regional-selection" hidden></p>
           <div class="map-frame" data-dim="2d">
             <div id="mapCanvas" class="map-canvas"></div>
             <div id="map3d" class="map-3d"></div>
@@ -197,6 +215,7 @@
             <aside id="catchmentStory" class="catchment-story" role="dialog" aria-label="Catchment risk" hidden></aside>
           </div>
           <footer class="map-footer">
+            <a id="regionalAttribution" class="regional-attribution" href="https://docs.overturemaps.org/attribution/" target="_blank" rel="noopener" hidden>© OpenStreetMap contributors · Overture Maps Foundation</a>
             <div id="mapLegend" class="map-legend"></div>
             <div id="jurisdictionCards" class="jurisdiction-cards"></div>
             <div id="watchpointList" class="watchpoint-list"></div>
@@ -447,8 +466,8 @@
         </footer>
       </div>
     </div>
-    <script src="./app.js?v=a6e9935381ce-022946" type="module"></script>
-    <script src="./web-app.js?v=a6e9935381ce-022946" type="module"></script>
+    <script src="./app.js?v=map-first-review" type="module"></script>
+    <script src="./web-app.js?v=map-first-review" type="module"></script>
 
     <!-- Visitor beacon removed 28 Sep 2026: the Apps Script endpoint returned
          401 (collecting nothing) while still egressing visitor IP/geo to

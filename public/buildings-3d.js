@@ -111,6 +111,7 @@ export function setupBuildings3D({ getViewer, getDimension, setDimension, getLan
     try {
       await setDimension("3d"); await load();
       enabled=true; layer.show=getDimension()==="3d";
+      document.dispatchEvent?.(new Event("pilot-buildings-active"));
       focus();
     } catch (e) {
       error=true; enabled=false; if (layer) layer.show=false;
@@ -122,6 +123,9 @@ export function setupBuildings3D({ getViewer, getDimension, setDimension, getLan
     await setDimension("3d"); focus();
   });
   document.addEventListener("operator-language",render);
+  document.addEventListener("regional-buildings-active",()=>{
+    enabled=false; selection=null; if(layer) layer.show=false; render();
+  });
   render();
   return { dimensionChanged(dim) {
     if (layer) layer.show=enabled && dim==="3d";

@@ -31,9 +31,12 @@
             <span>OFFICE OF SECRETARY DANIEL GOH // MPP</span>
             <span id="scopePill" class="scope-pill" data-scope="padawan">PADAWAN FOCUS</span>
           </div>
-          <h1 id="titleText" title="Padawan · 984 km² · 800,000 lives · 11 wards · 525 localities · the growth ring of Greater Kuching. This board is how the council stays ahead of the weather, the river, and the rooftops.">Greater Kuching Intelligent Operation Center</h1>
+          <h1 id="titleText" title="Greater Kuching Intelligent Operation Center">Greater Kuching IOC</h1>
           <p id="subtitleText" class="summary-lead">In collaboration with depa, PMUA, Axiom, ReTL, Thailand Smart City Office & ASCN</p>
         </div>
+        <details id="viewTools" class="view-tools">
+          <summary id="viewToolsLabel">Tools</summary>
+          <div id="viewToolsBody" class="view-tools-body">
         <div class="status-block">
           <div class="controls-row">
             <div class="scope-toggle segmented-control" role="group" aria-label="Geographic scope">
@@ -72,6 +75,8 @@
             <img src="./assets/ascn.png" alt="ASCN" title="ASEAN Smart Cities Network" />
           </div>
         </div>
+          </div>
+        </details>
       </header>
 
       <div class="ticker-bar">
@@ -140,6 +145,10 @@
       <section id="metricBand" class="metric-band"></section>
 
         <section class="panel map-panel">
+          <div class="map-entry">
+            <button id="regionalBuildings" type="button" aria-pressed="false" disabled>3D city</button>
+            <button id="assemblyFocus" type="button" disabled>Sarawak Assembly</button>
+            <details class="map-options"><summary id="mapOptionsLabel">Map layers</summary>
           <div class="panel-head map-head">
             <div class="title-wrap">
               <div class="kicker" id="mapKicker" data-i18n="radar">Map · Greater Kuching</div>
@@ -164,6 +173,11 @@
           </div>
           <div id="wardCategoryBar" class="ward-category-bar" role="toolbar" aria-label="Filter Padawan Wards by Category"></div>
           <div class="building-tools">
+            <details id="regionalEvidence">
+              <summary id="regionalEvidenceTitle">About this city model</summary>
+              <p id="regionalEvidenceText"></p>
+              <a id="regionalManifest" href="./data/buildings/greater-kuching/manifest.json" target="_blank" rel="noopener">Coverage &amp; methods</a>
+            </details>
             <div class="building-buttons">
               <button id="buildingsToggle" type="button" aria-pressed="false" disabled>3D buildings · pilot</button>
               <button id="buildingsFocus" type="button" disabled>Focus pilot</button>
@@ -181,6 +195,10 @@
             <p id="buildingSelection" hidden></p>
             <a id="buildingsAttribution" href="https://docs.overturemaps.org/attribution/" target="_blank" rel="noopener">© OpenStreetMap contributors, Overture Maps Foundation</a>
           </div>
+            </details>
+          </div>
+          <p id="regionalStatus" class="regional-status" role="status" aria-live="polite"></p>
+          <p id="regionalSelection" class="regional-selection" hidden></p>
           <div class="map-frame" data-dim="2d">
             <div id="mapCanvas" class="map-canvas"></div>
             <div id="map3d" class="map-3d"></div>
@@ -197,6 +215,7 @@
             <aside id="catchmentStory" class="catchment-story" role="dialog" aria-label="Catchment risk" hidden></aside>
           </div>
           <footer class="map-footer">
+            <a id="regionalAttribution" class="regional-attribution" href="https://docs.overturemaps.org/attribution/" target="_blank" rel="noopener" hidden>© OpenStreetMap contributors · Overture Maps Foundation</a>
             <div id="mapLegend" class="map-legend"></div>
             <div id="jurisdictionCards" class="jurisdiction-cards"></div>
             <div id="watchpointList" class="watchpoint-list"></div>

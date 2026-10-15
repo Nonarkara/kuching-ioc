@@ -26,6 +26,7 @@ const { classifyRainRegime, summariseOpenMeteo, RAIN_REGIME_OPEN_METEO_URL } = a
 const { gridUrl, backTrajectory, firesAlongPath, originSector } = await import(`./air-path.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { summariseTide, TIDE_URL } = await import(`./tide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupBuildings3D } = await import(`./buildings-3d.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { setupRegionalBuildings } = await import(`./regional-buildings.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupOperatorGuide } = await import(`./operator-guide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 
 const BOOT = window.__IOC_BOOT__ || {};
@@ -4592,7 +4593,7 @@ function renderDashboard(payload) {
   const metCount = payload?.metWarnings?.activeCount || 0;
   const titleSuffix = metCount > 0 ? ` · ${metCount} MET` : "";
   document.title = `${titlePrefix} ${(payload.site?.title || "Greater Kuching IOC")}${titleSuffix}`;
-  if (payload.site?.title) $("titleText").textContent = payload.site.title;
+  if (payload.site?.title) $("titleText").title = payload.site.title;
   // Today's Brief — dynamic teleprompter line. Replaces the static partnership
   // subtitle (the partner-row of logos already credits the same partners visually).
   const subtitle = $("subtitleText");
@@ -4807,7 +4808,7 @@ function setLang(lang) {
   document.documentElement.lang = lang === "zh" ? "zh-Hans" : lang;
   document.dispatchEvent(new CustomEvent("operator-language", { detail: lang }));
   // Update labels
-  $("titleText").textContent = t("title");
+  $("titleText").textContent = ({en:"Greater Kuching IOC",ms:"IOC Greater Kuching",zh:"大古晋城市运行中心"})[state.lang] || "Greater Kuching IOC";
   $("subtitleText").textContent = t("subtitle");
   document.querySelectorAll("[data-i18n]").forEach(el => {
     el.textContent = t(el.dataset.i18n);
@@ -5089,6 +5090,7 @@ async function setDimension(dim, { silent = false } = {}) {
     showToast(`▰ DIMENSION: ${dim.toUpperCase()}`, "ok");
   }
   buildingLayer?.dimensionChanged(dim);
+  regionalBuildings?.dimensionChanged();
 }
 
 function renderDimensionToggle() {
@@ -6008,6 +6010,10 @@ function renderInsights(payload) {
 const buildingLayer = setupBuildings3D({
   getViewer: () => state.cesiumViewer, getDimension: () => state.dimension,
   setDimension, getLang: () => state.lang, version: __ASSET_VER__,
+});
+const regionalBuildings = setupRegionalBuildings({
+  getViewer: () => state.cesiumViewer, getDimension: () => state.dimension,
+  setDimension, getLang: () => state.lang,
 });
 boot();
 setInterval(boot, 60000);

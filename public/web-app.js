@@ -21,7 +21,7 @@ function placeButton() {
 }
 if (!placeButton()) {
   const observer = new MutationObserver(() => { if (placeButton()) observer.disconnect(); });
-  observer.observe(document.querySelector('.dashboard-shell'), { childList: true });
+  observer.observe(document.getElementById('viewToolsBody') || document.querySelector('.dashboard-shell'), { childList: true, subtree: true });
 }
 function render(next = document.documentElement.lang) {
   lang = next.startsWith('zh') ? 'zh' : next.startsWith('ms') ? 'ms' : 'en';

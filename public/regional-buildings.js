@@ -124,22 +124,35 @@ export function setupRegionalBuildings({getViewer,getDimension,setDimension,getL
     }
     if(instances.length){const primitive=getViewer().scene.primitives.add(new C.Primitive({geometryInstances:instances,appearance:new C.PerInstanceColorAppearance({closed:true,translucent:false}),asynchronous:true}));primitives.set(key,primitive);}
   }
-  async function refresh(){if(!enabled||getDimension()!=='3d')return;
+  async function refresh(boundsOverride){if(!enabled||getDimension()!=='3d')return;
     cancel();const ticket=generation,controller=new AbortController();active=controller;
     try{
       render();
       await getManifest(controller.signal);if(ticket!==generation)return;
-      const C=window.Cesium,v=getViewer(),canvas=v.scene.canvas,points=[];
-      // computeViewRectangle may include the ellipsoid horizon far outside the
-      // visible neighbourhood. Intersect the actual canvas corners instead.
-      // Off-globe means sky beyond the horizon, not sea: sea still intersects
-      // the ellipsoid. Use surviving samples conservatively, within budgets.
-      for(const x of [0,canvas.clientWidth/2,canvas.clientWidth])for(const y of [0,canvas.clientHeight/2,canvas.clientHeight]){
-        const p=v.camera.pickEllipsoid(new C.Cartesian2(x,y),v.scene.globe.ellipsoid);
-        if(p){const ll=C.Cartographic.fromCartesian(p);points.push([C.Math.toDegrees(ll.longitude),C.Math.toDegrees(ll.latitude)]);}
+      const C=window.Cesium,v=getViewer();
+      // Bounds source: an explicit small box around the activation target is
+      // used for the initial fly. With reduced motion enabled, `flyToBounding
+      // Sphere` with `duration:0` declares its `complete` callback before
+      // Cesium's render loop has actually moved the camera, so canvas-corner
+      // sampling would still see the default home view and produce a city-
+      // wide rectangle that trips the 25-tile budget. The override is small
+      // (~1 km box) so the 25-tile budget always passes. After the first
+      // successful load, `moveEnd` calls refresh() with no override, so the
+      // user-pan path still uses the canvas corners.
+      let bounds=null;
+      if(boundsOverride){bounds=boundsOverride;}
+      else{const canvas=v.scene.canvas,points=[];
+        // computeViewRectangle may include the ellipsoid horizon far outside
+        // the visible neighbourhood. Intersect the actual canvas corners
+        // instead. Off-globe means sky beyond the horizon, not sea: sea still
+        // intersects the ellipsoid. Use surviving samples conservatively.
+        for(const x of [0,canvas.clientWidth/2,canvas.clientWidth])for(const y of [0,canvas.clientHeight/2,canvas.clientHeight]){
+          const p=v.camera.pickEllipsoid(new C.Cartesian2(x,y),v.scene.globe.ellipsoid);
+          if(p){const ll=C.Cartographic.fromCartesian(p);points.push([C.Math.toDegrees(ll.longitude),C.Math.toDegrees(ll.latitude)]);}
+        }
+        // Two samples may bracket a useful rectangle; degenerate bounds draw none.
+        if(points.length>=2)bounds={south:Math.min(...points.map(p=>p[1])),north:Math.max(...points.map(p=>p[1])),west:Math.min(...points.map(p=>p[0])),east:Math.max(...points.map(p=>p[0]))};
       }
-      // Two samples may bracket a useful rectangle; degenerate bounds draw none.
-      const bounds=points.length>=2?{south:Math.min(...points.map(p=>p[1])),north:Math.max(...points.map(p=>p[1])),west:Math.min(...points.map(p=>p[0])),east:Math.max(...points.map(p=>p[0]))}:null;
       const keys=tilesForBounds(bounds,14,25);
       clear();
       if(!bounds||keys===null){state='zoom';render();v.scene.requestRender();return;}
@@ -183,7 +196,12 @@ export function setupRegionalBuildings({getViewer,getDimension,setDimension,getL
       if(!handler){handler=new C.ScreenSpaceEventHandler(v.scene.canvas);handler.setInputAction(inspect,C.ScreenSpaceEventType.LEFT_CLICK);v.camera.moveStart.addEventListener(cancel);v.camera.moveEnd.addEventListener(refresh);}
       // A local-scale camera gives useful neighbourhood detail immediately.
       const lon=isAssembly?110.34786:110.3258,lat=isAssembly?1.56173:1.4277;
-      v.camera.flyToBoundingSphere(new C.BoundingSphere(C.Cartesian3.fromDegrees(lon,lat),100),{offset:new C.HeadingPitchRange(C.Math.toRadians(15),C.Math.toRadians(-58),isAssembly?850:1400),duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:.7,complete:refresh});
+      // Pre-compute a ~1 km box around the target so the post-fly refresh
+      // can draw the neighbourhood even when the camera is still mid-flight
+      // (reduced motion + duration:0 fires `complete` synchronously).
+      const d=0.005;
+      const initialBounds={south:lat-d,north:lat+d,west:lon-d,east:lon+d};
+      v.camera.flyToBoundingSphere(new C.BoundingSphere(C.Cartesian3.fromDegrees(lon,lat),100),{offset:new C.HeadingPitchRange(C.Math.toRadians(15),C.Math.toRadians(-58),isAssembly?850:1400),duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:.7,complete:()=>refresh(initialBounds)});
       document.querySelector('.map-panel')?.scrollIntoView({block:'start',behavior:'instant'});render();
     }catch(e){if(!operation.signal.aborted){state='error';enabled=false;await setDimension('2d');render();console.warn('Regional activation failed:',e.message);}}
     finally{if(activation===operation){activation=null;render();}}

@@ -164,3 +164,97 @@ test('loader cancellation works without AbortSignal.any or AbortSignal.timeout',
   await h.switchDimension('2d');assert.equal(h.requests[1].signal.aborted,true);
   gate.resolve(ok(tileRaw));await pending;assert.equal(h.primitives.length,0);
 });
+
+test("activation with reduced motion uses the target-bounds override, not canvas corners", async t => {
+  // Reproduce the "space exploration" bug: duration:0 fires the fly's
+  // complete callback synchronously, before Cesium's render loop has
+  // actually moved the camera. Canvas corners then sample the default
+  // home view and produce a city-wide rectangle that trips the 25-tile
+  // budget. The fix is to seed refresh() with a small boundsOverride
+  // derived from the activation target.
+  const old = { document: globalThis.document, window: globalThis.window, fetch: globalThis.fetch, matchMedia: globalThis.matchMedia };
+  t.after(() => Object.assign(globalThis, old));
+  const nodes = new Map(), events = {};
+  const node = () => ({ textContent: "", hidden: false, disabled: false, events: {}, children: [],
+    setAttribute(k, v) { this[k] = v; }, addEventListener(k, v) { this.events[k] = v; },
+    replaceChildren() { this.children = []; }, append(...c) { this.children.push(...c); } });
+  for (const id of ["regionalBuildings", "assemblyFocus", "regionalStatus", "viewToolsLabel", "mapOptionsLabel", "regionalAttribution", "regionalSelection", "regionalEvidenceTitle", "regionalEvidenceText", "regionalManifest"]) nodes.set(id, node());
+  globalThis.document = { getElementById: k => nodes.get(k), createElement: node,
+    addEventListener: (k, f) => events[k] = f, dispatchEvent() {}, querySelector: () => null };
+  // Reduced motion is on: matchMedia.matches=true so duration=0.
+  globalThis.matchMedia = () => ({ matches: true });
+  globalThis.fetch = async url => {
+    if (url.includes("manifest")) return { ok: true, text: async () => manifestRaw };
+    // Read whatever tile the URL asks for from disk so the loader's hash
+    // validation passes. Without this, returning a single tile for every
+    // URL triggers a hash mismatch for the other tiles in the bounds.
+    try {
+      const m = url.match(/greater-kuching\/(.+?)\.json/);
+      if (m) {
+        const raw = await readFile(new URL(m[1] + ".json", root), "utf8");
+        return { ok: true, text: async () => raw };
+      }
+    } catch { /* fall through to 404 */ }
+    return { ok: false, status: 404 };
+  };
+  const event = () => ({ addEventListener(fn) { this.fn = fn; } });
+  let completeCb = null;
+  const camera = {
+    moveStart: event(), moveEnd: event(),
+    // The bug: complete fires synchronously while the camera is still at
+    // the default home. We simulate "deep space" with pickEllipsoid
+    // returning widely separated points — the original failing case.
+    flyToBoundingSphere(_, opts) {
+      if (opts && typeof opts.complete === "function") {
+        completeCb = opts.complete;
+        // Fire synchronously, like a duration:0 fly actually does.
+        Promise.resolve().then(() => { try { completeCb(); } catch { /* harness will re-check */ } });
+      }
+    },
+    pickEllipsoid: (p) => {
+      // Default Cesium home view, ~10,000 km off the ground. Corners span
+      // hundreds of degrees of longitude, which is the buggy scenario.
+      const scale = 200;
+      return { longitude: 100 + p.x / scale, latitude: 1.5 + p.y / scale };
+    },
+  };
+  const viewer = { camera, entities: { removeAll() {} }, scene: {
+    canvas: { clientWidth: 1000, clientHeight: 1000 }, globe: { ellipsoid: {} }, requestRender() {},
+    primitives: { add(p) { return p; }, remove(p) {} },
+  } };
+  const C = { Math: { toDegrees: n => n, toRadians: n => n }, Cartesian2: class { constructor(x, y) { this.x = x; this.y = y; } },
+    Cartographic: { fromCartesian: x => x },
+    Cartesian3: { fromDegrees: () => ({}), fromDegreesArray: x => x, fromDegreesArrayHeights: x => x },
+    BoundingSphere: class {}, HeadingPitchRange: class {},
+    ScreenSpaceEventHandler: class { setInputAction() {} }, ScreenSpaceEventType: { LEFT_CLICK: 1 },
+    PolygonHierarchy: class {}, GeometryInstance: class { constructor(o) { Object.assign(this, o); } },
+    PolygonGeometry: class {}, Primitive: class {},
+    PerInstanceColorAppearance: class { static VERTEX_FORMAT = {}; },
+    ColorGeometryInstanceAttribute: { fromColor: x => x }, Color: { fromCssColorString: x => x } };
+  globalThis.window = { Cesium: C, addEventListener() {} };
+  let dim = "2d";
+  const api = setupRegionalBuildings({ getViewer: () => viewer, getDimension: () => dim, setDimension: async d => { dim = d; api?.dimensionChanged(); }, getLang: () => "en" });
+  nodes.get("regionalBuildings").events.click();
+  // Wait for the post-fly refresh to settle. With the override, the bounds
+  // is a small box around (110.3258, 1.4277), well under the 25-tile budget.
+  // The status must show real mapped pieces (or empty), not "Zoom closer".
+  const start = Date.now();
+  while (!/mapped pieces|No mapped footprints/.test(nodes.get("regionalStatus").textContent) && Date.now() - start < 5000) {
+    await new Promise(r => setTimeout(r, 20));
+  }
+  assert.match(nodes.get("regionalStatus").textContent, /mapped pieces|No mapped footprints/,
+    "activation must show the real city model, not 'Zoom closer'");
+  assert.doesNotMatch(nodes.get("regionalStatus").textContent, /Zoom closer/,
+    "canvas-corner sampling must not be used while the camera is still mid-flight");
+  assert.equal(dim, "3d");
+});
+
+test("loader cancellation works without AbortSignal.any or AbortSignal.timeout",async t=>{  const any=Object.getOwnPropertyDescriptor(AbortSignal,'any'),timeout=Object.getOwnPropertyDescriptor(AbortSignal,'timeout');
+  Object.defineProperty(AbortSignal,'any',{configurable:true,value:undefined});
+  Object.defineProperty(AbortSignal,'timeout',{configurable:true,value:undefined});
+  t.after(()=>{Object.defineProperty(AbortSignal,'any',any);Object.defineProperty(AbortSignal,'timeout',timeout);});
+  const gate=deferred(),h=harness(t,url=>url.includes('manifest')?ok(manifestRaw):gate.promise);
+  await activated(h);const pending=h.camera.moveEnd.fn();await until(()=>h.requests.length===2,'tile pending');
+  await h.switchDimension('2d');assert.equal(h.requests[1].signal.aborted,true);
+  gate.resolve(ok(tileRaw));await pending;assert.equal(h.primitives.length,0);
+});

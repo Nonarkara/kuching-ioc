@@ -287,3 +287,75 @@ test("wide desktop keeps a real map column next to the situation rail", async ()
   const css = await readFile(new URL("../public/reading.css", import.meta.url), "utf8");
   assert.match(css, /@media\(min-width:1600px\)\s*\{\s*\.dashboard-shell \.board-grid\.war-room \{ grid-template-columns:270px minmax\(0,1fr\) clamp\(/);
 });
+
+// Runtime check: actually execute the beacon with an empty endpoint and
+// prove zero third-party calls go out. The source-order test above would
+// still pass if a future refactor moved the gate after the fetch, so this
+// is the load-bearing privacy assertion.
+test("beacon runtime: empty endpoint makes zero fetch calls", async () => {
+  const { renderIndexHtml } = await import("../site-build.mjs");
+  const html = await renderIndexHtml({ env: {}, assetVersion: "t", visitorBeaconUrl: "" });
+  const start = html.indexOf("(function(){");
+  const end = html.indexOf("})();", start);
+  const body = html.slice(start, end + 5);
+  // Extract the literal __VISITOR_BEACON_URL__ that the template processor
+  // should have already replaced. If anything is left, the test fixture is
+  // broken — escapeScriptJson would not let this survive, so the assertion
+  // doubles as a sanity check on the template pipeline.
+  assert.doesNotMatch(body, /__VISITOR_BEACON_URL__/);
+  const vm = await import("node:vm");
+  const calls = [];
+  const ctx = {
+    fetch: (url) => { calls.push(String(url)); return Promise.resolve({ json: () => Promise.resolve({}) }); },
+    navigator: { userAgent: "t", language: "en" },
+    screen: { width: 1024, height: 768 },
+    Intl: { DateTimeFormat: () => ({ resolvedOptions: () => ({ timeZone: "UTC" }) }) },
+    AbortSignal: { timeout: () => new AbortController().signal },
+    AbortController,
+    setTimeout, clearTimeout, Promise, console,
+  };
+  vm.createContext(ctx);
+  vm.runInContext(body, ctx);
+  // Yield once so any microtask would have run.
+  await new Promise((r) => setImmediate(r));
+  assert.deepEqual(calls, [], `empty endpoint must make zero third-party calls (saw: ${calls.join(", ")})`);
+});
+
+// Runtime check: a real endpoint DOES hit ipwho.is, then the operator's
+// sheet. The source-order test would pass even if a refactor moved the
+// fetch after the gate, so this confirms the gate is runtime-effective.
+test("beacon runtime: configured endpoint makes exactly one ipwho.is call", async () => {
+  const { renderIndexHtml } = await import("../site-build.mjs");
+  const html = await renderIndexHtml({
+    env: {},
+    assetVersion: "t",
+    visitorBeaconUrl: "https://script.google.com/macros/s/abc/exec",
+  });
+  const start = html.indexOf("(function(){");
+  const end = html.indexOf("})();", start);
+  const body = html.slice(start, end + 5);
+  const vm = await import("node:vm");
+  const calls = [];
+  const ctx = {
+    fetch: (url, init) => {
+      calls.push({ url: String(url), method: init?.method || "GET" });
+      if (String(url).includes("ipwho.is")) {
+        return Promise.resolve({ json: () => Promise.resolve({ ip: "1.2.3.4", country: "MY", region: "Sarawak", city: "Kuching" }) });
+      }
+      return Promise.resolve({});
+    },
+    navigator: { userAgent: "t", language: "en" },
+    screen: { width: 1024, height: 768 },
+    Intl: { DateTimeFormat: () => ({ resolvedOptions: () => ({ timeZone: "UTC" }) }) },
+    AbortSignal: { timeout: () => new AbortController().signal },
+    AbortController, setTimeout, clearTimeout, Promise, console,
+  };
+  vm.createContext(ctx);
+  vm.runInContext(body, ctx);
+  await new Promise((r) => setImmediate(r));
+  await new Promise((r) => setImmediate(r));
+  const ipwho = calls.filter((c) => c.url.includes("ipwho.is"));
+  const beacon = calls.filter((c) => c.url.includes("script.google.com"));
+  assert.equal(ipwho.length, 1, "operator-configured beacon must hit ipwho.is exactly once");
+  assert.equal(beacon.length, 1, "operator-configured beacon must post to the Apps Script endpoint");
+});

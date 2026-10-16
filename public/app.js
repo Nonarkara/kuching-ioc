@@ -863,6 +863,7 @@ async function buildFallbackDashboard() {
     // Parity with the server payload: no-CORS or bake-only sources are honest stubs here.
     regionalFires: { status: "unavailable", points: [], cells: {} }, tide: { status: "unavailable" },
     apims: { status: "unavailable", stations: [], worst: null },
+    nrebApi: { status: "unavailable", stations: [], kuching: null, worst: null },
     metWarnings: {
       status: "fallback",
       activeCount: 0,

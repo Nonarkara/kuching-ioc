@@ -519,9 +519,15 @@ async function cached(key, ttlMs, loader) {
   }
 
   const value = await loader();
-  cache.set(key, { value, expiresAt: Date.now() + ttlMs });
+  // A transient failure must not stick for the full TTL (e.g. GloFAS held a
+  // fallback for 6 h). Degraded results get a short TTL so the next request
+  // or build retries the source.
+  const failed = value && typeof value === "object" && !Array.isArray(value)
+    && ["fallback", "unavailable", "offline", "error"].includes(value.status);
+  cache.set(key, { value, expiresAt: Date.now() + (failed ? Math.min(ttlMs, FAILED_TTL_MS) : ttlMs) });
   return value;
 }
+const FAILED_TTL_MS = 2 * 60 * 1000;
 
 // Some government hosts (iHYDRO, JKM) reject non-browser user agents.
 const BROWSER_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128 Safari/537.36";
@@ -3805,7 +3811,11 @@ async function loadFloodForecast() {
         const url = `https://flood-api.open-meteo.com/v1/flood?latitude=${p.lat}&longitude=${p.lon}`
           + `&daily=river_discharge,river_discharge_min,river_discharge_max,river_discharge_mean`
           + `&forecast_days=10&models=seamless_v4`;
-        const data = await fetchJson(url, 12000);
+        // One retry: on CI the first wave of ~30 parallel loaders can hit
+        // connect timeouts, which used to bake a "fallback" into the snapshot.
+        let data;
+        try { data = await fetchJson(url, 12000); }
+        catch { await new Promise((r) => setTimeout(r, 1500)); data = await fetchJson(url, 15000); }
         const dates = data.daily?.time ?? [];
         const dis = data.daily?.river_discharge ?? [];
         const min = data.daily?.river_discharge_min ?? [];

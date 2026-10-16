@@ -1,5 +1,7 @@
 # Greater Kuching Intelligent Operation Center (IOC)
 
+> **Code playbook:** `BEST-PRACTICES.md` in this directory — 16 cross-project code rules every codebase follows. Read on first open.
+
 Daniel Goh's municipal intelligence dashboard for Greater Kuching, Sarawak. Demo-grade civic software for one named secretary — every panel shows a live reading, a baked snapshot, or a sourced fallback. No placeholders, no theatre.
 
 **Live:** https://kuching.nonarkara.org · **Repo:** Nonarkara/kuching-ioc · **Stack:** Node 20+ static + Leaflet 1.9.4 (2D) + CesiumJS 1.121 (3D, ArcGIS imagery, no Ion token).

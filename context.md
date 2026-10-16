@@ -1,5 +1,7 @@
 # Greater Kuching IOC — Secretary Goh's Super Dashboard
 
+> **Code playbook:** `BEST-PRACTICES.md` in this directory — 16 cross-project code rules every codebase follows. Read on first open.
+
 ## Live URL
 - Production: https://kuching.nonarkara.org (Cloudflare Pages — sole host)
 - Local dev: http://localhost:3000

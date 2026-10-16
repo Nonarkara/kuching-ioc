@@ -469,19 +469,18 @@
     <script src="./app.js?v=__ASSET_VERSION__" type="module"></script>
     <script src="./web-app.js?v=__ASSET_VERSION__" type="module"></script>
 
-    <!-- Visitor beacon: opt-in geolocation enrichment for the operator's own
-         analytics sheet. ipwho.is is the only external call; ip/city never
-         leave the browser unless VISITOR_BEACON_URL is set (default empty →
-         fire-and-forget). Failures are swallowed — the board never waits on
-         a third party. -->
+    <!-- Visitor beacon: off unless VISITOR_BEACON_URL is set at build time.
+         When set, ipwho.is sees the visitor IP and the operator's sheet gets
+         ip/country/region/city. Unset (the default) makes no external call.
+         Failures are swallowed; the board never waits on a third party. -->
     <script>(function(){
-      if(typeof window==='undefined')return;
+      var SH=__VISITOR_BEACON_URL__;
+      if(!SH)return;
       try{
-        var SH=window.__VISITOR_BEACON_URL__||'';
         var b={ua:navigator.userAgent,lang:navigator.language,
           screen:(screen.width||0)+'x'+(screen.height||0),
           tz:Intl.DateTimeFormat().resolvedOptions().timeZone||''};
-        function send(p){if(!SH)return;fetch(SH,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(p)}).catch(function(){});}
+        function send(p){fetch(SH,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(p)}).catch(function(){});}
         fetch('https://ipwho.is/',{signal:AbortSignal.timeout(4000)})
           .then(function(r){return r.json();})
           .then(function(d){b.ip=d.ip||'';b.country=d.country||'';b.region=d.region||'';b.city=d.city||'';send(b);})

@@ -266,3 +266,24 @@ test("Supabase RLS one-liner is in the repo with a runbook and a default-deny po
   // Idempotent: re-running is a no-op.
   assert.match(sql, /DROP POLICY IF EXISTS/, "policy create must be idempotent");
 });
+
+// 16 Oct: the beacon shipped as `window.""` (a syntax error on every load)
+// and called ipwho.is even with no endpoint. Every inline script must parse,
+// and an unset endpoint must mean no third-party call at all.
+test("rendered inline scripts parse, and the beacon is silent without an endpoint", async () => {
+  const { renderIndexHtml } = await import("../site-build.mjs");
+  for (const url of ["", "https://script.google.com/macros/s/x/exec"]) {
+    const html = await renderIndexHtml({ env: {}, assetVersion: "t", visitorBeaconUrl: url });
+    for (const [, attrs, body] of html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g)) {
+      if (/json/.test(attrs) || !body.trim()) continue;
+      assert.doesNotThrow(() => new Function(body), `inline script fails to parse: ${body.slice(0, 80)}`);
+    }
+    const beacon = html.slice(html.indexOf("Visitor beacon"));
+    assert.ok(beacon.indexOf("if(!SH)return") < beacon.indexOf("ipwho.is/'"), "endpoint gate must precede the ipwho.is call");
+  }
+});
+
+test("wide desktop keeps a real map column next to the situation rail", async () => {
+  const css = await readFile(new URL("../public/reading.css", import.meta.url), "utf8");
+  assert.match(css, /@media\(min-width:1600px\)\s*\{\s*\.dashboard-shell \.board-grid\.war-room \{ grid-template-columns:270px minmax\(0,1fr\) clamp\(/);
+});

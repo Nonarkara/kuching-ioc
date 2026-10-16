@@ -193,6 +193,12 @@ html, body { overflow-x: clip; }
   .dashboard-shell .verdict-verb { font-size:20px; }
   .dashboard-shell .verdict-why { font-size:14px; }
 }
+/* >=1600 keeps the three named areas (now map situation). Two explicit
+   columns there left the rail in an auto track sized by its content, which
+   squeezed the map to 0px at 1600 and 140px at 1920 (16 Oct 2026). */
+@media(min-width:1600px) {
+  .dashboard-shell .board-grid.war-room { grid-template-columns:270px minmax(0,1fr) clamp(320px,22vw,400px); }
+}
 @media(max-width:1040px) {
   .dashboard-shell { display:flex; flex-direction:column; height:auto; overflow:visible; }
   .dashboard-shell .masthead { order:0; }

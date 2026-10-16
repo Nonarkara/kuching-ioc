@@ -860,6 +860,9 @@ async function buildFallbackDashboard() {
     mppService: { status: "unavailable", source: "mpp.sarawak.gov.my" },
     waterSupply: { status: "unavailable" }, rainRegime: { status: "unavailable", label: "unknown", evidence: [] },
     mppCoverage: { status: "unavailable" }, reliefCentres: { status: "unavailable", items: [] },
+    // Parity with the server payload: no-CORS or bake-only sources are honest stubs here.
+    regionalFires: { status: "unavailable", points: [], cells: {} }, tide: { status: "unavailable" },
+    apims: { status: "unavailable", stations: [], worst: null },
     metWarnings: {
       status: "fallback",
       activeCount: 0,
@@ -1412,9 +1415,9 @@ function renderMap(payload) {
       className: hasCatchment ? "hydro-marker hydro-has-catchment" : "hydro-marker",
     })
       .bindTooltip(
-        `<strong>${s.name}</strong><br>${s.basin || "Sarawak basin"} · ${s.council || ""}<br>` +
+        `<strong>${escapeHtml(s.name)}</strong><br>${escapeHtml(s.basin || "Sarawak basin")} · ${escapeHtml(s.council || "")}<br>` +
         `Level: <strong>${s.waterLevelM != null ? s.waterLevelM + " m" : "no live reading"}</strong>` +
-        ` · ${s.bandLabel || s.band || "—"}` +
+        ` · ${escapeHtml(s.bandLabel || s.band || "—")}` +
         (s.thresholds?.alert != null
           ? `<br>Alert starts at ${s.thresholds.alert} m`
           : "") +
@@ -3517,7 +3520,7 @@ function renderLocalitySummary(payload) {
   const wardCount = Object.values(wards).filter(c => (typeof c === "object" ? (c?.count ?? 0) : c) > 0).length;
   target.innerHTML = `
     <span><span class="locality-num">${num(totals.localities ?? 0, 0)}</span> ${t("totalLocalities").toLowerCase()}</span>
-    <span><span class="locality-num">${wardCount}</span> ${(t("wards") || "wards")}</span>
+    <span><span class="locality-num">${wardCount}</span> ${t("wards")}</span>
     <span><span class="locality-num">${countOrDash(totals.residential)}</span> ${t("residential").toLowerCase()}</span>
     <span><span class="locality-num">${countOrDash(totals.commercial)}</span> ${t("commercial").toLowerCase()}</span>
     <span><span class="locality-num">${countOrDash(totals.industrial)}</span> ${t("industrial").toLowerCase()}</span>
@@ -4716,7 +4719,7 @@ function renderDashboard(payload) {
         <strong>FLOOD // JPS HYDRO</strong>
         <div class="val">${ib.liveCount}<sup>/${ib.stationCount}</sup></div>
         <div class="meta">${(ib.highestBandLabel || "Reference").toUpperCase()} · ${glyphHTML(ib.status === "live" ? "live" : "cached", ib.status === "live" ? "live feed" : "reference hold")}</div>
-        ${top.map(s => `<div class="meta" style="color:${bandColors[s.band]||"#8aa2c8"}">${s.name} · ${s.waterLevelM != null ? s.waterLevelM + "m" : "—"} (${s.bandLabel})${s.catchment?.status === "snapped" ? ` · ${s.catchment.segmentCount}seg` : ""}</div>`).join("")}
+        ${top.map(s => `<div class="meta" style="color:${bandColors[s.band]||"#8aa2c8"}">${escapeHtml(s.name)} · ${s.waterLevelM != null ? s.waterLevelM + "m" : "—"} (${escapeHtml(s.bandLabel)})${s.catchment?.status === "snapped" ? ` · ${s.catchment.segmentCount}seg` : ""}</div>`).join("")}
         ${catchLine}
       </div>`;
   }
@@ -5653,11 +5656,18 @@ function renderWaterSupply(payload) {
 
 // --- Regional haze: fire detections + where today's air came from ------------
 let airPathCache = null;
+const AIR_PATH_KEY = "kch-ioc-air-path-v2";
 async function computeAirPath() {
   if (airPathCache && Date.now() - Date.parse(airPathCache.at) < 3600 * 1000) return airPathCache;
+  // One hour cache survives reloads, so repeat visits don't re-bill Open-Meteo.
+  try {
+    const saved = JSON.parse(localStorage.getItem(AIR_PATH_KEY) || "null");
+    if (saved?.at && Date.now() - Date.parse(saved.at) < 3600 * 1000 && Array.isArray(saved.path)) return (airPathCache = saved);
+  } catch { /* private mode */ }
   const json = await fetch(gridUrl()).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
   const path = backTrajectory(json);
   airPathCache = { path, sector: originSector(path), at: new Date().toISOString() };
+  try { localStorage.setItem(AIR_PATH_KEY, JSON.stringify(airPathCache)); } catch { /* private mode */ }
   return airPathCache;
 }
 

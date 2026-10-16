@@ -84,6 +84,7 @@ export async function renderIndexHtml({
   boardLabel = deploymentMode === "pages-static" ? "SNAPSHOT BOARD" : "LIVE BOARD",
   pagesUrl = env.PAGES_PUBLIC_URL || DEFAULT_PAGES_URL,
   liveUrl = env.LIVE_IOC_URL || DEFAULT_LIVE_URL,
+  visitorBeaconUrl = env.VISITOR_BEACON_URL || "",
 } = {}) {
   const resolvedAssetVersion = compactAssetToken(assetVersion) || resolveAssetVersion({ env, builtAt: builtAt || undefined });
   const template = await fs.readFile(INDEX_TEMPLATE_PATH, "utf8");
@@ -106,6 +107,7 @@ export async function renderIndexHtml({
 
   return template
     .replaceAll("__ASSET_VERSION__", resolvedAssetVersion)
+    .replace("__VISITOR_BEACON_URL__", escapeScriptJson(visitorBeaconUrl))
     .replace("__IOC_BOOT_JSON__", escapeScriptJson(bootMeta));
 }
 

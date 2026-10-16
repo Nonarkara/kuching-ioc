@@ -469,8 +469,24 @@
     <script src="./app.js?v=__ASSET_VERSION__" type="module"></script>
     <script src="./web-app.js?v=__ASSET_VERSION__" type="module"></script>
 
-    <!-- Visitor beacon removed 28 Sep 2026: the Apps Script endpoint returned
-         401 (collecting nothing) while still egressing visitor IP/geo to
-         ipapi.co. Re-add only with a working endpoint + privacy note. -->
+    <!-- Visitor beacon: opt-in geolocation enrichment for the operator's own
+         analytics sheet. ipwho.is is the only external call; ip/city never
+         leave the browser unless VISITOR_BEACON_URL is set (default empty →
+         fire-and-forget). Failures are swallowed — the board never waits on
+         a third party. -->
+    <script>(function(){
+      if(typeof window==='undefined')return;
+      try{
+        var SH=window.__VISITOR_BEACON_URL__||'';
+        var b={ua:navigator.userAgent,lang:navigator.language,
+          screen:(screen.width||0)+'x'+(screen.height||0),
+          tz:Intl.DateTimeFormat().resolvedOptions().timeZone||''};
+        function send(p){if(!SH)return;fetch(SH,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(p)}).catch(function(){});}
+        fetch('https://ipwho.is/',{signal:AbortSignal.timeout(4000)})
+          .then(function(r){return r.json();})
+          .then(function(d){b.ip=d.ip||'';b.country=d.country||'';b.region=d.region||'';b.city=d.city||'';send(b);})
+          .catch(function(){send(b);});
+      }catch(e){/* visitor beacon is best-effort */}
+    })();</script>
   </body>
 </html>

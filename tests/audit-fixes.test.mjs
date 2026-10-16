@@ -191,6 +191,27 @@ test("deploy workflow schedules a recurring snapshot refresh (audit #2)", () => 
   const schedIdx = workflow.indexOf("schedule:");
   const testIdx = workflow.indexOf("node --test");
   assert.ok(schedIdx > 0 && testIdx > 0, "schedule and test steps both present");
+  // The cadence is now a single "13 */4 * * *" — once every 4 h. The earlier
+  // 30-min schedule was a phantom: GH Actions guarantees scheduled workflows
+  // run at most every 5 min but de-duplicates in practice at 3–5 h. Match
+  // the cron to the platform reality so the comment and the truth agree.
+  const cronMatch = workflow.match(/cron:\s*"([^"]+)"/);
+  assert.ok(cronMatch, "cron must be a quoted string");
+  const cron = cronMatch[1].trim();
+  assert.match(cron, /\*\/4/, "cron must be the 4-hour cadence (e.g. \"13 */4 * * *\")");
+});
+
+test("build step wires the optional source credentials without baking them (audit #2)", () => {
+  // The dashboard never embeds a key. The build reads them from the env block
+  // and the runner maps them to secrets; if any key leaks into the source,
+  // this test should catch it.
+  assert.match(workflow, /FIRMS_MAP_KEY:\s*\$\{\{\s*secrets\.FIRMS_MAP_KEY\s*\}\}/, "FIRMS_MAP_KEY must come from secrets");
+  assert.match(workflow, /AQICN_TOKEN:\s*\$\{\{\s*secrets\.AQICN_TOKEN\s*\}\}/, "AQICN_TOKEN must come from secrets");
+  assert.match(workflow, /VISITOR_BEACON_URL:\s*\$\{\{\s*secrets\.VISITOR_BEACON_URL\s*\}\}/, "VISITOR_BEACON_URL must come from secrets");
+  // No raw key material in the workflow file itself.
+  for (const key of ["FIRMS_MAP_KEY", "AQICN_TOKEN", "VISITOR_BEACON_URL"]) {
+    assert.doesNotMatch(workflow, new RegExp(`${key}:\\s*['"]?[A-Za-z0-9_-]{20,}`), `${key} must not be inlined`);
+  }
 });
 
 // --- Audit #6: deploy workflow runs the test suite before publishing ---
@@ -215,4 +236,33 @@ test("Cloudflare Pages deploy workflow runs tests before publishing (audit #6)",
     buildIdx < deployIdx,
     "build step must run before the deploy step",
   );
+});
+// --- Audit followup: visitor beacon restored with privacy note ---
+test("index template ships the ipwho.is beacon with a privacy note and env-injected endpoint", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const tpl = await readFile(new URL("../public/index.template.html", import.meta.url), "utf8");
+  // The ipwho.is call is back.
+  assert.match(tpl, /ipwho\.is/, "ipwho.is lookup must be wired");
+  // Hard 4-s timeout — no risk of a slow third party stalling the boot.
+  assert.match(tpl, /AbortSignal\.timeout\(4000\)/, "ipwho.is call must be timeout-bounded");
+  // A privacy note sits next to the beacon, not just bare code.
+  assert.match(tpl, /Visitor beacon/, "beacon must carry a privacy note");
+  // The Apps Script endpoint comes from an env var, not a hardcoded URL.
+  assert.match(tpl, /__VISITOR_BEACON_URL__/, "beacon URL must be env-injected");
+  // The template processor must wire that placeholder to an env var.
+  const sb = await readFile(new URL("../site-build.mjs", import.meta.url), "utf8");
+  assert.match(sb, /__VISITOR_BEACON_URL__/);
+  assert.match(sb, /VISITOR_BEACON_URL/, "site-build.mjs must read VISITOR_BEACON_URL");
+});
+
+// --- Audit followup: Supabase RLS runbook is documented ---
+test("Supabase RLS one-liner is in the repo with a runbook and a default-deny policy", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const sql = await readFile(new URL("../scripts/ops-monitoring-rls.sql", import.meta.url), "utf8");
+  assert.match(sql, /ENABLE ROW LEVEL SECURITY/, "must enable RLS on the skills table");
+  // Default-deny until the application adds a real policy. The service role
+  // key bypasses RLS, so existing admin reads still work.
+  assert.match(sql, /USING \(false\)/, "default-deny policy must be in place");
+  // Idempotent: re-running is a no-op.
+  assert.match(sql, /DROP POLICY IF EXISTS/, "policy create must be idempotent");
 });

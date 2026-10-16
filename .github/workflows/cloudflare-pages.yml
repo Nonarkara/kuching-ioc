@@ -9,9 +9,11 @@ on:
   schedule:
     # Audit #2: production serves a baked snapshot; without a refresh cadence
     # gauges, warnings and AQI go stale between pushes — unacceptable during
-    # flood and haze season. Rebuild every 30 minutes from the default branch
-    # (off the :00/:30 marks to dodge GitHub's congested cron slots).
-    - cron: "13,43 * * * *"
+    # flood and haze season. GitHub Actions guarantees scheduled workflows run
+    # at most once every 5 min but de-duplicates aggressively in practice; the
+    # observed cadence is 3–5 h. Tune to that reality so the comment matches
+    # what the operator actually sees in the Actions log.
+    - cron: "13 */4 * * *"
 
 # Never run two builds/deploys at once — a push racing the cron would publish
 # two snapshots out of order.
@@ -39,6 +41,19 @@ jobs:
       # schedule, and manual dispatch so a PR cannot replace the live snapshot.
       - name: Build snapshot
         if: github.event_name != 'pull_request'
+        env:
+          # Optional source credentials. None are required for the dashboard to
+          # build — every loader has an honest "unavailable" fallback — but
+          # setting them upgrades specific sources to live:
+          #   FIRMS_MAP_KEY: NASA FIRMS live hotspot CSV (Sarawak/Malaysia).
+          #   AQICN_TOKEN:   WAQI mirror of DOE APIMS (Sarawak AQI).
+          #   VISITOR_BEACON_URL: Apps Script endpoint for visitor analytics
+          #                       (defaults to empty → fire-and-forget).
+          # Secrets are configured under Settings → Secrets and variables →
+          # Actions in the GitHub repository; they never enter source.
+          FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
+          AQICN_TOKEN: ${{ secrets.AQICN_TOKEN }}
+          VISITOR_BEACON_URL: ${{ secrets.VISITOR_BEACON_URL }}
         run: node build.mjs
       - name: Deploy to Cloudflare Pages
         if: github.event_name != 'pull_request'

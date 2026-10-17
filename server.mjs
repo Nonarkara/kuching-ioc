@@ -3811,11 +3811,15 @@ async function loadFloodForecast() {
         const url = `https://flood-api.open-meteo.com/v1/flood?latitude=${p.lat}&longitude=${p.lon}`
           + `&daily=river_discharge,river_discharge_min,river_discharge_max,river_discharge_mean`
           + `&forecast_days=10&models=seamless_v4`;
-        // One retry: on CI the first wave of ~30 parallel loaders can hit
-        // connect timeouts, which used to bake a "fallback" into the snapshot.
-        let data;
+        // One retry on transient failure. A point that still fails after
+        // the retry returns null so partial coverage survives — the upper
+        // Sarawak basin can still see the lower-basin forecast even if the
+        // Sg. Maong call times out. A full outage is the only path that
+        // triggers the outer catch and the whole-basin fallback.
+        let data = null;
         try { data = await fetchJson(url, 12000); }
-        catch { await new Promise((r) => setTimeout(r, 1500)); data = await fetchJson(url, 15000); }
+        catch { await new Promise((r) => setTimeout(r, 1500)); try { data = await fetchJson(url, 15000); } catch { /* leave null */ } }
+        if (!data) return null;
         const dates = data.daily?.time ?? [];
         const dis = data.daily?.river_discharge ?? [];
         const min = data.daily?.river_discharge_min ?? [];
@@ -3839,9 +3843,24 @@ async function loadFloodForecast() {
             : null,
         };
       }));
-      const primary = results.find((r) => r.id === "kuching") || results[0];
+      // Drop null points (full point-level failure) and decide live vs
+      // partial. Partial coverage is honest: the operator sees the reaches
+      // that did respond, with the ones that didn't dropped from the rail.
+      const okResults = results.filter((r) => r !== null);
+      if (!okResults.length) {
+        // All points failed twice — the outer try/catch returns the full
+        // fallback. This branch is unreachable in practice but keeps the
+        // type checker happy if the inner retry ever stops throwing.
+        return null;
+      }
+      const primary = okResults.find((r) => r.id === "kuching") || okResults[0];
+      // Live if every requested point responded; "partial" if at least one
+      // responded. The dashboard tells the user which reaches are missing
+      // from the rail instead of pretending the whole basin is ungauged.
+      const requested = points.length;
+      const reached = okResults.length;
       return {
-        status: "live",
+        status: reached === requested ? "live" : "partial",
         updatedAt: nowIso(),
         station: primary.label,
         units: "m³/s",
@@ -3849,10 +3868,13 @@ async function loadFloodForecast() {
         forecast: primary.forecast,
         peakCms: primary.peakCms,
         todayCms: primary.todayCms,
-        reaches: results.map((r) => ({
+        reaches: okResults.map((r) => ({
           id: r.id, label: r.label, lat: r.lat, lon: r.lon,
           todayCms: r.todayCms, peakCms: r.peakCms, spreadCms: r.spreadCms,
         })),
+        // Surface which points were asked for and which did not respond,
+        // so a "partial" status is honest about its own gap.
+        missingReaches: points.filter((p) => !okResults.find((r) => r.id === p.id)).map((p) => p.id),
       };
     } catch {
       return {

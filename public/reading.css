@@ -235,11 +235,13 @@ html[data-text-scale="large"] { --t-display: 26px; --t-body: 17px; --t-micro: 13
   background-color: var(--card-bg) !important;
   border: 1px solid var(--line-strong) !important;
 }
+/* Active state is a border-colour change, not a second ring. The previous
+   rule also set an inset 1px shadow on the same edge the border already
+   occupies, which drew a 2px edge and read as fake depth (rule 5 / 7). */
 .dashboard-shell :where(.map-entry > button[aria-pressed="true"], .scope-btn.active, .ward-cat-chip.active,
   .segmented-control button.active, .building-buttons button[aria-pressed="true"]) {
   border-color: var(--cyan) !important;
   color: var(--cyan) !important;
-  box-shadow: inset 0 0 0 1px var(--cyan) !important;
 }
 .dashboard-shell .verdict-chip { color: var(--ink) !important; font-weight: 500; }
 .dashboard-shell :where(.hg-observed, .hg-observed:not([data-status="recent"])) { color: var(--soft) !important; font-weight: 400 !important; }
@@ -251,6 +253,21 @@ html[data-text-scale="large"] { --t-display: 26px; --t-body: 17px; --t-micro: 13
 
 /* Labels read as labels: micro, tracked, uppercase only where they already were. */
 .dashboard-shell :where(.kicker, .section-label, .fa-kicker, .hg-title, .gp-kicker, .rr-kicker) { color: var(--soft) !important; letter-spacing: 0.06em; }
+
+/* Rule 3 (readable line length). Measured 18 Oct 2026 at 1024 px: the brief
+   column goes full-bleed on tablet and its prose ran to 137 characters —
+   well past the 75-char ceiling. At 1440 px the verdict reason and the 3D
+   status line ran 95–117ch. Cap the measure instead of adding a column, so
+   the map keeps its width. 65ch at 14px body ≈ 100 characters, which is the
+   top of the band; tighter would fight the three-column grid. */
+.dashboard-shell :where(.brief-item, .verdict-why, .regional-status, .operation-card p,
+  .flood-action-card p, .posture-block p, .signal-card p, .gp-item p, .news-intake-item p) {
+  max-width: 68ch !important;
+}
+/* Prose inside a narrow rail already fits; don't let the cap letterbox it. */
+.dashboard-shell :where(.situation-rail, .col-now) :where(.brief-item, .verdict-why, .regional-status) {
+  max-width: none !important;
+}
 /* Generated 18 Oct 2026 from the rendered page: every text style that was
    >=18px is display, every one that averaged <=11.5px is micro, the rest is body. */
 .dashboard-shell .verdict-verb,

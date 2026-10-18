@@ -445,6 +445,41 @@ older version of the atlas.
 
 ---
 
+## 17 · Wrangler storage commands need `--remote`, then check the live bytes
+
+In Wrangler 4 (this repo pins `wrangler` ^4.107.0), `npx wrangler r2 object put|get|delete`, `wrangler d1 execute`, and `wrangler kv key` / `wrangler kv bulk`
+talk to the **local emulator** under `.wrangler/state` unless you pass
+`--remote`. `wrangler kv namespace` is an account API call and has no local
+mode. An R2 put still prints `Upload complete.` and `Resource location: local`,
+so it looks like the upload worked when production never saw it.
+
+```bash
+# ❌ writes to the local emulator, prints "Upload complete"
+npx wrangler r2 object put hcmc-twin-assets/models/landmark-81.glb --file=public/models/landmark-81.glb
+
+# ✅ writes to the real bucket
+npx wrangler r2 object put hcmc-twin-assets/models/landmark-81.glb \
+  --file=public/models/landmark-81.glb --content-type=model/gltf-binary --remote
+
+# ✅ then prove it from outside: the live byte count must equal the file
+curl -s -o /dev/null -w '%{size_download}\n' \
+  https://hcmc.nonarkara.org/api/hcmc/3d/v2/models/landmark-81.glb
+stat -f %z public/models/landmark-81.glb   # macOS; Linux: stat -c %s
+```
+
+A 200 on that URL proves the route can read the object. No mounted page
+requests the hero GLBs. The only caller is unused `BorderMap.tsx`.
+
+Keep the Cache-Control on routes that read R2 short (`max-age=300`), so a
+corrected upload shows within five minutes instead of a day.
+
+**Failure this prevents:** HCMC, October 2026. Thirteen hero GLBs were
+"uploaded" three times without `--remote`. Production R2 kept the 732-byte
+placeholders and a 24 h edge cache hid them further; the fix needed a new
+`/api/hcmc/3d/v2/models` URL.
+
+---
+
 ## Appendix — Where these rules come from
 
 | Rule | System | Failure |
@@ -465,6 +500,7 @@ older version of the atlas.
 | 14 (force-dynamic) | KL, HCMC | Prerendered pages referenced dead chunk hashes |
 | 15 (render failures) | Kuching IOC | 12-hour outage looked like empty news |
 | 16 (canonical hostname) | HCMC, Jakarta, KL | Stale bookmarks served older code |
+| 17 (wrangler `--remote`) | HCMC | GLB uploads went to the local emulator; live served 732-byte placeholders |
 
 When a new system is born in this workspace, copy this file into it as
 `BEST-PRACTICES.md` and reference it from the project's `CLAUDE.md`.

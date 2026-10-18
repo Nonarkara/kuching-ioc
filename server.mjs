@@ -6,6 +6,7 @@ import { renderIndexHtml, resolveAssetVersion } from "./site-build.mjs";
 import { normalizeMetWeather } from "./public/met-weather.js";
 import { classifyRainRegime, summariseOpenMeteo, RAIN_REGIME_OPEN_METEO_URL } from "./public/rain-regime.js";
 import { summariseTide, TIDE_URL } from "./public/tide.js";
+import { anchorHourIndex } from "./public/open-meteo-anchor.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
@@ -1379,7 +1380,7 @@ async function loadWeather() {
     need(Number.isFinite(current.weather_code), "current.weather_code");
     need(Number.isFinite(current.pressure_msl), "current.pressure_msl");
     const times = Array.isArray(hourly.time) ? hourly.time : [];
-    const nowIdx = typeof current.time === "string" ? times.indexOf(current.time) : -1;
+    const nowIdx = anchorHourIndex(times, current.time);
     need(nowIdx >= 24, "hourly.time[now-24]");
     const nextWin = (a) => Array.isArray(a) && a.slice(nowIdx, nowIdx + 6).every(Number.isFinite);
     const pastWin = (a) => Array.isArray(a) && a.slice(nowIdx - 24, nowIdx).every(Number.isFinite);
@@ -1499,7 +1500,7 @@ async function loadAirQuality() {
     need(Number.isFinite(current.ozone), "current.ozone");
     need(Number.isFinite(current.nitrogen_dioxide), "current.nitrogen_dioxide");
     const times = Array.isArray(hourly.time) ? hourly.time : [];
-    const nowIdx = typeof current.time === "string" ? times.indexOf(current.time) : -1;
+    const nowIdx = anchorHourIndex(times, current.time);
     need(nowIdx >= 24, "hourly.time[now-24]");
     need(nowIdx + 6 <= times.length, "hourly.time[now+6]");
     const nextWin = (a) => Array.isArray(a) && a.slice(nowIdx, nowIdx + 6).every(Number.isFinite);

@@ -71,7 +71,7 @@ FOOTER    · operator shortcuts + disclaimer · telemetry heartbeat · KEYS · S
 | `renderWardBrief` / `renderWardProjectsHTML` | rail | `wards`, `MPP_WARD_PROJECTS` |
 | `renderRuntimeMeta` / `renderScopeToggle` / `renderDimensionToggle` / `renderTextScaleToggle` | masthead | boot + state |
 
-Helpers: `dataHealth()` in `public/data-health.js` (UI coverage check — not a flood model or agency freshness standard). Operator guide: `public/operator-guide.js` + `public/operator-guide.css` (native `<dialog>` with EN/BM/ZH instructions, opens via the "How to use" manual button; `?` opens the `#helpOverlay` keyboard shortcuts modal).
+Helpers: `dataHealth()` in `public/data-health.js` (UI coverage check — not a flood model or agency freshness standard). `anchorHourIndex()` in `public/open-meteo-anchor.js` maps Open-Meteo's `current.time` (`:00`/`:30` on `/v1/forecast`, on the hour on `/v1/air-quality`) onto the always-hourly `hourly.time` series; all four weather/AQI loaders in `server.mjs` and `app.js` must use it, never `times.indexOf(current.time)`. `completeClimateInBrowser()` in `app.js` finishes weather/AQI from the visitor's browser when the Pages bake could not reach Open-Meteo, mirroring `completeRainRegimeInBrowser()`. Operator guide: `public/operator-guide.js` + `public/operator-guide.css` (native `<dialog>` with EN/BM/ZH instructions, opens via the "How to use" manual button; `?` opens the `#helpOverlay` keyboard shortcuts modal).
 
 ---
 

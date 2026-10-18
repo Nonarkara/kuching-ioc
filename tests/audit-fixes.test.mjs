@@ -137,7 +137,7 @@ test("server loaders anchor windows to current.time, never fixed offsets (audit 
     const start = serverJs.indexOf(fn);
     const end = serverJs.indexOf("async function", start + 10);
     const block = serverJs.slice(start, end > 0 ? end : undefined);
-    assert.match(block, /times\.indexOf\(current\.time\)/, `${fn} must locate nowIdx from current.time`);
+    assert.match(block, /anchorHourIndex\(times, current\.time\)/, `${fn} must anchor nowIdx to current.time`);
     assert.match(block, /slice\(nowIdx, nowIdx \+ 6\)|slice\(nowIdx, nowIdx\+6\)/, `${fn} must slice next 6h from nowIdx`);
     assert.match(block, /slice\(nowIdx - 24, nowIdx\)/, `${fn} must slice past 24h from nowIdx`);
     assert.ok(!block.includes("slice(24, 30)") && !block.includes("slice(24,30)"),
@@ -152,7 +152,13 @@ test("client fallback loaders anchor windows the same way (audit #11b)", () => {
   const wStart = appJs.indexOf("async function loadWeather");
   const wEnd = appJs.indexOf("async function loadEarthquakes");
   const block = appJs.slice(wStart, wEnd);
-  assert.match(block, /times\.indexOf\(c\.time\)/, "client weather must locate nowIdx from current.time");
+  // Assert the behaviour, not the expression. This previously pinned
+  // `times.indexOf(c.time)`, which reads as "anchor to current.time" but is
+  // not: Open-Meteo reports `current` at :00/:30 while `hourly` is hourly, so
+  // that exact match returns -1 and collapses the block to the stub. See
+  // tests/open-meteo-anchor.test.mjs.
+  assert.match(block, /anchorHourIndex\(times, c\.time\)/,
+    "client weather must anchor nowIdx to current.time");
   assert.ok(!block.includes("slice(24,30)") && !block.includes("slice(24, 30)"),
     "client weather must not use the fixed 24..30 offset");
   assert.match(block, /WEATHER_FALLBACK, updatedAt: nowIso\(\), status: "degraded"/,

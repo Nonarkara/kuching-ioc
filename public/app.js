@@ -25,6 +25,7 @@ const { morningBrief } = await import(`./morning-brief.js?v=${encodeURIComponent
 const { classifyRainRegime, summariseOpenMeteo, RAIN_REGIME_OPEN_METEO_URL } = await import(`./rain-regime.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { gridUrl, backTrajectory, firesAlongPath, originSector } = await import(`./air-path.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { summariseTide, TIDE_URL } = await import(`./tide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { anchorHourIndex } = await import(`./open-meteo-anchor.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupBuildings3D } = await import(`./buildings-3d.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupRegionalBuildings } = await import(`./regional-buildings.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupOperatorGuide } = await import(`./operator-guide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
@@ -578,7 +579,7 @@ async function loadWeather() {
     const c = p.current??{}, h = p.hourly??{}, d = p.daily??{};
     const fin = Number.isFinite;
     const times = Array.isArray(h.time) ? h.time : [];
-    const nowIdx = typeof c.time === "string" ? times.indexOf(c.time) : -1;
+    const nowIdx = anchorHourIndex(times, c.time);
     const dIdx = typeof c.time === "string" ? (Array.isArray(d.time) ? d.time : []).indexOf(c.time.slice(0,10)) : -1;
     const nextWin = (a) => Array.isArray(a) && a.slice(nowIdx, nowIdx+6).every(fin);
     const pastWin = (a) => Array.isArray(a) && a.slice(nowIdx-24, nowIdx).every(fin);
@@ -615,7 +616,7 @@ async function loadAirQuality() {
     const c = p.current??{}, h = p.hourly??{};
     const fin = Number.isFinite;
     const times = Array.isArray(h.time) ? h.time : [];
-    const nowIdx = typeof c.time === "string" ? times.indexOf(c.time) : -1;
+    const nowIdx = anchorHourIndex(times, c.time);
     const nextWin = (a) => Array.isArray(a) && a.slice(nowIdx, nowIdx+6).every(fin);
     const pastWin = (a) => Array.isArray(a) && a.slice(nowIdx-24, nowIdx).every(fin);
     const ok = fin(c.us_aqi) && fin(c.pm2_5) && fin(c.pm10) && fin(c.ozone) && fin(c.nitrogen_dioxide)
@@ -630,6 +631,47 @@ async function loadAirQuality() {
       history: h.us_aqi.slice(nowIdx-24, nowIdx).map(v=>Math.round(v)),
     };
   } catch { const f=AIR_FALLBACK; return { ...f, updatedAt:nowIso(), current:{...f.current, band:aqiBand(f.current.aqi)} }; }
+}
+
+// --- Climate browser completion ---------------------------------------------
+// Rain regime completes itself in the browser when the bake could not reach
+// Open-Meteo (see completeRainRegimeInBrowser). Climate had no such path, so
+// whenever the CI runner was refused — documented, and reproducible, since the
+// shared runner gets 429/503 — the Pages board served buildWeatherFallback()'s
+// constants for the rest of the bake window. The chip said "degraded" and the
+// numbers read like measurements, which is the one thing this board must never
+// do. A visitor's browser is not refused, and Open-Meteo is CORS-open.
+//
+// Reuse loadWeather/loadAirQuality rather than re-deriving the parse, so a
+// browser-completed payload is shaped and validated exactly like the bake's.
+// Only the static tier needs this: the live API refreshes every 60 s, and the
+// server is not the thing being blocked.
+let climateClientTried = false;
+async function completeClimateInBrowser(payload) {
+  if (climateClientTried || payload?.delivery?.mode !== "static-snapshot") return;
+  const climate = payload?.climate;
+  if (!climate) return;
+  const wantWeather = climate.weather && climate.weather.status !== "live";
+  const wantAir = climate.air && climate.air.status !== "live";
+  if (!wantWeather && !wantAir) return;
+  climateClientTried = true;
+  const [w, a] = await Promise.all([
+    wantWeather ? loadWeather() : Promise.resolve(null),
+    wantAir ? loadAirQuality() : Promise.resolve(null),
+  ]);
+  const liveW = w?.status === "live";
+  const liveA = a?.status === "live";
+  if (liveW) climate.weather = { ...w, computedIn: "browser" };
+  if (liveA) climate.air = { ...a, computedIn: "browser" };
+  if (!liveW && !liveA) return;
+  // The source chips read payload.sources, not climate.*.status — leaving them
+  // alone would print "degraded" over live numbers, which is the exact lie
+  // this function exists to remove.
+  for (const src of payload.sources || []) {
+    if (src.id === "open-meteo-weather" && liveW) src.status = "live";
+    if (src.id === "open-meteo-air" && liveA) src.status = "live";
+  }
+  renderDashboard(payload);
 }
 
 async function loadEarthquakes() {
@@ -4632,6 +4674,7 @@ function renderGrowthStory(payload) {
 
 function renderDashboard(payload) {
   state.payload = payload;
+  completeClimateInBrowser(payload);
   // Dynamic <title> — encodes current posture + warning count so the browser
   // tab itself is a status indicator. Safe / Watch / Stretched glyph prefix.
   const postureToken = String(payload?.summary?.posture || "stable").toLowerCase();

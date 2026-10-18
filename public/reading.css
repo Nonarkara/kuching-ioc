@@ -478,3 +478,5 @@ body::before { display: none !important; }
 .dashboard-shell .brief-disclosure { padding-top: 0 !important; padding-bottom: 0 !important; }
 .dashboard-shell .brief-disclosure:not([open]) > summary { margin: 0; }
 @media (max-width: 720px) { .dashboard-shell .help-hint { display: none; } }
+/* A white legend swatch (ward hairlines) needs an edge to be seen on paper. */
+.dashboard-shell .legend-dot { outline: 1px solid var(--line-strong); }

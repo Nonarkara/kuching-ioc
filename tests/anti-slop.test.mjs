@@ -33,9 +33,18 @@ test("rule 3: prose is capped to a readable measure", () => {
   for (const el of [".brief-item", ".verdict-why", ".regional-status"]) {
     assert.ok(capped.includes(el), `${el} must be inside the measure cap`);
   }
-  // A narrow rail must not be letterboxed by the cap.
-  assert.match(css, /\.situation-rail[\s\S]{0,220}max-width: none !important/,
-    "the rail is narrower than the cap; it must opt out");
+  // A narrow rail must not be letterboxed by the cap — but ONLY on the wide
+  // layout. At <=1040px `.col-now` is `display: contents` and the brief runs
+  // full-bleed, so an unscoped opt-out silently disabled the measure on
+  // tablet (measured 137ch). Pin the media query, not just the presence.
+  const optOut = css.slice(css.indexOf("@media screen and (min-width: 1041px)"));
+  assert.match(optOut, /\.situation-rail[\s\S]{0,220}max-width: none !important/,
+    "the rail is narrower than the cap; it must opt out on the wide layout only");
+  assert.doesNotMatch(
+    css.replace(optOut, ""),
+    /\.col-now[\s\S]{0,160}max-width: none/,
+    "an unscoped .col-now opt-out disables the measure at tablet width",
+  );
 });
 
 // Anti-slop rules 5 + 7 — no fake depth.

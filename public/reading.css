@@ -264,9 +264,15 @@ html[data-text-scale="large"] { --t-display: 26px; --t-body: 17px; --t-micro: 13
   .flood-action-card p, .posture-block p, .signal-card p, .gp-item p, .news-intake-item p) {
   max-width: 68ch !important;
 }
-/* Prose inside a narrow rail already fits; don't let the cap letterbox it. */
-.dashboard-shell :where(.situation-rail, .col-now) :where(.brief-item, .verdict-why, .regional-status) {
-  max-width: none !important;
+/* Prose inside a narrow rail already fits; don't let the cap letterbox it.
+   Scoped to the wide layout on purpose: at <=1040px the left column becomes
+   `display: contents` and the brief runs full-bleed, which is exactly the
+   case the cap exists for. An unscoped `.col-now` opt-out silently disabled
+   the measure on tablet — measured 137ch before this was scoped. */
+@media screen and (min-width: 1041px) {
+  .dashboard-shell :where(.situation-rail, .col-now) :where(.brief-item, .verdict-why, .regional-status) {
+    max-width: none !important;
+  }
 }
 /* Generated 18 Oct 2026 from the rendered page: every text style that was
    >=18px is display, every one that averaged <=11.5px is micro, the rest is body. */

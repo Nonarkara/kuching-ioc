@@ -4201,18 +4201,24 @@ function renderVerdict(payload) {
   if (weatherUnknown && !health.uncertain && !floodAct && !floodPrep && !airBad) verb = t("weatherUnknown");
  const chips = [];
   chips.push(`<span class="verdict-chip" data-tone="${health.uncertain ? "warn" : health.highest === "normal" ? "ok" : "alert"}">${health.uncertain ? t("verifyReading") : t("gauge" + health.highest[0].toUpperCase() + health.highest.slice(1))} · ${health.count}/${health.total}</span>`);
-  chips.push(`<span class="verdict-chip" data-tone="${!weatherUnknown && met.activeCount > 0 ? "alert" : "warn"}">${weatherUnknown ? t("weatherUnknown") : met.activeCount > 0 ? met.activeCount + " · " + t("weatherWarnings") : t("weatherChecked")}</span>`);
-  if (aqi != null) chips.push(`<span class="verdict-chip" data-tone="${aqi > 150 ? "alert" : aqi > 100 ? "warn" : "ok"}">Open-Meteo AQI · ${aqi}</span>`);
+  // The chip states the WARNING STATE, never the headline. It used to push
+  // t("weatherUnknown") — which is also the verb whenever weatherUnknown is
+  // true — so the same sentence appeared twice, 30px apart, in a bordered box.
+  chips.push(`<span class="verdict-chip" data-tone="${!weatherUnknown && met.activeCount > 0 ? "alert" : "warn"}">${weatherUnknown ? t("weatherUnverified") : met.activeCount > 0 ? met.activeCount + " · " + t("weatherWarnings") : t("weatherClear")}</span>`);
+  if (aqi != null) chips.push(`<span class="verdict-chip" data-tone="${aqi > 150 ? "alert" : aqi > 100 ? "warn" : "ok"}" title="Open-Meteo air quality index">AQI · ${aqi}</span>`);
   const ff = payload.floodForecast;
   if (ff?.todayCms != null && ff?.peakCms != null) {
     const rising = ff.peakCms > ff.todayCms * 1.15;
-    chips.push(`<span class="verdict-chip" data-tone="${rising ? "warn" : "ok"}">River flow ${Math.round(ff.todayCms)}→${Math.round(ff.peakCms)} m³/s</span>`);
+    chips.push(`<span class="verdict-chip" data-tone="${rising ? "warn" : "ok"}" title="River flow now to today's peak">Flow ${Math.round(ff.todayCms)}→${Math.round(ff.peakCms)} m³/s</span>`);
   }
 
-  const why = morningBrief(payload, state.lang, state.scope).now[0];
+  // No reason line here any more. It was morningBrief().now[0] — the same
+  // string renderBriefStrip already prints as the first line of "DO THIS
+  // TODAY" — so the board was saying one sentence twice, 30px apart, and the
+  // top line paid 21px for the privilege. tests/anti-slop.test.mjs pins that
+  // the bar carries the headline and its statuses, and nothing else.
   el.innerHTML = `
     <span class="verdict-verb">${escapeHtml(verb || payload.summary?.posture || "—")}</span>
-    <div class="verdict-why">${escapeHtml(why)}</div>
     <div class="verdict-chips">${chips.join("")}</div>`;
 }
 

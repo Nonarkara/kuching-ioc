@@ -89,14 +89,19 @@ export function setupRegionalBuildings({getViewer,getDimension,setDimension,getL
     // Error state is sticky until the next activation rewrites it. Otherwise
     // a stranded user in 2D sees the idle hint and never learns the city model
     // failed. Order matters: error first, then 2D-idle, then 3D-busy/zoom/empty/ready.
+    // The 2D-idle case now renders nothing: "Explore places in 3D, or open Map
+    // layers…" named the 3D-city and Map-layers buttons sitting right beside it,
+    // and cost a row of the map for the privilege. Every real state below it
+    // still writes here.
     status.textContent=state==='error'?text.error
       :activation?text.busy
-      :!visible?text.idle
+      :!visible?''
       :state==='busy'?text.busy
       :state==='zoom'?text.zoom
       :state==='empty'?text.empty
       :`${count.toLocaleString()} ${text.count} · ${text.date} ${manifest?.release||'—'}. ${text.estimate}`;
     if(destination&&visible)status.textContent+=' '+text.dun;
+    status.hidden=!status.textContent;
     $('regionalAttribution').hidden=!visible;
   }
   function clear(){for(const p of primitives.values())getViewer()?.scene.primitives.remove(p);primitives.clear();metaById.clear();count=0;$('regionalSelection').hidden=true;}

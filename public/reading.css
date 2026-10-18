@@ -309,6 +309,8 @@ html[data-text-scale="large"] { --t-display: 26px; --t-body: 17px; --t-micro: 13
 .dashboard-shell .gp-narrative,
 .dashboard-shell .gp-badge,
 .dashboard-shell .metric-unit,
+.dashboard-shell .metric-label,
+.dashboard-shell .metric-context,
 .dashboard-shell .src-name,
 .dashboard-shell .src-fresh,
 .dashboard-shell .ward-cat-count,
@@ -487,6 +489,162 @@ body::before { display: none !important; }
 /* Verdict chips are labels, not buttons: no touch-target height. */
 .dashboard-shell .verdict-chip { min-height: 0 !important; padding: 3px 8px !important; line-height: 1.35 !important; }
 @media (min-width: 1041px) { .dashboard-shell .col-map .deep-tray { flex-basis: 26%; } }
+
+/* ======================================================================
+   ONE-LINE COMMAND BAR (18 Oct 2026). Measured at 1440x900: masthead 46
+   + ticker 27 + verdict 72 = 145px of chrome stacked ABOVE the map, which
+   was 821x311 — 19.7% of the first screen, out-massed 2.7:1 by its own
+   furniture. Three stacked bands for one line of reading each.
+
+   One row now: title+tools | verdict verb + reason | chips | headlines.
+   The map gets the 109px back. Layout is grid, so nothing reflows inside
+   the bands; each band shrinks to its own content height and the row
+   takes the tallest.
+   ====================================================================== */
+@media screen and (min-width: 1041px) {
+  /* head + ticker + verdict share row 1; board takes everything left.
+     The telemetry heartbeat and the disclaimer each get a FULL-width row:
+     in a third column the footer was 374px, and at 1366 it wrapped the
+     disclaimer to 163px tall and stole 118px of map height. Chrome at the
+     foot of the board should not be rationed by a track meant for news. */
+  .dashboard-shell {
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "head  head  head"
+      "board board board"
+      "tele  tele  tele"
+      "foot  foot  foot";
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 26vw);
+  }
+  /* Explicit placement, NOT the old named areas: styles.css still assigns
+     .ticker-bar{grid-area:ticker} and .verdict-strip{grid-area:verdict},
+     and those names no longer exist in the template above — leaving them
+     to auto-placement dropped both into implicit rows at the bottom of the
+     shell and collapsed the map column to 0px (same class of bug as the
+     1600px grid defect in b8f67f5). Name every zone explicitly. */
+  .dashboard-shell .masthead     { grid-area: head;  grid-column: 1; grid-row: 1; }
+  .dashboard-shell .verdict-strip { grid-area: head; grid-column: 2; grid-row: 1; }
+  .dashboard-shell .ticker-bar   { grid-area: head; grid-column: 3; grid-row: 1; }
+  /* Row 1 is one flex line: title+tools | verdict | headlines. */
+  .dashboard-shell .masthead,
+  .dashboard-shell .ticker-bar,
+  .dashboard-shell .verdict-strip {
+    align-self: stretch;
+    border-bottom: 0 !important;
+    margin: 0;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 34px;
+    max-height: 34px;
+    overflow: hidden;
+  }
+  /* Zone rules read as hairlines BETWEEN zones on one line, not under each. */
+  .dashboard-shell .ticker-bar { border-left: 1px solid var(--line-strong) !important; }
+  .dashboard-shell .verdict-strip { border-left: 2px solid var(--ink) !important; flex: 1 1 auto; min-width: 0; }
+
+  /* Masthead keeps the title and Tools; the eyebrow/lead are already off. */
+  .dashboard-shell .masthead { flex: 0 0 auto; padding-left: 10px; }
+  .dashboard-shell .masthead .title-block h1 { font-size: 15px; line-height: 1.2; }
+  .dashboard-shell .view-tools > summary { min-height: 32px; padding: 4px 8px; }
+
+  /* Ticker: stamp + summary + window, all one row. The window's marquee is
+     nowrap and max-content is enormous, so the COLUMN is capped (34vw) —
+     an `auto` track let the ticker eat the verdict down to 22px. */
+  .dashboard-shell .ticker-bar { flex: 1 1 auto; min-width: 0; }
+  .dashboard-shell .section-stamp { line-height: 1; padding: 0 8px; flex: 0 0 auto; }
+  /* The summary preview had ~30px and rendered as "Gr…", which is worse than
+     nothing: a truncated word reads as a bug. The verdict and the brief both
+     carry the summary in full, so the crawl takes the whole column. */
+  .dashboard-shell .ticker-summary { display: none; }
+  .dashboard-shell .ticker-window { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+
+  /* Verdict: the verb is the display headline and the chips are status
+     tokens. Chips must NEVER be clipped — a status you cannot read is
+     worse than no status — so they are flex:0 0 auto and the verb is the
+     only thing allowed to shrink. (Measured: the chips needed 588px in a
+     212px slot and the tail was silently cut.) */
+  .dashboard-shell .verdict-verb {
+    flex: 0 1 auto; min-width: 0;
+    /* !important matches the Rams display rule above; without it this clamp
+       is silently overridden and the headline never scales down. */
+    font-size: clamp(17px, 1.45vw, 20px) !important; line-height: 1.1 !important;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .dashboard-shell .verdict-chips {
+    flex: 0 0 auto; flex-wrap: nowrap; overflow: visible; gap: 6px;
+  }
+}
+
+/* Below ~1400px there is not enough width for headline + four status
+   chips + a news crawl on one line, and cutting a chip is not an option.
+   The crawl yields first: headlines still run in the left-column news rail
+   and the Economy tray tab, so nothing is lost. */
+@media screen and (min-width: 1041px) and (max-width: 1399px) {
+  /* Two columns only: the crawl yields, and the verdict takes the slack.
+     The track is dropped, not just zeroed — a 0-width third track still
+     forced the footer into it. */
+  .dashboard-shell {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "head  head"
+      "board board"
+      "tele  tele"
+      "foot  foot";
+  }
+  .dashboard-shell .ticker-bar { display: none; }
+  .dashboard-shell .masthead { grid-column: 1; grid-row: 1; }
+  .dashboard-shell .verdict-strip { grid-column: 2; grid-row: 1; border-left: 2px solid var(--ink) !important; }
+}
+
+/* The KPI card measured 117px because .metric-label and .metric-context were
+   never named in the micro list above, so both rendered at 14px body and the
+   context wrapped to two lines. They are in the list now; the band is ~67px.
+   These width rules stop a long context from wrapping it back open. */
+@media screen and (min-width: 1041px) {
+  .dashboard-shell #metricBand .metric-card { padding: 4px 8px 3px; }
+  .dashboard-shell #metricBand .metric-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dashboard-shell #metricBand .metric-context { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* The whole point of the band is a scannable row of readings; six cards
+     side by side at ~46px beats three rows of tall ones. */
+  .dashboard-shell #metricBand { gap: 1px; }
+}
+
+/* The map is the hero: it takes the height the chrome gave back, and the
+   evidence tray keeps a fixed share so the map cannot be squeezed by tray
+   content (measured: the map's area swung 23% with tray content). */
+@media screen and (min-width: 1041px) {
+  .dashboard-shell .col-map .deep-tray { flex: 0 0 150px; min-height: 150px; max-height: 150px; }
+  .dashboard-shell .col-map.hero-map-active .deep-tray { flex-basis: 32px !important; min-height: 32px !important; max-height: 32px !important; }
+}
+/* The idle 3D hint is instructional filler that sat as its own 28px row
+   between the controls and the map. It names a control that is already
+   on screen, so it rides at the end of the controls row instead. */
+@media screen and (min-width: 1041px) {
+  .dashboard-shell .regional-status {
+    position: absolute; left: 0; right: 0; bottom: 24px;
+    padding: 2px 8px; font-size: var(--t-micro); line-height: 1.25;
+    background: var(--hud-bg); color: var(--soft);
+    pointer-events: none; z-index: 3;
+  }
+  .dashboard-shell .map-panel { position: relative; }
+  /* The overlay must never sit on top of the legend row: 24px clears the
+     22px footer measured at this width. */
+  .dashboard-shell .map-footer { position: relative; z-index: 4; }
+}
+/* Source citations and news headlines were rendering in UA-default
+   rgb(0,0,238), which is not in this palette. Scoped to the board chrome
+   and deliberately NOT to Leaflet, which owns its own attribution colour. */
+.dashboard-shell :where(.tray-pane, .news-rail, .situation-rail, .deep-tray, .source-matrix, .lower-grid) a {
+  color: var(--cyan);
+}
+.dashboard-shell :where(.tray-pane, .news-rail, .situation-rail, .deep-tray, .source-matrix, .lower-grid) a:visited {
+  color: var(--cyan);
+}
+/* Two spans in one summary read as one run-together string without a
+   separator ("News digestheadlines & language lanes"). */
+.dashboard-shell .rail-disclosure-summary span + span::before { content: " — "; color: var(--soft); }
 
 /* One display headline per screen: the page verdict. Panel headlines that
    echo it are bold body text, so the verdict is not repeated at full size. */

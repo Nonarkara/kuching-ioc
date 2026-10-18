@@ -4546,22 +4546,27 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
     height: max(640px, 100svh);
     min-height: 0;
     overflow: hidden;
-    grid-template-columns: auto minmax(120px, 1fr) auto;
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     grid-template-areas:
-      "head head head"
-      "ticker ticker ticker"
-      "verdict verdict verdict"
+      "head  head  head"
       "board board board"
-      "tools tele foot";
+      "tools tele  foot";
     font-size: 13px;
     line-height: 1.4;
   }
+  /* head, ticker and verdict are ONE row. The ticker and verdict are pinned
+     to it by reading.css (the final layout layer), which also caps the row
+     at 34px. They keep the same area name here so the base grid and the
+     refinement cannot disagree about which row they belong to. */
   .masthead { grid-area: head; }
-  .ticker-bar { grid-area: ticker; }
-  .verdict-strip { grid-area: verdict; }
+  .ticker-bar { grid-area: head; }
+  .verdict-strip { grid-area: head; }
   .board-grid { grid-area: board; }
-  .operator-tools { grid-area: tools; }
+  /* .operator-tools is appended to #viewToolsBody by operator-guide.js, i.e.
+     inside the absolutely-positioned Tools dropdown. It was never a shell
+     grid item, so its old `grid-area: tools` placed nothing — and the
+     "tools" track it reserved wrapped the footer at 1366px. */
   .telemetry-strip { grid-area: tele; }
   .bottom-bar { grid-area: foot; }
 

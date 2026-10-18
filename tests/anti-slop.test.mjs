@@ -6,6 +6,7 @@ const read = (p) => readFile(new URL(p, import.meta.url), "utf8");
 const css = await read("../public/reading.css");
 const template = await read("../public/index.template.html");
 const styles = await read("../public/styles.css");
+const app = await read("../public/app.js");
 
 // Anti-slop rule 1 — boxes fit their content.
 // Regression: the collapsed disclosures and the tray stack each carry their own
@@ -142,4 +143,93 @@ test("rule 5: cards are square while map dots stay circular", () => {
     /:where\([^)]*\.legend-dot[^)]*\) \{ border-radius: 50% !important/,
     "legend dots must stay round",
   );
+});
+
+// ---------------------------------------------------------------------------
+// ONE-LINE COMMAND BAR (18 Oct 2026). The secretary's call: the top of the
+// board was three stacked bands (masthead 46 + ticker 27 + verdict 72 = 145px)
+// for one line of reading each, and the map below them was 19.7% of the first
+// screen. These gate the fix. Measured after: one 34px row, map 32.8%.
+// ---------------------------------------------------------------------------
+
+const desktopBar = css.slice(css.indexOf("ONE-LINE COMMAND BAR"));
+assert.ok(desktopBar.length, "reading.css must document and own the one-line bar");
+
+test("rule 7: the three top zones share ONE grid row instead of stacking", () => {
+  // The defect was a stacked head/ticker/verdict block. The fix must place all
+  // three on row 1 explicitly — not merely stop giving them heights.
+  for (const zone of ["masthead", "ticker-bar", "verdict-strip"]) {
+    assert.match(
+      desktopBar,
+      new RegExp(`\\.dashboard-shell \\.${zone}\\s*\\{[^}]*grid-row:\\s*1`),
+      `.${zone} must be pinned to grid row 1`,
+    );
+  }
+  // And row 1 must be a fixed, shallow budget so it cannot creep back.
+  assert.match(desktopBar, /min-height:\s*34px/, "the command bar must declare its height");
+  assert.match(desktopBar, /max-height:\s*34px/,
+    "the command bar must cap its height; a max is what stops chrome regrowing");
+});
+
+test("rule 7: every named grid area used by the shell actually exists", () => {
+  // The exact regression of 18 Oct: the bar collapsed head/ticker/verdict into
+  // one row, but styles.css still assigns .ticker-bar{grid-area:ticker} and
+  // .verdict-strip{grid-area:verdict}. Those names were gone from
+  // grid-template-areas, so both elements fell into implicit rows at the
+  // BOTTOM of the shell and the map column collapsed to 0px — the same class
+  // of bug as the 1600px three-areas/two-columns defect in b8f67f5.
+  const block = desktopBar.slice(0, desktopBar.indexOf("@media screen and (min-width: 1041px) and"));
+  const declared = new Set(
+    [...block.matchAll(/grid-template-areas:([\s\S]*?);/g)].flatMap((m) =>
+      [...m[1].matchAll(/"([a-z\s]+)"/g)].flatMap((r) => r[1].trim().split(/\s+/)),
+    ),
+  );
+  assert.ok(declared.size, "the shell must declare grid-template-areas");
+  // Every grid-area a shell child can ask for, across both layers.
+  const used = [...(css + styles).matchAll(/grid-area:\s*([a-z]+)\s*;/g)].map((m) => m[1]);
+  for (const name of new Set(used)) {
+    if (!["head", "ticker", "verdict", "board", "tools", "tele", "foot"].includes(name)) continue;
+    if (desktopBar.indexOf(`grid-area: ${name}`) !== -1) continue;
+    assert.ok(declared.has(name),
+      `grid-area "${name}" is used but missing from grid-template-areas — ` +
+      `the element will auto-place into an implicit row`);
+  }
+  // The narrow-desktop override must drop the third track, not zero it: a
+  // 0-width track still forced the footer into it and wrapped the disclaimer
+  // to 163px tall, stealing 118px of map height at 1366px.
+  const narrow = desktopBar.slice(desktopBar.indexOf("(min-width: 1041px) and (max-width: 1399px)"));
+  assert.match(narrow.slice(0, 400), /grid-template-columns:\s*auto minmax\(0, 1fr\)/,
+    "below 1400px the crawl yields by dropping the column, not by zeroing it");
+});
+
+test("rule 1: the KPI card is micro type, so the band cannot regrow to 118px", () => {
+  // The card measured 117px because .metric-label and .metric-context were
+  // never in the micro list, so both rendered at 14px body and the context
+  // wrapped to two lines. The band was 118px of the map's screen.
+  const microList = css.slice(css.indexOf(".dashboard-shell .verdict-verb,"), css.indexOf("font-size: var(--t-micro) !important"));
+  for (const el of [".metric-label", ".metric-context"]) {
+    assert.ok(microList.includes(el),
+      `${el} must be named in the micro size list, or the KPI band regrows`);
+  }
+  // ...and the band must be able to stay one row of cards, not three.
+  assert.match(desktopBar, /#metricBand \.metric-context \{[^}]*text-overflow:\s*ellipsis/,
+    "a long context must truncate rather than wrap the card taller");
+});
+
+test("rule 5: the verdict bar says its headline once, in statuses that add something", () => {
+  // The reason line was morningBrief().now[0] — character-identical to the first
+  // line of "DO THIS TODAY" — so the board said one sentence twice, 30px apart.
+  // Strip comments first: the fix is DOCUMENTED in a comment that names the
+  // symbol, and a gate must read code, not the prose describing it.
+  const src = app.slice(app.indexOf("function renderVerdict"), app.indexOf("// Zone 2"));
+  const code = src.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+  assert.doesNotMatch(code, /verdict-why/,
+    "the reason duplicates briefNow[0]; the brief column is its only copy");
+  assert.doesNotMatch(code, /morningBrief/,
+    "renderVerdict must not re-read the morning brief that the brief column owns");
+  // A chip that repeats the headline verbatim is a box that wraps nothing.
+  assert.match(code, /weatherUnverified/,
+    "the weather chip must state the warning state, not restate the headline");
+  assert.doesNotMatch(code, /verdict-chip[^>]*>\s*\$\{weatherUnknown \? t\("weatherUnknown"\)/,
+    "the weather chip must never be the headline string");
 });

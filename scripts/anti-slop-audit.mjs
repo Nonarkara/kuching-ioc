@@ -144,15 +144,26 @@ const AUDIT_FN = `
   const map = document.querySelector("#mapCanvas, #map3d, .map-panel");
   const mapRect = map ? map.getBoundingClientRect() : null;
 
-  // Rule 3 — line length. Prose blocks wider than 65ch are the hit.
+  // Rule 3 — line length. Only real PROSE counts, and only when the text
+  // actually fills the measure. Two false-positive modes are filtered out,
+  // both of which inflated the earlier count to a meaningless 122:
+  //   a) containers (.board-grid, .masthead) — measure leaves only;
+  //   b) a SHORT label sitting in a WIDE block — its width is not its measure.
+  // An element only counts when its own text is long enough to wrap and the
+  // block is not ellipsis-truncated (a one-line headline has no line length).
   const longLines = [];
   for (const el of all) {
+    if (el.children.length) continue;
     const t = (el.textContent || "").trim();
-    if (t.length < 160) continue;
-    const w = el.getBoundingClientRect().width;
-    const fs = parseFloat(getComputedStyle(el).fontSize);
-    const chars = Math.round(w / (fs * 0.5));           // ~0.5em average advance
-    if (chars > 95) longLines.push({ sel: el.className || el.tagName, chars, w: Math.round(w) });
+    if (t.length < 120) continue;
+    const cs = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    // Truncated to one line, or explicitly clamped: no line length to judge.
+    if (cs.textOverflow === "ellipsis" || cs.webkitLineClamp !== "none") continue;
+    if (cs.overflow === "hidden" && cs.whiteSpace === "nowrap") continue;
+    const fs = parseFloat(cs.fontSize);
+    const chars = Math.round(r.width / (fs * 0.5));
+    if (chars > 85) longLines.push({ sel: el.className || el.tagName, chars, w: Math.round(r.width), len: t.length });
   }
 
   // Rule 4 — AI-slop fonts.

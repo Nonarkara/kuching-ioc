@@ -833,10 +833,10 @@ async function buildFallbackDashboard() {
 
   // Hydro bands for map legend
   const defaultHydroBands = [
-    { id: "danger", label: "Danger", color: "#ff003c" },
-    { id: "warning", label: "Warning", color: "#ff7a00" },
-    { id: "alert", label: "Alert", color: "#ffd000" },
-    { id: "normal", label: "Normal", color: "#00ffaa" },
+    { id: "danger", label: "Danger", color: "#d32f2f" },
+    { id: "warning", label: "Warning", color: "#ef6c00" },
+    { id: "alert", label: "Alert", color: "#f2b705" },
+    { id: "normal", label: "Normal", color: "#7fcfa6" },
     { id: "reference", label: "Reference", color: "#8aa2c8" },
   ];
 
@@ -1114,7 +1114,7 @@ function sparkline(vals, tone = "neutral") {
   if (!Array.isArray(vals) || vals.length < 2) return "";
   const w=120,h=16,mn=Math.min(...vals),mx=Math.max(...vals),rng=Math.max(mx-mn,1);
   const pts=vals.map((v,i)=>`${(i/(vals.length-1))*w},${h-((v-mn)/rng)*h}`).join(" ");
-  const c = tone==="critical"?"#ff003c":tone==="warn"?"#ffaa00":"var(--cyan)";
+  const c = tone==="critical"?"#d32f2f":tone==="warn"?"#ffaa00":"var(--cyan)";
   return `<svg viewBox="0 0 ${w} ${h}" class="sparkline" preserveAspectRatio="none"><polyline fill="none" stroke="${c}" stroke-width="2" points="${pts}"/></svg>`;
 }
 
@@ -1348,16 +1348,17 @@ function renderMap(payload) {
     window.L.polyline(payload.jurisdictions.river.map(p=>[p[1],p[0]]), { color:"#7ec8ff", weight:3.5, opacity:0.95 }).addTo(state.boundaryLayerGroup);
   }
 
-  const catColors = { civic:"#00f3ff", market:"#ffaa00", "urban-core":"#ff003c", "north-bank":"#0d6efd", "growth-corridor":"#00ffaa", "padawan-core":"#b48a00", "southern-edge":"#9966ff", airport:"#ff6b9d", education:"#22d3ee", residential:"#a78bfa" };
+  // One marker colour: category lives in the tooltip, not in ten hues.
+  const catColors = {};
   (payload.jurisdictions.localMarkers||[]).forEach(m => {
-    window.L.circleMarker([m.lat,m.lon], { radius:5, fillColor:catColors[m.category]||"#00f3ff", fillOpacity:0.9, color:"#fff", weight:1, opacity:0.6 }).bindTooltip(m.name, { permanent:false, className:"marker-tooltip" }).addTo(state.markerLayerGroup);
+    window.L.circleMarker([m.lat,m.lon], { radius:5, fillColor:catColors[m.category]||"#ffffff", fillOpacity:0.9, color:"#1f4e79", weight:1, opacity:0.6 }).bindTooltip(m.name, { permanent:false, className:"marker-tooltip" }).addTo(state.markerLayerGroup);
   });
 
   // Airport flights on map
   if (payload.airport?.liveFlights) {
     payload.airport.liveFlights.forEach(f => {
       if (!f.latitude || !f.longitude) return;
-      const color = f.type === "arrival" ? "#00ffaa" : f.type === "departure" ? "#ffaa00" : "#00f3ff";
+      const color = f.type === "arrival" ? "#7fcfa6" : f.type === "departure" ? "#ffaa00" : "#00f3ff";
       window.L.circleMarker([f.latitude, f.longitude], { radius: 3, fillColor: color, fillOpacity: 1, color, weight: 1 })
         .bindTooltip(`${f.callsign} | ${f.type} | ${f.distanceKm}km`, { className: "marker-tooltip" })
         .addTo(state.markerLayerGroup);
@@ -1366,7 +1367,7 @@ function renderMap(payload) {
 
   // Hydrology stations (JPS Infobanjir): band-coloured circles + tooltips.
   // Click → highlight catchment (BFS-walked drainage segments) in band colour.
-  const hydroBandColors = { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" };
+  const hydroBandColors = { danger: "#d32f2f", warning: "#ef6c00", alert: "#f2b705", normal: "#7fcfa6", reference: "#8aa2c8" };
   // Stash for the hydro card click handler.
   state.hydroStationsByName = new Map();
   // Reset any previously highlighted catchment.
@@ -1436,7 +1437,7 @@ function renderMap(payload) {
   apimsStations.forEach(s => {
     if (s.lat == null || s.lon == null || s.status !== "live") return;
     const tone = s.band?.tone;
-    const c = tone === "good" ? "#00ffaa" : tone === "watch" ? "#ffd000" : tone === "warn" ? "#ff7a00" : tone === "alert" || tone === "critical" ? "#ff003c" : "#8aa2c8";
+    const c = tone === "good" ? "#7fcfa6" : tone === "watch" ? "#f2b705" : tone === "warn" ? "#ef6c00" : tone === "alert" || tone === "critical" ? "#d32f2f" : "#8aa2c8";
     window.L.circleMarker([s.lat, s.lon], {
       radius: 6,
       fillColor: c,
@@ -1456,7 +1457,7 @@ function renderMap(payload) {
   // Citizen Reports — ground-truth complaint markers. Red=high, amber=medium, green=resolved.
   // Pins only from a live feed — never demo or placeholder rows.
   const crReports = payload.cityReports?.status === "live" ? (payload.cityReports.recent || []) : [];
-  const crColors = { high: "#ff003c", medium: "#f59e0b", low: "#00ffaa", completed: "#8aa2c8" };
+  const crColors = { high: "#d32f2f", medium: "#f59e0b", low: "#7fcfa6", completed: "#8aa2c8" };
   crReports.forEach((r) => {
     if (r.lat == null || r.lon == null) return;
     const color = r.status === "completed" ? crColors.completed : (crColors[r.urgency] || crColors.medium);
@@ -1604,10 +1605,10 @@ function renderGisLegend(activeLayerIds) {
 
   const legendMap = {
     drainage: [
-      { label: t("drainage"), color: "#60a5fa" },
+      { label: t("drainage"), color: "#a9cfee" },
     ],
     mpp_wards: [
-      { label: "MPP wards", color: "#a78bfa" },
+      { label: "MPP wards", color: "#ffffff" },
     ],
     transit: [
       { label: "Transit", color: "#fbbf24" },
@@ -1732,16 +1733,17 @@ function renderUrbanLayerToggle() {
         if (layer.id === "drainage") {
           const rank = props.rank || 0;
           return {
-            color: rank >= 4 ? "#1e90ff" : rank >= 3 ? "#3aa6ff" : rank >= 2 ? "#60a5fa" : "#93c5fd",
-            weight: rank >= 4 ? 3 : rank >= 3 ? 2.2 : rank >= 2 ? 1.6 : 1.1,
-            opacity: 0.85,
+            // One colour; rank reads through line weight alone.
+            color: "#a9cfee",
+            weight: rank >= 4 ? 2 : rank >= 3 ? 1.4 : rank >= 2 ? 1 : 0.7,
+            opacity: 0.75,
             dashArray: props.intermittent ? "4 4" : null,
           };
         }
         if (layer.id === "transit") {
           const rank = props.rank || 0;
           return {
-            color: rank >= 5 ? "#ff003c" : rank >= 4 ? "#ff7a00" : rank >= 3 ? "#ffd000" : "#fbbf24",
+            color: rank >= 5 ? "#d32f2f" : rank >= 4 ? "#ef6c00" : rank >= 3 ? "#f2b705" : "#fbbf24",
             weight: rank >= 5 ? 3.2 : rank >= 4 ? 2.6 : rank >= 3 ? 2 : 1.4,
             opacity: 0.9,
           };
@@ -1757,13 +1759,16 @@ function renderUrbanLayerToggle() {
           const c = featCat?.color || props.color || WARD_COLOR_MAP[props.wardCode] || layer.color;
           const active = state.activeWard === props.wardCode;
           const inCat = !state.activeWardCategory || state.activeWardCategory === featCatId;
+          // Ward lines are one white hairline; only the selected ward is filled.
+          // Category colour stays on the chips, where it is labelled.
+          void c;
           return {
-            color: c,
-            weight: active ? 3.5 : inCat ? 2 : 1,
-            opacity: inCat ? 0.95 : 0.25,
-            fillColor: c,
-            fillOpacity: active ? 0.38 : inCat ? 0.22 : 0.05,
-            dashArray: active ? null : inCat ? "4 4" : "2 2",
+            color: "#ffffff",
+            weight: active ? 2.5 : 1,
+            opacity: inCat ? 0.85 : 0.25,
+            fillColor: "#f59e0b",
+            fillOpacity: active ? 0.2 : 0,
+            dashArray: active ? null : "3 3",
           };
         }
         if (layer.id === "land_use" || layer.id === "flood_risk") {
@@ -2878,7 +2883,7 @@ function renderFloodAction(payload) {
   el.innerHTML = `
     <div class="fa-kicker">${t("floodAction")}</div>
     <div class="fa-verb">${escapeHtml(verb)}</div>
-    <div class="fa-reason">${escapeHtml(health.uncertain ? coverageWarning : fa.reason || "")}</div>
+    <div class="fa-reason">${escapeHtml(health.uncertain && verb !== coverageWarning ? coverageWarning : (fa.reason && fa.reason !== verb ? fa.reason : ""))}</div>
     <div class="fa-watch-head"><span>Water watch</span><strong>${fa.score ?? "—"}<small>/100</small></strong><em>attention index · not a flood forecast</em></div>
     <div class="fa-story" aria-label="Water situation from observation to action">
       <div class="fa-story-row"><span>01 · observation in payload</span><strong>${escapeHtml(pathStation?.name || "Padawan gauges")}</strong><p>${escapeHtml(level)} · ${escapeHtml(pathStation?.observedAt || "Observation time unavailable")}</p></div>
@@ -2888,7 +2893,7 @@ function renderFloodAction(payload) {
     </div>
     <ul class="fa-checklist">${checklist}</ul>
     <div class="fa-meta">
-      <span><strong>${escapeHtml(health.uncertain ? coverageWarning : "Check observation times before action")}</strong></span>
+      <span><strong>Check observation times before action</strong></span>
       <span>Selected scope: <strong>${health.count}/${health.total}</strong> readings in payload</span>
     </div>
     <details class="fa-details">
@@ -2909,7 +2914,7 @@ function renderFloodAction(payload) {
     const station = stations.find((item) => item.id === pathStation?.id);
     if (!station) return;
     if (station.lat != null && station.lon != null && state.map) state.map.setView([station.lat, station.lon], 14);
-    const colors = { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" };
+    const colors = { danger: "#d32f2f", warning: "#ef6c00", alert: "#f2b705", normal: "#7fcfa6", reference: "#8aa2c8" };
     openWaterPath(station, colors[station.band] || "#8aa2c8");
   });
 }
@@ -2971,7 +2976,7 @@ function renderHydroGauges(payload) {
         state.map.setView([station.lat, station.lon], 14);
       }
       if (station) {
-        const colors = { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" };
+        const colors = { danger: "#d32f2f", warning: "#ef6c00", alert: "#f2b705", normal: "#7fcfa6", reference: "#8aa2c8" };
         openWaterPath(station, colors[station.band] || "#8aa2c8");
       }
       row.classList.toggle("hg-open");
@@ -3139,6 +3144,9 @@ function renderFloodForecast(floodForecast) {
       <span class="flood-day-val ${spread}">${r.todayCms ?? "—"}${r.spreadCms != null ? ` ±${r.spreadCms}` : ""}</span>
     </div>`;
   }).join("");
+  // A partial bake names the reaches that did not answer instead of hiding them.
+  const missing = (floodForecast?.missingReaches || []).map((id) => String(id).replace(/-/g, " "));
+  const reachCount = (floodForecast?.reaches || []).length;
   el.innerHTML = `
     <div class="flood-station">${floodForecast?.station ?? "Sarawak River"}</div>
     <div class="flood-today">
@@ -3157,6 +3165,7 @@ function renderFloodForecast(floodForecast) {
       }).join("")}
     </div>
     ${reaches ? `<div class="flood-days flood-reaches" style="margin-top:4px">${reaches}</div>` : ""}
+    ${missing.length ? `<div class="flood-model flood-missing">${reachCount} of ${reachCount + missing.length} reaches responded · no forecast for ${escapeHtml(missing.join(", "))}</div>` : ""}
     <div class="flood-model">${isFallback ? "River model unreachable — no forecast shown" : "River model via Open-Meteo / GloFAS (ensemble)"}</div>`;
 }
 
@@ -3812,13 +3821,15 @@ function applyWardCategoryFilter() {
       const inCategory = !catId || featCatId === catId;
       const isSelectedWard = state.activeWard === code;
 
+      // Same rule as the base ward style: white hairline, only the selected ward filled.
+      void baseColor;
       layer.setStyle({
-        color: baseColor,
-        weight: isSelectedWard ? 3.5 : inCategory ? 2 : 1,
-        opacity: inCategory ? 0.95 : 0.25,
-        fillColor: baseColor,
-        fillOpacity: isSelectedWard ? 0.45 : inCategory ? 0.24 : 0.05,
-        dashArray: isSelectedWard ? null : inCategory ? "4 4" : "2 2",
+        color: "#ffffff",
+        weight: isSelectedWard ? 2.5 : 1,
+        opacity: inCategory ? 0.85 : 0.25,
+        fillColor: "#f59e0b",
+        fillOpacity: isSelectedWard ? 0.2 : 0,
+        dashArray: isSelectedWard ? null : "3 3",
       });
     });
 
@@ -4234,7 +4245,7 @@ function renderCascade(payload) {
     fanSvg = `
       <div class="cascade-fan">
         <svg viewBox="0 0 300 110" preserveAspectRatio="none" role="img" aria-label="River discharge 14-day forecast fan">
-          <polygon points="${envelope}" fill="rgba(0,243,255,0.10)" stroke="none"/>
+          <polygon points="${envelope}" class="fc-band" stroke="none"/>
           <polyline points="${path(median)}" fill="none" stroke="var(--cyan)" stroke-width="1.5"/>
           <line x1="5" y1="103" x2="295" y2="103" stroke="var(--line)" stroke-width="1"/>
         </svg>
@@ -4321,13 +4332,13 @@ function renderWardRisk(payload) {
   }).sort((a, b) => (BAND_TONE_ORDER[a.tone] ?? 9) - (BAND_TONE_ORDER[b.tone] ?? 9) || b.props - a.props);
 
   el.innerHTML = `
-    <div class="ward-risk-note">Worst gauge in the ward × rated holdings behind it. ${feats.length ? "Click a ward for its brief + councillor contacts." : "Ward boundaries loading — gauge column fills in shortly."}</div>
+    <div class="ward-risk-note">${rows.some(r => r.props) ? "Worst gauge in the ward × rated holdings behind it." : "Worst gauge in the ward. Rated-holding counts are withheld in the public build."} ${feats.length ? "Click a ward for its brief + councillor contacts." : "Ward boundaries loading — gauge column fills in shortly."}</div>
     ${rows.map(r => `
       <div class="ward-risk-row" data-ward="${r.code}" role="button" tabindex="0" title="Open ward ${r.code} brief">
         <span class="wr-dot" data-tone="${r.tone}"></span>
         <span class="wr-ward">${escapeHtml(r.label || r.code)}</span>
         <span class="wr-area">${escapeHtml(r.area || "")}</span>
-        <span class="wr-props">${r.props.toLocaleString()}<sup> hldg</sup></span>
+        <span class="wr-props">${r.props ? `${r.props.toLocaleString()}<sup> hldg</sup>` : "—"}</span>
         <span class="wr-gauge">${escapeHtml(r.gauge)}</span>
       </div>`).join("")}`;
 
@@ -4665,7 +4676,7 @@ function renderDashboard(payload) {
   renderWardCategoryBar();
   if (state.activeStation && state.activeWaterPath) {
     const fresh = (payload.infobanjir?.stations || []).find((station) => station.id === state.activeStation);
-    if (fresh) highlightCatchment({ ...fresh, catchment: state.activeWaterPath }, { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" }[fresh.band] || "#8aa2c8");
+    if (fresh) highlightCatchment({ ...fresh, catchment: state.activeWaterPath }, { danger: "#d32f2f", warning: "#ef6c00", alert: "#f2b705", normal: "#7fcfa6", reference: "#8aa2c8" }[fresh.band] || "#8aa2c8");
   }
   renderAirportStats(payload.airport);
   renderNewsIntake(payload.news);
@@ -4707,7 +4718,7 @@ function renderDashboard(payload) {
         return (order[a.band] ?? 9) - (order[b.band] ?? 9);
       })
       .slice(0, 2);
-    const bandColors = { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" };
+    const bandColors = { danger: "#d32f2f", warning: "#ef6c00", alert: "#f2b705", normal: "#7fcfa6", reference: "#8aa2c8" };
     const snapped = (ib.stations || []).filter(s => s.catchment?.status === "snapped");
     const totalCatchKm = snapped.reduce((sum, s) => sum + (s.catchment?.totalLengthKm || 0), 0);
     const catchLine = ib.catchmentStatus === "live"
@@ -4727,7 +4738,7 @@ function renderDashboard(payload) {
   if (apims) {
     const w = apims.worst;
     groundHtml += `
-      <div class="signal-card" style="border-left:3px solid ${w?.band?.tone === "good" ? "#00ffaa" : w?.band?.tone === "watch" ? "#ffd000" : w?.band?.tone === "warn" ? "#ff7a00" : w?.band?.tone === "alert" || w?.band?.tone === "critical" ? "#ff003c" : "#8aa2c8"}">
+      <div class="signal-card" style="border-left:3px solid ${w?.band?.tone === "good" ? "#7fcfa6" : w?.band?.tone === "watch" ? "#f2b705" : w?.band?.tone === "warn" ? "#ef6c00" : w?.band?.tone === "alert" || w?.band?.tone === "critical" ? "#d32f2f" : "#8aa2c8"}">
         <strong>APIMS // GROUND AQ</strong>
         <div class="val">${w?.aqi ?? "—"}<sup>${w?.band?.label || apims.status}</sup></div>
         <div class="meta">${apims.stations.map(s => `${glyphHTML(s.status || (s.aqi != null ? "live" : "offline"), s.label + ": " + (s.aqi ?? "—"))}`).join(" · ")}</div>
@@ -4803,6 +4814,10 @@ function renderDashboard(payload) {
 function toggleTheme() {
   state.theme = state.theme === "dark" ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", state.theme);
+  if (state.cesiumViewer && window.Cesium) {
+    state.cesiumViewer.scene.backgroundColor = window.Cesium.Color.fromCssColorString(getComputedStyle(document.documentElement).getPropertyValue("--bg").trim());
+    state.cesiumViewer.scene.requestRender();
+  }
   const tp = document.querySelector(".leaflet-tile-pane");
   if (tp) tp.style.filter = "";
   const btn = $("themeToggle");
@@ -5187,7 +5202,13 @@ function initCesium() {
   // Tune the scene: enable depth + lighting so 3D extrusions read as solid
   // volumes. Atmosphere + sun are kept on for a true outdoor scene.
   viewer.scene.globe.enableLighting = false;
-  viewer.scene.skyAtmosphere.show = true;
+  // A city board, not a globe: no starfield, sun or moon, and the horizon
+  // fades into the page paper. The camera clamp below keeps it over Kuching.
+  viewer.scene.skyAtmosphere.show = false;
+  viewer.scene.skyBox.show = false;
+  if (viewer.scene.sun) viewer.scene.sun.show = false;
+  if (viewer.scene.moon) viewer.scene.moon.show = false;
+  viewer.scene.backgroundColor = Cesium.Color.fromCssColorString(getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#f6f5f2");
   viewer.scene.fog.enabled = true;
   viewer.scene.fog.density = 0.0001;
 
@@ -5217,9 +5238,11 @@ function initCesium() {
   // Default camera: a low oblique over Kuching. flyCesiumToScope() will
   // refine this based on the active scope.
   viewer.camera.setView({
-    destination: Cesium.Cartesian3.fromDegrees(110.35, 1.53, 18000),
-    orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-35), roll: 0 },
+    destination: Cesium.Cartesian3.fromDegrees(110.35, 1.53 - 18000 / Math.tan(Cesium.Math.toRadians(60)) / 111000, 18000),
+    orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-60), roll: 0 },
   });
+
+  clampCesiumCamera(viewer);
 
   // requestRenderMode only repaints on demand; without this the first switch
   // to 3D can sit on a black starfield until the user touches the scene.
@@ -5289,7 +5312,7 @@ function renderCesiumEntities(payload) {
   // 3) Hydro stations as short pins — the only vertical marks on the twin.
   // Tall cylinders used to compete with the jelly molds; short pins keep
   // the satellite readable while still flagging Alert/Warning/Danger.
-  const hydroBandColors = { danger: "#ff003c", warning: "#ff7a00", alert: "#ffd000", normal: "#00ffaa", reference: "#8aa2c8" };
+  const hydroBandColors = { danger: "#d32f2f", warning: "#ef6c00", alert: "#f2b705", normal: "#7fcfa6", reference: "#8aa2c8" };
   const hydroBandHeight = { danger: 450, warning: 320, alert: 220, normal: 120, reference: 60 };
   const allHydro = payload.mapScene?.hydroStations || payload.infobanjir?.stations || [];
   const hydroStations = isPadawan
@@ -5336,7 +5359,7 @@ function renderCesiumEntities(payload) {
     const g = f.geometry;
     const rings = g?.type === "Polygon" ? [g.coordinates[0]] : g?.type === "MultiPolygon" ? g.coordinates.map((p) => p[0]) : [];
     const code = f.properties?.wardCode;
-    const color = Cesium.Color.fromCssColorString(f.properties?.color || "#a78bfa");
+    const color = Cesium.Color.WHITE; // same hairline rule as the 2D wards
     rings.forEach((ring) => {
       if (!ring || ring.length < 3) return;
       viewer.entities.add({
@@ -5378,6 +5401,29 @@ function renderCesiumEntities(payload) {
   viewer.scene.requestRender();
 }
 
+// Greater Kuching, not the planet. Zoom distance is capped and the view is
+// pulled back over SITE.mapMaxBounds whenever a pan or zoom ends outside it.
+const CESIUM_MIN_RANGE_M = 120;
+const CESIUM_MAX_RANGE_M = 35000;
+const CESIUM_MAX_PITCH_DEG = -40; // flatter than this the horizon fills the frame
+function clampCesiumCamera(viewer) {
+  const Cesium = window.Cesium;
+  const ctl = viewer.scene.screenSpaceCameraController;
+  ctl.minimumZoomDistance = CESIUM_MIN_RANGE_M;
+  ctl.maximumZoomDistance = CESIUM_MAX_RANGE_M;
+  const [[south, west], [north, east]] = SITE.mapMaxBounds;
+  viewer.camera.moveEnd.addEventListener(() => {
+    const c = viewer.camera, p = c.positionCartographic;
+    const lon = Cesium.Math.toDegrees(p.longitude), lat = Cesium.Math.toDegrees(p.latitude);
+    const cl = Math.min(east, Math.max(west, lon)), ct = Math.min(north, Math.max(south, lat));
+    const h = Math.min(p.height, CESIUM_MAX_RANGE_M);
+    const pitch = Math.min(c.pitch, Cesium.Math.toRadians(CESIUM_MAX_PITCH_DEG));
+    // Tolerances stop the corrective flight from re-triggering itself on float noise.
+    if (Math.abs(cl - lon) < 1e-4 && Math.abs(ct - lat) < 1e-4 && p.height - h < 50 && c.pitch - pitch < 0.01) return;
+    c.flyTo({ destination: Cesium.Cartesian3.fromDegrees(cl, ct, h), orientation: { heading: c.heading, pitch, roll: 0 }, duration: 0.4 });
+  });
+}
+
 function flyCesiumToScope(scopeId) {
   const viewer = state.cesiumViewer;
   if (!viewer || !window.Cesium) return;
@@ -5386,11 +5432,14 @@ function flyCesiumToScope(scopeId) {
   // Camera altitude scaled inversely with zoom: closer on Padawan, higher
   // for the wider Greater Kuching view.
   const altitudeM = cfg.mapZoom <= 11 ? 28000 : 16000;
+  // Look down at -60° from a point south of the centre so the city, not the
+  // sea beyond it, sits in the middle of the frame.
+  const backDeg = (altitudeM / Math.tan(Cesium.Math.toRadians(60))) / 111000;
   viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(cfg.mapCenter[1], cfg.mapCenter[0], altitudeM),
+    destination: Cesium.Cartesian3.fromDegrees(cfg.mapCenter[1], cfg.mapCenter[0] - backDeg, altitudeM),
     orientation: {
       heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-35),
+      pitch: Cesium.Math.toRadians(-60),
       roll: 0,
     },
     duration: 1.5,

@@ -283,9 +283,30 @@ test("rendered inline scripts parse, and the beacon is silent without an endpoin
   }
 });
 
-test("wide desktop keeps a real map column next to the situation rail", async () => {
+test("desktop keeps a real map column between brief and situation rail", async () => {
   const css = await readFile(new URL("../public/reading.css", import.meta.url), "utf8");
-  assert.match(css, /@media\(min-width:1600px\)\s*\{\s*\.dashboard-shell \.board-grid\.war-room \{ grid-template-columns:270px minmax\(0,1fr\) clamp\(/);
+  assert.match(css, /@media\(min-width:1041px\)\s*\{\s*\.dashboard-shell \.board-grid\.war-room \{ grid-template-columns:clamp\(250px,19vw,340px\) minmax\(0,1fr\) clamp\(/);
+  // The page frame is one viewport on desktop (28 Sep brief); no rule may reopen page scroll.
+  assert.doesNotMatch(css, /min-width: 1041px\) \{\s*\.dashboard-shell \{\s*height: auto/);
+});
+
+// 18 Oct Rams pass: a city board, not a globe; one type scale; no page-wide texture.
+test("3D camera is bounded to Greater Kuching and the sky is off", async () => {
+  const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  assert.match(app, /maximumZoomDistance = CESIUM_MAX_RANGE_M/);
+  assert.match(app, /CESIUM_MAX_RANGE_M = (\d+)/);
+  assert.ok(Number(app.match(/CESIUM_MAX_RANGE_M = (\d+)/)[1]) <= 100000, "3D zoom-out must stay city-scale");
+  assert.match(app, /skyBox\.show = false/);
+  assert.match(app, /camera\.moveEnd\.addEventListener\(\(\) => \{/);
+});
+
+test("Rams layer: three type sizes, no grid texture, partial river forecast is named", async () => {
+  const css = await readFile(new URL("../public/reading.css", import.meta.url), "utf8");
+  const rams = css.slice(css.indexOf("RAMS PASS"));
+  assert.deepEqual([...new Set(rams.match(/var\(--t-(\w+)\)/g))].sort(), ["var(--t-body)", "var(--t-display)", "var(--t-micro)"]);
+  assert.match(css, /body::before \{ display: none !important; \}/);
+  const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  assert.match(app.slice(app.indexOf("function renderFloodForecast")), /missingReaches/);
 });
 
 // Runtime check: actually execute the beacon with an empty endpoint and

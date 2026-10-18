@@ -70,43 +70,16 @@ html[data-text-scale="large"] .dashboard-shell .metric-context { font-size: 18px
 html[data-text-scale="large"] .dashboard-shell .controls-row button { font-size: 16px; min-height: 48px; }
 #briefNow:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 @media screen and (min-width: 1041px) {
-  .dashboard-shell {
-    height: auto; min-height: 100svh; overflow: visible;
-    grid-template-rows: auto auto auto auto auto;
-  }
-  .dashboard-shell .masthead { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px; }
-  .dashboard-shell .status-block { grid-template-areas: "controls controls partners" "runtime runtime system"; }
-  .dashboard-shell .verdict-strip { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 16px; gap: 12px; }
+  /* One-screen command board (28 Sep brief): the page never scrolls, each
+     column scrolls inside itself. styles.css owns the frame; this block only
+     keeps the reading-scale chrome that fits inside it. */
+  .dashboard-shell .masthead { grid-template-columns: minmax(0, 1fr); }
+  .dashboard-shell .verdict-strip { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .dashboard-shell .verdict-chips { grid-column: 1 / -1; justify-content: flex-start; flex-wrap: wrap; }
-  .dashboard-shell .board-grid.war-room {
-    min-height: 760px; grid-template-columns: 320px minmax(0, 1fr) 360px;
-    grid-template-rows: auto; align-items: stretch;
-  }
-  .dashboard-shell .col-now { overflow-y: visible; }
-  .dashboard-shell .col-now .news-rail { flex: 0 0 auto; overflow: visible; }
-  /* Bounded: with auto rows and no height, the Leaflet canvas grew to ~2,900px
-     (map read as a grey strip, tray pushed ~3,700px down). 14 Oct 2026. */
-  .dashboard-shell .col-map .map-panel { min-height: 480px; height: clamp(560px, calc(100svh - 160px), 920px); flex: 0 0 auto; }
-  .dashboard-shell .deep-tray { flex-basis: 220px; }
-  .dashboard-shell .title-block h1 { font-size: 24px; white-space: normal; }
   .dashboard-shell .operator-tools { flex-wrap: wrap; }
-  /* Desktop building-tools compacting so 2D map doesn't lose vertical space */
-  .dashboard-shell .building-tools { padding: 5px 10px; font-size: 11px; }
-  .dashboard-shell .building-tools button,
-  .dashboard-shell .building-tools .building-buttons a { min-height: 22px; padding: 2px 8px; font-size: 11px; }
-  .dashboard-shell .building-tools p { font-size: 11px; margin: 2px 0; }
-  .dashboard-shell .building-tools summary { min-height: 22px; padding: 2px 0; font-size: 11px; }
-  /* Hero Map Mode overrides: collapse tray & building-tools, give full height to center map */
+  .dashboard-shell .col-map .map-panel { flex: 1 1 auto; min-height: 0; height: auto; }
   .dashboard-shell .col-map.hero-map-active .building-tools { display: none !important; }
-  .dashboard-shell .col-map.hero-map-active .map-panel { height: clamp(700px, calc(100svh - 80px), 1200px) !important; }
   .dashboard-shell .col-map.hero-map-active .deep-tray { flex-basis: 32px !important; max-height: 32px !important; min-height: 32px !important; }
-}
-@media screen and (min-width: 1041px) and (max-width: 1599px) {
-  .dashboard-shell .board-grid.war-room {
-    grid-template-columns: 320px minmax(0, 1fr);
-    grid-template-areas: "now map" "situation situation"; grid-template-rows: auto auto;
-  }
-  .dashboard-shell .situation-rail { max-height: none; height: auto; overflow: visible; border-left: 0; }
 }
 @media (max-width: 1040px) {
   .dashboard-shell .masthead { grid-template-columns: minmax(0, 1fr); }
@@ -187,17 +160,14 @@ html, body { overflow-x: clip; }
 @media(min-width:1041px) {
   .dashboard-shell .masthead { min-height:46px; padding:0 12px; }
   .view-tools > summary { min-height:44px; padding:12px 8px; }
-  .dashboard-shell .board-grid.war-room { min-height:0; grid-template-columns:270px minmax(0,1fr); }
-  .dashboard-shell .col-map .map-panel { height:max(560px,calc(100dvh - 160px)); }
   .dashboard-shell .verdict-strip { padding:6px 12px; gap:6px; }
   .dashboard-shell .verdict-verb { font-size:20px; }
   .dashboard-shell .verdict-why { font-size:14px; }
 }
-/* >=1600 keeps the three named areas (now map situation). Two explicit
-   columns there left the rail in an auto track sized by its content, which
-   squeezed the map to 0px at 1600 and 140px at 1920 (16 Oct 2026). */
-@media(min-width:1600px) {
-  .dashboard-shell .board-grid.war-room { grid-template-columns:270px minmax(0,1fr) clamp(320px,22vw,400px); }
+/* Three named areas need three explicit tracks at every desktop width; with
+   two, the rail took an auto track and squeezed the map to 0px (16 Oct). */
+@media(min-width:1041px) {
+  .dashboard-shell .board-grid.war-room { grid-template-columns:clamp(250px,19vw,340px) minmax(0,1fr) clamp(290px,24vw,420px); }
 }
 @media(max-width:1040px) {
   .dashboard-shell { display:flex; flex-direction:column; height:auto; overflow:visible; }
@@ -221,3 +191,290 @@ html, body { overflow-x: clip; }
   .map-options > summary { font-size:13px; padding:12px 0; }
 }
 html:lang(zh) .view-tools, html:lang(zh) .regional-status { letter-spacing:0; line-height:1.6; }
+
+/* ======================================================================
+   RAMS PASS (18 Oct 2026). One owner for type, colour and line, last in
+   the cascade on purpose. Earlier layers in styles.css and this file came
+   from several agents and left 14 text sizes, three gradients, rounded
+   chips, glows, italics and 14 coloured side bars. This block replaces all
+   of that with one rule set:
+   - three sizes: display (hero numbers, the verdict), body, micro (labels)
+   - one accent (--cyan: civic navy in light, cyan in dark) for interaction
+   - severity colour only on the words that carry severity, never as fills,
+     glows or bars
+   - lines by role: hairline between items, a stronger rule between zones
+   ====================================================================== */
+:root { --t-display: 22px; --t-body: 14px; --t-micro: 11px; --font-display: var(--font-sans); }
+html[data-text-scale="large"] { --t-display: 26px; --t-body: 17px; --t-micro: 13px; }
+
+.dashboard-shell :where(:not(svg, svg *, .leaflet-container *, .map-3d *)) {
+  font-size: var(--t-body) !important;
+  font-family: var(--font-sans) !important;
+  font-style: normal !important;
+  text-shadow: none !important;
+  border-radius: 0 !important;
+  background-image: none !important;
+}
+.dashboard-shell :where(:not(svg, svg *, .leaflet-container *, .map-3d *, .tray-tab, :focus-visible)) { box-shadow: none !important; }
+.dashboard-shell :where(.legend-dot, .ward-cat-dot, .wr-dot, .pulse-indicator) { border-radius: 50% !important; }
+.dashboard-shell .pulse-indicator { animation: none !important; }
+
+/* Lines by role. Side bars were severity-as-decoration; severity now lives
+   in the verb and kicker text. */
+.dashboard-shell :where(.verdict-strip, .gp-lane, .urban-toggle, .rain-regime, .cascade-stale, .flood-action-card,
+  .posture-block, .operation-card, .signal-card, .councillor-card, .flight-row, .regional-selection, .brief-card) {
+  border-left: 0 !important;
+}
+.dashboard-shell :where(.verdict-strip, .insights-bar-text, .panel-head, .news-intake-card, .news-intake-item, .gp-lane,
+  .tray-tabs, .forecast-card, .flood-action-card, .hydro-gauge-panel, .posture-block, .operation-card, .cr-empty,
+  .signal-card, .official-pulse-block, .mpp-contact-card, .map-head, .col-now, .ward-category-bar) {
+  background-color: transparent !important;
+}
+.dashboard-shell :where(.map-entry > button, .building-buttons button, .building-buttons a, .scope-btn, .ward-cat-chip,
+  .segmented-control button, .verdict-chip, .action-btn) {
+  background-color: var(--card-bg) !important;
+  border: 1px solid var(--line-strong) !important;
+}
+.dashboard-shell :where(.map-entry > button[aria-pressed="true"], .scope-btn.active, .ward-cat-chip.active,
+  .segmented-control button.active, .building-buttons button[aria-pressed="true"]) {
+  border-color: var(--cyan) !important;
+  color: var(--cyan) !important;
+  box-shadow: inset 0 0 0 1px var(--cyan) !important;
+}
+.dashboard-shell .verdict-chip { color: var(--ink) !important; font-weight: 500; }
+.dashboard-shell :where(.hg-observed, .hg-observed:not([data-status="recent"])) { color: var(--soft) !important; font-weight: 400 !important; }
+.dashboard-shell .cascade-stale { border: 1px solid var(--line-strong) !important; color: var(--ink) !important; }
+
+/* Zone rules: one strong line where one region of the board meets another. */
+.dashboard-shell .masthead, .dashboard-shell .ticker-bar { border-bottom: 1px solid var(--line-strong) !important; }
+.dashboard-shell .verdict-strip { border-bottom: 2px solid var(--ink) !important; }
+
+/* Labels read as labels: micro, tracked, uppercase only where they already were. */
+.dashboard-shell :where(.kicker, .section-label, .fa-kicker, .hg-title, .gp-kicker, .rr-kicker) { color: var(--soft) !important; letter-spacing: 0.06em; }
+/* Generated 18 Oct 2026 from the rendered page: every text style that was
+   >=18px is display, every one that averaged <=11.5px is micro, the rest is body. */
+.dashboard-shell .verdict-verb,
+.dashboard-shell .metric-value,
+.dashboard-shell .flood-value,
+.dashboard-shell .fa-watch-head strong,
+.dashboard-shell .hg-level,
+.dashboard-shell .val,
+.dashboard-shell .stat-val,
+.dashboard-shell .g-val { font-size: var(--t-display) !important; line-height: 1.15 !important; }
+.dashboard-shell .glyph,
+.dashboard-shell .runtime-badge span,
+.dashboard-shell .section-stamp,
+.dashboard-shell .lang-badge,
+.dashboard-shell .kicker,
+.dashboard-shell .news-intake-badge,
+.dashboard-shell .news-intake-card span,
+.dashboard-shell .news-intake-note,
+.dashboard-shell .news-intake-item-head strong,
+.dashboard-shell .news-intake-item-head span,
+.dashboard-shell .news-intake-title,
+.dashboard-shell .rail-disclosure-summary span,
+.dashboard-shell .news-digest-tab,
+.dashboard-shell .news-digest-badge,
+.dashboard-shell .news-digest-title,
+.dashboard-shell .news-digest-time,
+.dashboard-shell .gp-kicker,
+.dashboard-shell .gp-totals,
+.dashboard-shell .gp-lane-label,
+.dashboard-shell .gp-lane-count,
+.dashboard-shell .gp-unit,
+.dashboard-shell .gp-narrative,
+.dashboard-shell .gp-badge,
+.dashboard-shell .metric-unit,
+.dashboard-shell .src-name,
+.dashboard-shell .src-fresh,
+.dashboard-shell .ward-cat-count,
+.dashboard-shell .map-compass-label,
+.dashboard-shell .coord-label,
+.dashboard-shell .coord-value,
+.dashboard-shell .coord-copy,
+.dashboard-shell .legend-item,
+.dashboard-shell .watchpoint-list span,
+.dashboard-shell .rr-kicker,
+.dashboard-shell .rr-method summary,
+.dashboard-shell .rr-method p,
+.dashboard-shell .rr-method a,
+.dashboard-shell .rr-radar span,
+.dashboard-shell .hz-counts span,
+.dashboard-shell .hz-counts a,
+.dashboard-shell .hz-note,
+.dashboard-shell .hz-note a,
+.dashboard-shell .delta-stamp,
+.dashboard-shell .delta-since,
+.dashboard-shell .cascade-title,
+.dashboard-shell .cascade-explain,
+.dashboard-shell .cascade-fan-caption span,
+.dashboard-shell .cascade-table th,
+.dashboard-shell .cascade-table td,
+.dashboard-shell .c-lag,
+.dashboard-shell .c-muted,
+.dashboard-shell .cascade-band,
+.dashboard-shell .section-label,
+.dashboard-shell .forecast-badge,
+.dashboard-shell .forecast-sub,
+.dashboard-shell .fc-card-label,
+.dashboard-shell .fc-unit,
+.dashboard-shell .fc-outlook,
+.dashboard-shell .fc-glyph,
+.dashboard-shell .fc-range,
+.dashboard-shell .flood-station,
+.dashboard-shell .flood-unit,
+.dashboard-shell .flood-day-label,
+.dashboard-shell .flood-day-val,
+.dashboard-shell .flood-model,
+.dashboard-shell .fa-kicker,
+.dashboard-shell .fa-watch-head span,
+.dashboard-shell .fa-watch-head small,
+.dashboard-shell .fa-watch-head em,
+.dashboard-shell .fa-story-row span,
+.dashboard-shell .fa-path-button,
+.dashboard-shell .fa-path-button span,
+.dashboard-shell .fa-meta strong,
+.dashboard-shell .fa-meta span,
+.dashboard-shell .fa-details summary,
+.dashboard-shell .fa-reality,
+.dashboard-shell .fa-reality strong,
+.dashboard-shell .fa-reality div,
+.dashboard-shell .fa-reality a,
+.dashboard-shell .fa-hotline strong,
+.dashboard-shell .fa-hotline span,
+.dashboard-shell .fa-shelter span,
+.dashboard-shell .fa-shelter strong,
+.dashboard-shell .fa-source,
+.dashboard-shell .fa-source a,
+.dashboard-shell .hg-title,
+.dashboard-shell .ward-risk-note,
+.dashboard-shell .wr-ward,
+.dashboard-shell .wr-area,
+.dashboard-shell .wr-props,
+.dashboard-shell .wr-props sup,
+.dashboard-shell .wr-gauge,
+.dashboard-shell .directive-status,
+.dashboard-shell .ws-head span,
+.dashboard-shell .ws-head a,
+.dashboard-shell .ws-meta,
+.dashboard-shell .ws-note,
+.dashboard-shell .cr-empty,
+.dashboard-shell .cr-empty a,
+.dashboard-shell .val sup,
+.dashboard-shell .meta,
+.dashboard-shell .meta span,
+.dashboard-shell .pulse-label,
+.dashboard-shell .pulse-stat span,
+.dashboard-shell .pd-name,
+.dashboard-shell .pulse-district strong,
+.dashboard-shell .mpp-contact-header strong,
+.dashboard-shell .mpp-hq-badge,
+.dashboard-shell .mpp-contact-label,
+.dashboard-shell .mpp-contact-link,
+.dashboard-shell .mpp-contact-val,
+.dashboard-shell .mpp-service-badge,
+.dashboard-shell .mpp-service-arrow,
+.dashboard-shell .mpp-service-title,
+.dashboard-shell .mpp-service-desc,
+.dashboard-shell .councillor-role,
+.dashboard-shell .councillor-name,
+.dashboard-shell .councillor-scope,
+.dashboard-shell .councillor-phone,
+.dashboard-shell .ward-chip-cat-icon,
+.dashboard-shell .ward-chip-area,
+.dashboard-shell .ward-chip-stats span,
+.dashboard-shell .ward-hint,
+.dashboard-shell .councillor-term,
+.dashboard-shell .fm-amc-label,
+.dashboard-shell .fm-amc-val,
+.dashboard-shell .fm-amc-mm,
+.dashboard-shell .fm-col-label,
+.dashboard-shell .fm-horizons span,
+.dashboard-shell .fm-station,
+.dashboard-shell .fm-row-amc,
+.dashboard-shell .fm-imp,
+.dashboard-shell .fm-band,
+.dashboard-shell .fm-stale,
+.dashboard-shell .airport-feed-status,
+.dashboard-shell .stat-label,
+.dashboard-shell .flight-callsign,
+.dashboard-shell .flight-type,
+.dashboard-shell .flight-dist,
+.dashboard-shell .flight-eta,
+.dashboard-shell .flight-feed-tag,
+.dashboard-shell .event-time,
+.dashboard-shell .event-type,
+.dashboard-shell .event-text,
+.dashboard-shell .tlm-time,
+.dashboard-shell .tlm-sep,
+.dashboard-shell .tlm-entry span,
+.dashboard-shell .bottom-disclaimer,
+.dashboard-shell .help-hint,
+.dashboard-shell .help-hint kbd,
+.dashboard-shell .growth-lead,
+.dashboard-shell .growth-lead strong,
+.dashboard-shell .g-label,
+.dashboard-shell .gz-name,
+.dashboard-shell .gz-pct,
+.dashboard-shell .gz-gauge,
+.dashboard-shell .growth-foot,
+.dashboard-shell .growth-foot strong,
+.dashboard-shell .locality-reset,
+.dashboard-shell .locality-summary span,
+.dashboard-shell .locality-num,
+.dashboard-shell .locality-ward-header span,
+.dashboard-shell .ward-locality-count,
+.dashboard-shell .locality-code,
+.dashboard-shell .locality-name,
+.dashboard-shell .locality-const,
+.dashboard-shell .c-res,
+.dashboard-shell .econ-pill-value,
+.dashboard-shell .econ-pill-label,
+.dashboard-shell .cov-count,
+.dashboard-shell .cov-hint,
+.dashboard-shell .cov-note,
+.dashboard-shell .source-matrix-card span,
+.dashboard-shell .source-chip,
+.dashboard-shell .source-status,
+.dashboard-shell .source-updated,
+.dashboard-shell .zone-num { font-size: var(--t-micro) !important; line-height: 1.35 !important; }
+
+/* The map wins on desktop: KPIs sit in one row, watchpoint chips stay on the
+   map's own labels, and the tray takes a fixed share below. */
+@media (min-width: 1041px) {
+  .dashboard-shell #metricBand { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
+  .dashboard-shell .map-footer .watchpoint-list { display: none; }
+  .dashboard-shell .col-map .deep-tray { flex: 0 0 30%; min-height: 0; }
+}
+
+/* Decoration removed: a 40px grid drawn over the whole page (it showed as
+   seams across the map) and 2-3px colour bars on brief and pulse cards. */
+body::before { display: none !important; }
+.dashboard-shell :where(.brief-card, .official-pulse-block, .mpp-contact-card)::before { display: none !important; }
+
+/* Phone: the verdict is the first sentence, right under the title. */
+@media (max-width: 1040px) { .dashboard-shell .verdict-strip { order: 0; } }
+
+@media (min-width: 1041px) {
+  .dashboard-shell .map-entry { padding: 4px 8px; }
+  .dashboard-shell .map-entry > button, .dashboard-shell .map-options > summary { min-height: 32px; padding: 4px 10px; }
+}
+
+/* Verdict chips are labels, not buttons: no touch-target height. */
+.dashboard-shell .verdict-chip { min-height: 0 !important; padding: 3px 8px !important; line-height: 1.35 !important; }
+@media (min-width: 1041px) { .dashboard-shell .col-map .deep-tray { flex-basis: 26%; } }
+
+/* One display headline per screen: the page verdict. Panel headlines that
+   echo it are bold body text, so the verdict is not repeated at full size. */
+.dashboard-shell :where(.fa-verb, .posture-title) { font-size: var(--t-body) !important; font-weight: 700; line-height: 1.35 !important; }
+
+/* Forecast ranges are an ink tint, the same everywhere; no second accent. */
+.dashboard-shell :where(.fc-band, .flood-spark-band, .forecast-card[data-tone="warn"] .fc-band) { fill: var(--ink) !important; fill-opacity: 0.08 !important; }
+.dashboard-shell .forecast-card { border-color: var(--line) !important; }
+/* A normal reading is a word, not a box; only non-normal bands keep a frame. */
+.dashboard-shell .cascade-band[data-tone="normal"], .dashboard-shell .cascade-band[data-tone="na"] { border: 0 !important; background: none !important; color: var(--soft) !important; }
+/* Collapsed rows are as tall as their touch target, no more. */
+.dashboard-shell .brief-card { padding: 12px 16px !important; }
+.dashboard-shell .brief-disclosure { padding-top: 0 !important; padding-bottom: 0 !important; }
+.dashboard-shell .brief-disclosure:not([open]) > summary { margin: 0; }
+@media (max-width: 720px) { .dashboard-shell .help-hint { display: none; } }

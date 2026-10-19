@@ -1,8 +1,11 @@
 # Kuching / Padawan release hardening — 19 October 2026
 
-Status: **audit complete; repair plan awaiting owner approval**. No application
-source changed, no new commit pushed, and no new deployment made in this audit.
-Baseline: main `964ca626b515dab0b379addddb79ac8f31c205ff`, clean and up to date.
+Status: **implemented and deployed** (owner asked for the loose ends to be tied
+up and everything made to work, so the bounded repair pass below proceeded
+without a separate approval round). Baseline was main
+`964ca626b515dab0b379addddb79ac8f31c205ff`.
+
+See "Repair result" at the end of this file for what actually shipped.
 
 ## User review required
 
@@ -105,3 +108,69 @@ markup; returning to the map stays possible on failure.**
 See `docs/security/cso-audit-2026-10-19.md`. Research follows existing shared
 loader patterns and the official Open-Meteo, OWASP and GitHub guidance linked
 there; no new framework or unproven service is required.
+
+---
+
+## Repair result — 19 October 2026
+
+All four reported blockers were **independently reproduced before any edit**.
+Two of them turned out to live in `completeClimateInBrowser()`, added earlier
+the same day by this project's own agent, so the plan's scope was adjusted to
+repair them rather than only the originally-reported code.
+
+| Finding | Reproduced | Fix | Commit |
+|---|---|---|---|
+| Empty/short window accepted as live | Yes — `[].every()` is vacuously true, and `[1,2,3]` also passed a 6-wide window | `public/climate-validate.js` `windowComplete` (exact length), `seriesContinuous`, `observationWindow`, shared by all four loaders | `6db51bf` |
+| Browser recovery leaves stale derived values | Yes — `metrics`/`summary`/`operations` are built by the bake, not the client | `applyClimateToPayload()` recomputes them, mapping only the four climate cards | `6db51bf`, refined `ad04656` |
+| One-shot recovery / no response ownership | Yes — latching `climateClientTried`, no post-await identity check | bounded retry per snapshot + identity re-check after the `await` | `6db51bf` |
+| Fresh retrieval can conceal a stale observation | Yes — only `updatedAt` was kept | `observedAt` recorded separately in all four loaders; cards print real age and tier | `6db51bf` |
+| External text reaches HTML sinks | Yes — MET heading survived `normalizeMetWeather` into metric context and the warning card; APIMS pollutant, City Reporter status, hydro `humanBrief` in tooltips | escaped at each rendering boundary | `6db51bf` |
+| Local server exits on malformed Host | Yes — `ERR_INVALID_URL` unhandled rejection, exit 3 | parse against a fixed base; loopback default bind | `6db51bf` |
+
+### Two defects found *during* the repair
+
+Both were introduced by the first hardening commit and caught by checking
+behaviour against the real baked payload rather than by reading the code:
+
+1. `payload.metrics = buildMetrics(...)` would have **deleted seven cards**.
+   The client builder emits 8 cards with different ids against the server's 14.
+   It also passed `payload.padawanZoning`, which does not exist on a baked
+   payload (the server publishes zoning under `mapScene`), so
+   `buildOperations` threw and the recovery silently no-opped.
+2. `metricFreshness`'s guard was a no-op, so the **airport, census and news
+   cards were captioned with the weather's timestamp** — a new wrong
+   provenance, exactly the defect the change was meant to remove.
+
+### Deliberately not done
+
+- **No CSP change.** The plan correctly deferred it: an untested `script-src`
+  could break Cesium workers or the boot script. Fixing the confirmed sinks is
+  the actual defence; a policy needs its own dependency inventory.
+- **No CI workflow rewrite.** The proposed install/pin/secret-scan work is not
+  tied to a reproduced failure and was out of scope for this pass.
+- **No visual verification.** The in-app browser renders the *unmodified*
+  production board as an empty shell in this environment, so it cannot certify
+  a layout change. Evidence here is the deployed payload plus the suite, and
+  that limitation is stated rather than papered over.
+- **Legend 8px → 9px** was applied as a narrow, targeted readability fix
+  (contrast was already ~5.5:1, so this was a size issue, not a colour one).
+
+### Verification
+
+- 134/134 tests pass (was 114 before this pass; 20 added).
+- Live server and full static bake both report `weather: live` with
+  `observedAt` recorded and `degradedFields` absent.
+- Bake carries 41 sources and all 6 GIS layers; only `nasa-firms` and
+  `doe-apims` are non-live, both gated on secrets that are not configured
+  (`FIRMS_MAP_KEY`, `AQICN_TOKEN`) — confirmed genuinely key-required, not a
+  code defect (FIRMS returns HTTP 400 without a key).
+
+### Residual limitations
+
+- Cloudflare Pages is unaffected by the local-server crash; the fix is to the
+  documented local dev server only.
+- City Reporter remains an optional, self-hosted feed; its write permissions
+  were not inspected, so public attacker control is unverified. It is now
+  escaped at every rendering boundary regardless.
+- This remains decision-support pilot software. No security or compliance
+  certification is implied.

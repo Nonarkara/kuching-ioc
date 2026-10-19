@@ -51,3 +51,32 @@ export function observationWindow(observedAt, nowMs = Date.now()) {
   if (nowMs - t > MAX_OBSERVATION_AGE_MS) return "current.time[stale]";
   return null;
 }
+
+// The literal "60 s" is the local loader's cadence, and it sat next to a Pages
+// snapshot that the 4 h bake can leave hours old - a number claiming a freshness
+// it did not have. Say what is true instead: how old the observation actually
+// is, and which tier produced it.
+//
+// Only cards genuinely derived from climate may borrow the climate reading's
+// age. Everything else - airport, wards, census, headlines - keeps its declared
+// cadence; captioning those with the weather's timestamp is a fresh wrong
+// provenance, the same defect as the literal it replaces.
+export const CLIMATE_METRIC_READING = { heat: "weather", rain6h: "weather", aqi: "air", pm25: "air" };
+
+export function metricFreshness(payload, id, fallback) {
+  const which = CLIMATE_METRIC_READING[id];
+  if (!which) return fallback;
+  const reading = which === "air" ? payload?.climate?.air : payload?.climate?.weather;
+  if (!reading) return fallback;
+  const stamp = reading.observedAt || reading.updatedAt;
+  if (!stamp) return fallback;
+  // Open-Meteo reports a local stamp with no offset; our own updatedAt is UTC.
+  const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(stamp) ? `${stamp}:00+08:00` : stamp;
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return fallback;
+  const mins = Math.max(0, Math.round((Date.now() - t) / 60000));
+  const age = mins < 1 ? "just now" : mins < 60 ? `${mins} min old` : `${Math.round(mins / 60)} h old`;
+  const tier = payload?.delivery?.mode === "static-snapshot" ? " · baked" : "";
+  const origin = reading.computedIn === "browser" ? " · browser-completed" : "";
+  return `${age}${origin}${tier}`;
+}

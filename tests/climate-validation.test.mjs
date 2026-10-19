@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
-import { windowComplete, seriesContinuous, observationWindow, MAX_OBSERVATION_AGE_MS } from "../public/climate-validate.js";
+import { windowComplete, seriesContinuous, observationWindow, metricFreshness, MAX_OBSERVATION_AGE_MS } from "../public/climate-validate.js";
 
 // Regression for the 19 Oct release audit. The loaders validated windows with
 // `.slice(a, b).every(Number.isFinite)`, which is:
@@ -97,23 +97,58 @@ test("a live climate reading records its observation time, not only its fetch ti
 });
 test("a climate card cannot claim a freshness it does not have", async () => {
   const app = await fs.readFile(new URL("../public/app.js", import.meta.url), "utf8");
-  const fn = app.slice(app.indexOf("function metricFreshness"), app.indexOf("function renderMetrics"));
+  const mod = await fs.readFile(new URL("../public/climate-validate.js", import.meta.url), "utf8");
 
   // The literal "60 s" is the local loader cadence; on Pages the same card sat
-  // beside a snapshot the 4 h bake can leave hours old.
+  // beside a snapshot the 4 h bake can leave hours old. It stays only as the
+  // declared fallback for readings with no usable timestamp.
   assert.match(app, /fresh: "60 s"/, "the cadence stays as the declared fallback");
-  assert.match(fn, /reading\.observedAt \|\| reading\.updatedAt/,
-    "age must come from the observation, falling back to retrieval time");
-  assert.match(fn, /static-snapshot" \? " · baked"/,
-    "the tier must be visible — a baked snapshot is not a live feed");
-  assert.match(fn, /computedIn === "browser" \? " · browser-completed"/,
-    "a browser-completed reading must say so");
-  // No usable timestamp must fall back rather than invent an age.
-  assert.match(fn, /if \(!stamp\) return fallback;/);
-  assert.match(fn, /if \(!Number\.isFinite\(t\)\) return fallback;/);
+  assert.match(app, /metricFreshness/, "app.js must call the shared helper");
+  assert.match(app, /climate-validate\.js\?v=/, "imported from the shared, testable module");
+
+  // Age comes from the observation, not the retrieval.
+  assert.match(mod, /reading\.observedAt \|\| reading\.updatedAt/);
+  // The tier and origin must be visible: a baked snapshot is not a live feed.
+  assert.match(mod, /static-snapshot" \? " \u00b7 baked"/);
+  assert.match(mod, /computedIn === "browser" \? " \u00b7 browser-completed"/);
+  // No usable timestamp falls back rather than inventing an age.
+  assert.match(mod, /if \(!stamp\) return fallback;/);
+  assert.match(mod, /if \(!Number\.isFinite\(t\)\) return fallback;/);
   // Open-Meteo stamps are local without an offset; our own updatedAt is UTC.
-  assert.match(fn, /\+08:00/);
+  assert.match(mod, /\+08:00/);
   // And the rendered strings are escaped like every other external value.
   assert.match(app, /<span class="src-name">\$\{escapeHtml\(prov\.src\)\}<\/span>/);
   assert.match(app, /<span class="src-fresh">\$\{escapeHtml\(fresh\)\}<\/span>/);
+});
+
+test("only climate cards may borrow the climate observation's age", () => {
+  // The first version's guard was effectively a no-op, so the OpenSky airport
+  // card and the census card were captioned with the weather's timestamp - a
+  // new wrong provenance, the same defect as the literal it replaced.
+  const payload = { delivery: { mode: "static-snapshot" }, climate: {
+    weather: { observedAt: "2026-10-19T10:30" },
+    air: { observedAt: "2026-10-19T10:00" },
+  } };
+
+  for (const id of ["heat", "rain6h", "aqi", "pm25"]) {
+    const out = metricFreshness(payload, id, "declared");
+    assert.ok(/\d+ (min|h) old/.test(out), `${id} must report a real observation age, got "${out}"`);
+    assert.match(out, /baked$/, `${id} must disclose the baked tier`);
+  }
+  for (const id of ["airport", "wards", "population", "headlines", "flood-watch", "trends", "area"]) {
+    assert.equal(metricFreshness(payload, id, "declared"), "declared",
+      `${id} is not climate-derived and must keep its declared cadence`);
+  }
+  // Weather cards read the weather stamp; air cards the air stamp.
+  assert.notEqual(metricFreshness(payload, "heat", "d"), metricFreshness(payload, "aqi", "d"),
+    "heat and aqi come from different observations");
+  // A browser-completed reading must say so.
+  const recovered = { ...payload, climate: { ...payload.climate, weather: { observedAt: "2026-10-19T10:30", computedIn: "browser" } } };
+  assert.match(metricFreshness(recovered, "heat", "d"), /browser-completed/);
+  // No climate on the payload at all must fall back, not throw.
+  assert.equal(metricFreshness({}, "heat", "declared"), "declared");
+  assert.equal(metricFreshness({ climate: {} }, "aqi", "declared"), "declared");
+  // A stamp we cannot parse falls back rather than printing "NaN min old".
+  const bad = { delivery: { mode: "static-snapshot" }, climate: { weather: { observedAt: "not-a-time" } } };
+  assert.equal(metricFreshness(bad, "heat", "declared"), "declared");
 });

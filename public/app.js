@@ -26,7 +26,7 @@ const { classifyRainRegime, summariseOpenMeteo, RAIN_REGIME_OPEN_METEO_URL } = a
 const { gridUrl, backTrajectory, firesAlongPath, originSector } = await import(`./air-path.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { summariseTide, TIDE_URL } = await import(`./tide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { anchorHourIndex } = await import(`./open-meteo-anchor.js?v=${encodeURIComponent(__ASSET_VER__)}`);
-const { windowComplete, seriesContinuous, observationWindow } = await import(`./climate-validate.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { windowComplete, seriesContinuous, observationWindow, metricFreshness } = await import(`./climate-validate.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupBuildings3D } = await import(`./buildings-3d.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupRegionalBuildings } = await import(`./regional-buildings.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupOperatorGuide } = await import(`./operator-guide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
@@ -1267,23 +1267,11 @@ const METRIC_SOURCES = {
 // it did not have. Say what is true instead: how old the observation actually
 // is, and which tier produced it. A reading with no usable timestamp falls back
 // to the declared cadence rather than inventing an age.
-function metricFreshness(payload, id, fallback) {
-  const climate = payload?.climate || {};
-  const reading = id === "aqi" || id === "pm25" ? climate.air : climate.weather;
-  if (!reading || (id !== "aqi" && id !== "pm25" && !METRIC_SOURCES[id])) return fallback;
-  const stamp = reading.observedAt || reading.updatedAt;
-  if (!stamp) return fallback;
-  // Open-Meteo reports a local stamp with no offset; our own updatedAt is UTC.
-  const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(stamp) ? `${stamp}:00+08:00` : stamp;
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return fallback;
-  const mins = Math.max(0, Math.round((Date.now() - t) / 60000));
-  const age = mins < 1 ? "just now" : mins < 60 ? `${mins} min old` : `${Math.round(mins / 60)} h old`;
-  const tier = payload?.delivery?.mode === "static-snapshot" ? " · baked" : "";
-  const origin = reading.computedIn === "browser" ? " · browser-completed" : "";
-  return `${age}${origin}${tier}`;
-}
-
+//
+// Only cards genuinely derived from climate may borrow the climate reading's
+// age. Everything else — airport, wards, census, headlines — keeps its declared
+// cadence; captioning those with the weather's timestamp is a fresh wrong
+// provenance, the same defect as the literal it replaces.
 function renderMetrics(metrics) {
   state.lastMetrics = metrics;
   $("metricBand").innerHTML = metrics.slice(0,12).map(m => {

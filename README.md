@@ -119,7 +119,7 @@ cd kuching-ioc
 node server.mjs
 ```
 
-Open [http://127.0.0.1:3000](http://127.0.0.1:3000). Bind/port: `HOST` (default `0.0.0.0`), `PORT` (default `3000`).
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000). Bind/port: `HOST` (default `127.0.0.1` — loopback only; set `HOST=0.0.0.0` to expose on the LAN), `PORT` (default `3000`).
 
 ### Static snapshot
 

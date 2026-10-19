@@ -66,12 +66,89 @@ test("the static tier can finish climate in the browser when the bake could not"
   assert.match(body, /climate\.air\.status !== "live"/);
   // Only the baked tier needs it — the live API is already refreshing server-side.
   assert.match(body, /mode !== "static-snapshot"/);
-  // One attempt only: renderDashboard re-enters this function on the re-render.
-  assert.match(body, /climateClientTried = true;/);
   // A browser-computed reading must not keep the "degraded" chip, or the board
   // labels live numbers as fallback.
   assert.match(body, /src\.id === "open-meteo-weather" && liveW/);
   assert.match(body, /src\.id === "open-meteo-air" && liveA/);
+});
+
+test("browser recovery cannot leave the board showing two different readings", async () => {
+  const app = await fs.readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  const helper = app.slice(app.indexOf("function applyClimateToPayload"), app.indexOf("async function loadEarthquakes"));
+
+  // The audit's P1: the first version swapped payload.climate and stopped, so
+  // metrics/summary/operations still held the bake's fallback numbers — the
+  // panel read 24 °C beside a metric strip reading 30 °C.
+  assert.match(helper, /payload\.summary = buildSummary\(/);
+  assert.match(helper, /payload\.operations = buildOperations\(/);
+  assert.match(helper, /applyClimateToPayload\(payload, nextWeather, nextAir\)/);
+
+  // Recompute from the same builders the bake used, not a hand-rolled subset.
+  assert.match(helper, /buildMetrics\(weather, air, airport, jurisdictions, news, zoning, trends\)/);
+  // buildOperations dereferences padawanZoning.wardCount, but the server
+  // publishes zoning under mapScene — passing payload.padawanZoning straight
+  // through (it is undefined on a baked payload) throws a TypeError and the
+  // recovery silently does nothing.
+  assert.match(helper, /payload\.mapScene/);
+  assert.match(helper, /wardCount: payload\.mapScene\.wardCount/);
+});
+
+test("recovering climate must not delete the non-climate metric cards", async () => {
+  const app = await fs.readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  const helper = app.slice(app.indexOf("function applyClimateToPayload"), app.indexOf("async function loadEarthquakes"));
+
+  // The server's strip has 14 cards; the client's buildMetrics emits 8 with
+  // different ids. Assigning buildMetrics() wholesale would drop nreb-api,
+  // wards, population, headlines, trends and flood-watch and rename
+  // padawan-share to pdw-share. Only the four climate cards may change.
+  assert.match(helper, /const CLIMATE_CARD_IDS = \["heat", "aqi", "pm25", "rain6h"\];/);
+  assert.match(helper, /payload\.metrics = payload\.metrics\.map\(/,
+    "the strip must be mapped in place, preserving card count, order and ids");
+  assert.ok(!/payload\.metrics = buildMetrics\(/.test(helper),
+    "a wholesale assignment drops the seven server-only cards");
+  // id/label/unit come from the baked card so i18n and the source map resolve.
+  assert.match(helper, /\.\.\.next, id: m\.id, label: m\.label, unit: m\.unit/);
+});
+
+test("the baked payload actually contains the keys the recovery recompute reads", async () => {
+  // Structural assertions pass while behaviour is destructive. Read the real
+  // committed snapshot so a key rename breaks here, not in the browser.
+  const payloadPath = new URL("../public/api/dashboard.json", import.meta.url);
+  let raw;
+  try {
+    raw = await fs.readFile(payloadPath, "utf8");
+  } catch {
+    return; // no baked snapshot committed yet; the structural guards still run
+  }
+  const d = JSON.parse(raw);
+  for (const key of ["jurisdictions", "news", "trends", "airport", "fires", "quakes", "climate", "metrics", "summary", "operations", "mapScene"]) {
+    assert.ok(d[key] !== undefined, `baked payload is missing "${key}" — applyClimateToPayload would break`);
+  }
+  assert.ok(Array.isArray(d.metrics) && d.metrics.length >= 10,
+    `expected the full metric strip, got ${(d.metrics || []).length}`);
+  assert.ok(d.mapScene.wardCount != null, "mapScene.wardCount feeds buildOperations");
+  // And the four climate cards the recovery rewrites must actually exist.
+  for (const id of ["heat", "aqi", "pm25", "rain6h"]) {
+    assert.ok(d.metrics.some((m) => m.id === id), `no "${id}" card to recover`);
+  }
+});
+
+test("browser recovery is bounded, retryable, and cannot paint a superseded payload", async () => {
+  const app = await fs.readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  const fn = app.slice(app.indexOf("async function completeClimateInBrowser"), app.indexOf("async function loadEarthquakes"));
+
+  // Ownership: checked before the await AND after it. Checking only before was
+  // the defect — a slow response landed on a newer 60s payload.
+  assert.equal((fn.match(/payload !== state\.payload/g) || []).length, 2,
+    "identity must be re-checked after awaiting the fetch, not only before");
+  // Bounded: a latching one-shot flag blocked every later snapshot forever, and
+  // a failed first attempt could not retry until reload.
+  assert.match(app, /const climateRecovery = \{ attempts: 0, max: \d+, inflight: false/);
+  assert.match(fn, /climateRecovery\.attempts >= climateRecovery\.max/);
+  assert.match(fn, /climateRecovery\.inflight = true;/);
+  assert.match(fn, /finally \{[\s\S]*climateRecovery\.inflight = false;/);
+  // A healthy snapshot must give the next degraded one a fresh retry budget.
+  assert.match(fn, /climateRecovery\.forSnapshot !== snapshotId/);
 });
 
 test("every Open-Meteo anchor site uses anchorHourIndex, not an exact indexOf match", async () => {

@@ -7,10 +7,13 @@ import { normalizeMetWeather } from "./public/met-weather.js";
 import { classifyRainRegime, summariseOpenMeteo, RAIN_REGIME_OPEN_METEO_URL } from "./public/rain-regime.js";
 import { summariseTide, TIDE_URL } from "./public/tide.js";
 import { anchorHourIndex } from "./public/open-meteo-anchor.js";
+import { windowComplete, seriesContinuous, observationWindow } from "./public/climate-validate.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
-const host = process.env.HOST || "0.0.0.0";
+// Loopback by default: this is the documented local-dev server and nothing here
+// needs LAN exposure. Set HOST=0.0.0.0 explicitly to open it up.
+const host = process.env.HOST || "127.0.0.1";
 const port = Number(process.env.PORT || 3000);
 const serverStartedAt = new Date().toISOString();
 const assetVersion = resolveAssetVersion({ builtAt: serverStartedAt });
@@ -1382,9 +1385,18 @@ async function loadWeather() {
     const times = Array.isArray(hourly.time) ? hourly.time : [];
     const nowIdx = anchorHourIndex(times, current.time);
     need(nowIdx >= 24, "hourly.time[now-24]");
-    const nextWin = (a) => Array.isArray(a) && a.slice(nowIdx, nowIdx + 6).every(Number.isFinite);
-    const pastWin = (a) => Array.isArray(a) && a.slice(nowIdx - 24, nowIdx).every(Number.isFinite);
+    // Exact length, not "every element of whatever the slice returned" — an
+    // empty or short slice satisfied .every() and shipped as "live".
+    const nextWin = (a) => windowComplete(a, nowIdx, 6);
+    const pastWin = (a) => windowComplete(a, nowIdx - 24, 24);
     need(nowIdx + 6 <= times.length, "hourly.time[now+6]");
+    // An hourly series with a hole or a duplicated stamp cannot support a
+    // windowed claim about the next six hours.
+    need(seriesContinuous(times, nowIdx, 6), "hourly.time[next6h-continuous]");
+    need(seriesContinuous(times, nowIdx - 24, 24), "hourly.time[past24-continuous]");
+    // The observation must actually be current: a feed stuck on an old stamp
+    // must not be relabelled live just because the retrieval was fresh.
+    need(observationWindow(current.time) === null, "current.time[window]");
     need(nextWin(hourly.temperature_2m), "hourly.temperature_2m[now+6]");
     need(nextWin(hourly.precipitation), "hourly.precipitation[now+6]");
     need(nextWin(hourly.precipitation_probability), "hourly.precipitation_probability[now+6]");
@@ -1416,6 +1428,9 @@ async function loadWeather() {
     return {
       status: "live",
       updatedAt: nowIso(),
+      // Source observation time, kept apart from retrieval time above: a fresh
+      // retrieval of an old reading is still an old reading.
+      observedAt: current.time,
       current: {
         temperatureC: round(current.temperature_2m, 1),
         apparentTemperatureC: round(current.apparent_temperature, 1),
@@ -1503,8 +1518,11 @@ async function loadAirQuality() {
     const nowIdx = anchorHourIndex(times, current.time);
     need(nowIdx >= 24, "hourly.time[now-24]");
     need(nowIdx + 6 <= times.length, "hourly.time[now+6]");
-    const nextWin = (a) => Array.isArray(a) && a.slice(nowIdx, nowIdx + 6).every(Number.isFinite);
-    const pastWin = (a) => Array.isArray(a) && a.slice(nowIdx - 24, nowIdx).every(Number.isFinite);
+    const nextWin = (a) => windowComplete(a, nowIdx, 6);
+    const pastWin = (a) => windowComplete(a, nowIdx - 24, 24);
+    need(seriesContinuous(times, nowIdx, 6), "hourly.time[next6h-continuous]");
+    need(seriesContinuous(times, nowIdx - 24, 24), "hourly.time[past24-continuous]");
+    need(observationWindow(current.time) === null, "current.time[window]");
     need(nextWin(hourly.us_aqi), "hourly.us_aqi[now+6]");
     need(nextWin(hourly.pm2_5), "hourly.pm2_5[now+6]");
     need(pastWin(hourly.us_aqi), "hourly.us_aqi[past24]");
@@ -1524,6 +1542,7 @@ async function loadAirQuality() {
     return {
       status: "live",
       updatedAt: nowIso(),
+      observedAt: current.time,
       current: {
         aqi,
         band: aqiBand(aqi),
@@ -4894,7 +4913,19 @@ async function loadMockAuthorityLayer(layerId) {
 }
 
 const server = http.createServer(async (request, response) => {
-  const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
+  // A malformed Host header makes this constructor throw ERR_INVALID_URL. In an
+  // async callback that throw is an unhandled rejection, which terminates the
+  // process — one odd request could take the whole board down. Parse the URL
+  // ourselves instead: we only ever need the path, and it is the request target
+  // Node already parsed, never the client-supplied Host.
+  let url;
+  try {
+    url = new URL(request.url || "/", "http://localhost");
+  } catch {
+    response.writeHead(400, { "content-type": "application/json; charset=utf-8" });
+    response.end(JSON.stringify({ error: "malformed request URL" }));
+    return;
+  }
 
   if (!["GET", "HEAD"].includes(request.method || "")) {
     response.writeHead(405, { "content-type": "application/json; charset=utf-8" });

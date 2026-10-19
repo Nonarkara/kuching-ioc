@@ -812,11 +812,15 @@ body::before {
 
 .map-footer {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 4px 10px; border-top: 1px solid var(--line); font-size: 8px; background: var(--hud-bg); flex-shrink: 0;
+  /* 8px -> 9px: the hydro band labels (Normal/Alert/Warning/Danger/Reference)
+     are operational text, not chrome, and 8px was the design-system floor
+     rather than a comfortable size. One extra pixel of footer does not cost
+     the map any height worth having. */
+  padding: 4px 10px; border-top: 1px solid var(--line); font-size: 9px; background: var(--hud-bg); flex-shrink: 0;
 }
 .map-legend { display: flex; gap: 10px; align-items: center; }
 .legend-item { display: flex; align-items: center; gap: 3px; color: var(--soft); }
-.legend-dot { width: 7px; height: 7px; border-radius: 50%; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
 .watchpoint-list { display: flex; gap: 4px; flex-wrap: wrap; }
 .watchpoint-list span { padding: 1px 5px; border: 1px solid var(--line); font-size: 8px; text-transform: uppercase; color: var(--soft); }
 

@@ -26,6 +26,7 @@ const { classifyRainRegime, summariseOpenMeteo, RAIN_REGIME_OPEN_METEO_URL } = a
 const { gridUrl, backTrajectory, firesAlongPath, originSector } = await import(`./air-path.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { summariseTide, TIDE_URL } = await import(`./tide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { anchorHourIndex } = await import(`./open-meteo-anchor.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { windowComplete, seriesContinuous, observationWindow } = await import(`./climate-validate.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupBuildings3D } = await import(`./buildings-3d.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupRegionalBuildings } = await import(`./regional-buildings.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupOperatorGuide } = await import(`./operator-guide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
@@ -197,8 +198,9 @@ function statusTone(status) {
 function glyphHTML(status, label) {
   const g = statusGlyph(status);
   const tone = statusTone(status);
-  const txt = label != null ? `<span>${label}</span>` : "";
-  return `<span class="glyph" data-tone="${tone}" title="${status}">${g}</span>${txt}`;
+  const txt = label != null ? `<span>${escapeHtml(label)}</span>` : "";
+  // `status` is drawn from source records, which echo upstream vocabulary.
+  return `<span class="glyph" data-tone="${tone}" title="${escapeHtml(status)}">${g}</span>${txt}`;
 }
 
 function safeStorage() {
@@ -581,13 +583,15 @@ async function loadWeather() {
     const times = Array.isArray(h.time) ? h.time : [];
     const nowIdx = anchorHourIndex(times, c.time);
     const dIdx = typeof c.time === "string" ? (Array.isArray(d.time) ? d.time : []).indexOf(c.time.slice(0,10)) : -1;
-    const nextWin = (a) => Array.isArray(a) && a.slice(nowIdx, nowIdx+6).every(fin);
-    const pastWin = (a) => Array.isArray(a) && a.slice(nowIdx-24, nowIdx).every(fin);
+    const nextWin = (a) => windowComplete(a, nowIdx, 6);
+    const pastWin = (a) => windowComplete(a, nowIdx-24, 24);
     // Audit #11 (client twin): never label an incomplete payload "live" —
     // route to the labelled stub instead of printing zeros as measurements.
     const ok = fin(c.temperature_2m) && fin(c.apparent_temperature) && fin(c.relative_humidity_2m)
       && fin(c.wind_speed_10m) && fin(c.precipitation) && fin(c.cloud_cover) && fin(c.weather_code)
       && fin(c.pressure_msl) && nowIdx >= 24 && nowIdx+6 <= times.length
+      && seriesContinuous(times, nowIdx, 6) && seriesContinuous(times, nowIdx-24, 24)
+      && observationWindow(c.time) === null
       && nextWin(h.temperature_2m) && nextWin(h.precipitation) && nextWin(h.precipitation_probability)
       && pastWin(h.temperature_2m) && dIdx >= 0
       && fin(d.temperature_2m_max?.[dIdx]) && fin(d.temperature_2m_min?.[dIdx])
@@ -595,7 +599,7 @@ async function loadWeather() {
       && typeof d.sunrise?.[dIdx] === "string" && typeof d.sunset?.[dIdx] === "string";
     if (!ok) return { ...WEATHER_FALLBACK, updatedAt: nowIso(), status: "degraded" };
     return {
-      status:"live", updatedAt: nowIso(),
+      status:"live", updatedAt: nowIso(), observedAt: c.time,
       current: { temperatureC:round(c.temperature_2m,1), apparentTemperatureC:round(c.apparent_temperature,1), humidity:Math.round(c.relative_humidity_2m), windKph:round(c.wind_speed_10m,1), precipitationMm:round(c.precipitation,1), cloudCover:Math.round(c.cloud_cover), weatherLabel:weatherCodeLabel(Number(c.weather_code)), pressureHpa:round(c.pressure_msl,1) },
       nextHours: times.slice(nowIdx, nowIdx+6).map((tm,i)=>({ time:String(tm).slice(11,16), precipitationMm:round(h.precipitation[nowIdx+i],1), rainChance:Math.round(h.precipitation_probability[nowIdx+i]), temperatureC:round(h.temperature_2m[nowIdx+i],1) })),
       daily: { maxC:round(d.temperature_2m_max[dIdx],1), minC:round(d.temperature_2m_min[dIdx],1), rainTotalMm:round(d.precipitation_sum[dIdx],1), uvIndexMax:round(d.uv_index_max[dIdx],1), sunrise:String(d.sunrise[dIdx]).slice(11,16), sunset:String(d.sunset[dIdx]).slice(11,16) },
@@ -617,15 +621,17 @@ async function loadAirQuality() {
     const fin = Number.isFinite;
     const times = Array.isArray(h.time) ? h.time : [];
     const nowIdx = anchorHourIndex(times, c.time);
-    const nextWin = (a) => Array.isArray(a) && a.slice(nowIdx, nowIdx+6).every(fin);
-    const pastWin = (a) => Array.isArray(a) && a.slice(nowIdx-24, nowIdx).every(fin);
+    const nextWin = (a) => windowComplete(a, nowIdx, 6);
+    const pastWin = (a) => windowComplete(a, nowIdx-24, 24);
     const ok = fin(c.us_aqi) && fin(c.pm2_5) && fin(c.pm10) && fin(c.ozone) && fin(c.nitrogen_dioxide)
       && nowIdx >= 24 && nowIdx+6 <= times.length
+      && seriesContinuous(times, nowIdx, 6) && seriesContinuous(times, nowIdx-24, 24)
+      && observationWindow(c.time) === null
       && nextWin(h.us_aqi) && nextWin(h.pm2_5) && pastWin(h.us_aqi);
     if (!ok) { const f=AIR_FALLBACK; return { ...f, updatedAt: nowIso(), status: "degraded", current:{...f.current, band:aqiBand(f.current.aqi)} }; }
     const aqi = Math.round(c.us_aqi);
     return {
-      status:"live", updatedAt:nowIso(),
+      status:"live", updatedAt:nowIso(), observedAt: c.time,
       current:{ aqi, band:aqiBand(aqi), pm25:round(c.pm2_5,1), pm10:round(c.pm10,1), ozone:round(c.ozone,1), no2:round(c.nitrogen_dioxide,1) },
       nextHours: times.slice(nowIdx, nowIdx+6).map((tm,i)=>({ time:String(tm).slice(11,16), aqi:Math.round(h.us_aqi[nowIdx+i]), pm25:round(h.pm2_5[nowIdx+i],1) })),
       history: h.us_aqi.slice(nowIdx-24, nowIdx).map(v=>Math.round(v)),
@@ -642,36 +648,113 @@ async function loadAirQuality() {
 // numbers read like measurements, which is the one thing this board must never
 // do. A visitor's browser is not refused, and Open-Meteo is CORS-open.
 //
-// Reuse loadWeather/loadAirQuality rather than re-deriving the parse, so a
-// browser-completed payload is shaped and validated exactly like the bake's.
-// Only the static tier needs this: the live API refreshes every 60 s, and the
-// server is not the thing being blocked.
-let climateClientTried = false;
+// Three defects in the first version of this, all found by the 19 Oct audit:
+//
+//   1. It replaced payload.climate and stopped. metrics, summary and operations
+//      were computed by the *bake* from the fallback reading, so the panel
+//      showed a live 24 °C beside a metric strip still reading the fallback 30
+//      °C. Every climate-derived consumer is now recomputed from the accepted
+//      reading — never relabelled.
+//   2. A module-level `climateClientTried` latched forever, so a payload that
+//      arrived degraded after the first success never recovered, and a failed
+//      first attempt could not retry until reload. Now bounded and reset when
+//      a genuinely new snapshot arrives.
+//   3. The awaited result was applied unconditionally, so a slow response could
+//      land after a newer payload had been installed and render stale data.
+//      Now gated on payload identity.
+//
+// Reuses loadWeather/loadAirQuality rather than re-deriving the parse, so a
+// browser-completed payload is validated exactly like the bake's. Static tier
+// only: the live API refreshes every 60 s and the server is not what's blocked.
+const climateRecovery = { attempts: 0, max: 2, inflight: false, forSnapshot: null };
+
+// Recompute every value the bake derives from climate, from the same builders
+// the bake used, so the board cannot show two different weather readings.
+function applyClimateToPayload(payload, weather, air) {
+  const jurisdictions = payload.jurisdictions;
+  const news = payload.news;
+  const trends = payload.trends;
+  const airport = payload.airport;
+  const fires = payload.fires;
+  const quakes = payload.quakes;
+  // The server exposes zoning under mapScene, and buildOperations dereferences
+  // padawanZoning.wardCount — passing the payload key straight through throws.
+  const zoning = payload.padawanZoning
+    || (payload.mapScene
+      ? { wardCount: payload.mapScene.wardCount, status: payload.mapScene.wardStatus }
+      : { wardCount: null, status: "unavailable" });
+
+  payload.summary = buildSummary(weather, air, airport, jurisdictions, news, zoning, trends);
+
+  // ONLY the four climate cards may change. Replacing the whole array with
+  // buildMetrics would swap the server's 14 cards for the client's 8, rename
+  // padawan-share to pdw-share (losing its provenance line) and drop nreb-api,
+  // wards, properties, population, headlines, trends and flood-watch entirely.
+  const CLIMATE_CARD_IDS = ["heat", "aqi", "pm25", "rain6h"];
+  const rebuilt = buildMetrics(weather, air, airport, jurisdictions, news, zoning, trends);
+  const byId = new Map(rebuilt.filter((m) => CLIMATE_CARD_IDS.includes(m.id)).map((m) => [m.id, m]));
+  if (byId.size && Array.isArray(payload.metrics)) {
+    payload.metrics = payload.metrics.map((m) => {
+      const next = byId.get(m.id);
+      if (!next) return m;
+      // Keep the baked id/label/unit so i18n keys and the source map still
+      // resolve; only the values, history and context are climate-derived.
+      return { ...next, id: m.id, label: m.label, unit: m.unit };
+    });
+  }
+
+  payload.operations = buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning: zoning, trends, fires, quakes });
+}
+
 async function completeClimateInBrowser(payload) {
-  if (climateClientTried || payload?.delivery?.mode !== "static-snapshot") return;
+  if (payload?.delivery?.mode !== "static-snapshot") return;
+  // Ownership: boot installs a new payload every 60 s. A completion that
+  // arrives after that belongs to a superseded board and must not paint it.
+  if (payload !== state.payload) return;
   const climate = payload?.climate;
   if (!climate) return;
   const wantWeather = climate.weather && climate.weather.status !== "live";
   const wantAir = climate.air && climate.air.status !== "live";
-  if (!wantWeather && !wantAir) return;
-  climateClientTried = true;
-  const [w, a] = await Promise.all([
-    wantWeather ? loadWeather() : Promise.resolve(null),
-    wantAir ? loadAirQuality() : Promise.resolve(null),
-  ]);
-  const liveW = w?.status === "live";
-  const liveA = a?.status === "live";
-  if (liveW) climate.weather = { ...w, computedIn: "browser" };
-  if (liveA) climate.air = { ...a, computedIn: "browser" };
-  if (!liveW && !liveA) return;
-  // The source chips read payload.sources, not climate.*.status — leaving them
-  // alone would print "degraded" over live numbers, which is the exact lie
-  // this function exists to remove.
-  for (const src of payload.sources || []) {
-    if (src.id === "open-meteo-weather" && liveW) src.status = "live";
-    if (src.id === "open-meteo-air" && liveA) src.status = "live";
+  if (!wantWeather && !wantAir) {
+    // This snapshot is healthy — give a later snapshot a fresh retry budget.
+    climateRecovery.forSnapshot = null;
+    return;
   }
-  renderDashboard(payload);
+  const snapshotId = payload.generatedAt || payload.snapshotBuiltAt || null;
+  if (climateRecovery.forSnapshot !== snapshotId) {
+    climateRecovery.forSnapshot = snapshotId;
+    climateRecovery.attempts = 0;
+  }
+  if (climateRecovery.inflight || climateRecovery.attempts >= climateRecovery.max) return;
+  climateRecovery.inflight = true;
+  climateRecovery.attempts += 1;
+  try {
+    const [w, a] = await Promise.all([
+      wantWeather ? loadWeather() : Promise.resolve(null),
+      wantAir ? loadAirQuality() : Promise.resolve(null),
+    ]);
+    // Re-check identity after the await: a newer snapshot may have landed.
+    if (payload !== state.payload) return;
+    const liveW = w?.status === "live";
+    const liveA = a?.status === "live";
+    if (!liveW && !liveA) return;
+    const nextWeather = liveW ? { ...w, computedIn: "browser" } : climate.weather;
+    const nextAir = liveA ? { ...a, computedIn: "browser" } : climate.air;
+    climate.weather = nextWeather;
+    climate.air = nextAir;
+    applyClimateToPayload(payload, nextWeather, nextAir);
+    // The source chips read payload.sources, not climate.*.status — leaving them
+    // alone would print "degraded" over live numbers, which is the exact lie
+    // this function exists to remove.
+    for (const src of payload.sources || []) {
+      if (src.id === "open-meteo-weather" && liveW) src.status = "live";
+      if (src.id === "open-meteo-air" && liveA) src.status = "live";
+    }
+    payload.climateRecoveredIn = "browser";
+    renderDashboard(payload);
+  } finally {
+    climateRecovery.inflight = false;
+  }
 }
 
 async function loadEarthquakes() {
@@ -1179,18 +1262,41 @@ const METRIC_SOURCES = {
   "flood-watch":{src: "MET Malaysia",   fresh: "15 min",link: "https://api.data.gov.my/weather/warning/" },
 };
 
+// The literal "60 s" is the local loader's cadence, and it sat next to a Pages
+// snapshot that the 4 h bake can leave hours old — a number claiming a freshness
+// it did not have. Say what is true instead: how old the observation actually
+// is, and which tier produced it. A reading with no usable timestamp falls back
+// to the declared cadence rather than inventing an age.
+function metricFreshness(payload, id, fallback) {
+  const climate = payload?.climate || {};
+  const reading = id === "aqi" || id === "pm25" ? climate.air : climate.weather;
+  if (!reading || (id !== "aqi" && id !== "pm25" && !METRIC_SOURCES[id])) return fallback;
+  const stamp = reading.observedAt || reading.updatedAt;
+  if (!stamp) return fallback;
+  // Open-Meteo reports a local stamp with no offset; our own updatedAt is UTC.
+  const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(stamp) ? `${stamp}:00+08:00` : stamp;
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return fallback;
+  const mins = Math.max(0, Math.round((Date.now() - t) / 60000));
+  const age = mins < 1 ? "just now" : mins < 60 ? `${mins} min old` : `${Math.round(mins / 60)} h old`;
+  const tier = payload?.delivery?.mode === "static-snapshot" ? " · baked" : "";
+  const origin = reading.computedIn === "browser" ? " · browser-completed" : "";
+  return `${age}${origin}${tier}`;
+}
+
 function renderMetrics(metrics) {
   state.lastMetrics = metrics;
   $("metricBand").innerHTML = metrics.slice(0,12).map(m => {
     const prov = METRIC_SOURCES[m.id];
+    const fresh = prov ? metricFreshness(state.payload, m.id, prov.fresh) : "";
     const provHtml = prov
-      ? `<div class="metric-source"><span class="src-name">${prov.src}</span><span class="src-fresh">${prov.fresh}</span></div>`
+      ? `<div class="metric-source"><span class="src-name">${escapeHtml(prov.src)}</span><span class="src-fresh">${escapeHtml(fresh)}</span></div>`
       : "";
     return `
     <article class="metric-card" data-tone="${m.tone||'neutral'}" data-metric-id="${m.id}">
       <div class="metric-label">${escapeHtml(tOr(`m_${m.id}`, m.label))}</div>
       <div class="metric-value">${m.value == null ? "—" : num(m.value,m.value%1===0?0:1)}<span class="metric-unit">${m.value == null ? "" : m.unit||''}</span></div>
-      <div class="metric-context">${m.context||''}</div>
+      <div class="metric-context">${escapeHtml(m.context||'')}</div>
       <div class="sparkline-shell">${m.history?sparkline(m.history,m.tone):''}</div>
       ${provHtml}
     </article>`;
@@ -1465,7 +1571,7 @@ function renderMap(payload) {
         (s.thresholds?.alert != null
           ? `<br>Alert starts at ${s.thresholds.alert} m`
           : "") +
-        (s.humanBrief ? `<br><em style="opacity:.9">${s.humanBrief}</em>` : "") +
+        (s.humanBrief ? `<br><em style="opacity:.9">${escapeHtml(s.humanBrief)}</em>` : "") +
         catchmentLine,
         { className: "marker-tooltip", direction: "top" },
       )
@@ -1490,7 +1596,7 @@ function renderMap(payload) {
       dashArray: "2 2",
     })
       .bindTooltip(
-        `<strong>APIMS · ${s.stationName}</strong><br>AQI ${s.aqi} (${s.band?.label || "—"})<br>PM2.5 ${s.pm25 ?? "—"} · PM10 ${s.pm10 ?? "—"}<br>Dominant: ${s.dominant || "—"}`,
+        `<strong>APIMS · ${escapeHtml(s.stationName)}</strong><br>AQI ${s.aqi} (${escapeHtml(s.band?.label || "—")})<br>PM2.5 ${s.pm25 ?? "—"} · PM10 ${s.pm10 ?? "—"}<br>Dominant: ${escapeHtml(s.dominant || "—")}`,
         { className: "marker-tooltip", direction: "top" },
       )
       .addTo(state.markerLayerGroup);
@@ -1513,7 +1619,7 @@ function renderMap(payload) {
       className: r.urgency === "high" ? "cr-pulse-high" : ""
     })
       .bindTooltip(
-        `<strong>${escapeHtml(r.problem_type)}</strong><br>${escapeHtml(r.location_text || "—")}<br>Urgency: ${r.urgency.toUpperCase()} · ${(r.status || "").replace("_"," ").toUpperCase()}<br><em>${escapeHtml(r.ticket)}</em>`,
+        `<strong>${escapeHtml(r.problem_type)}</strong><br>${escapeHtml(r.location_text || "—")}<br>Urgency: ${escapeHtml(String(r.urgency || "").toUpperCase())} · ${escapeHtml(String(r.status || "").replace("_"," ").toUpperCase())}<br><em>${escapeHtml(r.ticket)}</em>`,
         { className: "marker-tooltip cr-tooltip", direction: "top" },
       )
       .addTo(state.markerLayerGroup);
@@ -4805,7 +4911,7 @@ function renderDashboard(payload) {
         <div class="signal-card" style="border-left:3px solid #ef4444">
           <strong>MET // WEATHER WARNING</strong>
           <div class="val">${met.activeCount}<sup>active</sup></div>
-          <div class="meta">${w.heading || "Active warning"}</div>
+          <div class="meta">${escapeHtml(w.heading || "Active warning")}</div>
           ${w.validTo ? `<div class="meta">Until ${new Date(w.validTo).toLocaleString("en-MY",{timeZone:"Asia/Kuching",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div>` : ""}
         </div>`;
     } else {

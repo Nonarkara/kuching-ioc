@@ -670,6 +670,11 @@ const climateRecovery = { attempts: 0, max: 2, inflight: false, forSnapshot: nul
 
 // Recompute every value the bake derives from climate, from the same builders
 // the bake used, so the board cannot show two different weather readings.
+//
+// All-or-nothing on purpose: if any builder throws on an unexpected payload
+// shape, nothing is assigned. A partially applied update would leave the board
+// showing live climate beside stale metrics — the exact defect this function
+// exists to remove — and would never be corrected.
 function applyClimateToPayload(payload, weather, air) {
   const jurisdictions = payload.jurisdictions;
   const news = payload.news;
@@ -684,7 +689,9 @@ function applyClimateToPayload(payload, weather, air) {
       ? { wardCount: payload.mapScene.wardCount, status: payload.mapScene.wardStatus }
       : { wardCount: null, status: "unavailable" });
 
-  payload.summary = buildSummary(weather, air, airport, jurisdictions, news, zoning, trends);
+  // --- compute, do not assign ---
+  const nextSummary = buildSummary(weather, air, airport, jurisdictions, news, zoning, trends);
+  const nextOperations = buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning: zoning, trends, fires, quakes });
 
   // ONLY the four climate cards may change. Replacing the whole array with
   // buildMetrics would swap the server's 14 cards for the client's 8, rename
@@ -693,8 +700,9 @@ function applyClimateToPayload(payload, weather, air) {
   const CLIMATE_CARD_IDS = ["heat", "aqi", "pm25", "rain6h"];
   const rebuilt = buildMetrics(weather, air, airport, jurisdictions, news, zoning, trends);
   const byId = new Map(rebuilt.filter((m) => CLIMATE_CARD_IDS.includes(m.id)).map((m) => [m.id, m]));
+  let nextMetrics = null;
   if (byId.size && Array.isArray(payload.metrics)) {
-    payload.metrics = payload.metrics.map((m) => {
+    nextMetrics = payload.metrics.map((m) => {
       const next = byId.get(m.id);
       if (!next) return m;
       // Keep the baked id/label/unit so i18n keys and the source map still
@@ -703,7 +711,10 @@ function applyClimateToPayload(payload, weather, air) {
     });
   }
 
-  payload.operations = buildOperations({ weather, air, airport, news, jurisdictions, padawanZoning: zoning, trends, fires, quakes });
+  // --- commit ---
+  payload.summary = nextSummary;
+  if (nextMetrics) payload.metrics = nextMetrics;
+  payload.operations = nextOperations;
 }
 
 async function completeClimateInBrowser(payload) {
@@ -740,9 +751,18 @@ async function completeClimateInBrowser(payload) {
     if (!liveW && !liveA) return;
     const nextWeather = liveW ? { ...w, computedIn: "browser" } : climate.weather;
     const nextAir = liveA ? { ...a, computedIn: "browser" } : climate.air;
+    try {
+      // Recompute the derived values BEFORE touching the payload: these
+      // builders can throw on an unexpected payload shape, and a half-applied
+      // update would leave live climate beside stale metrics forever.
+      applyClimateToPayload(payload, nextWeather, nextAir);
+    } catch {
+      // Leave the snapshot internally consistent (all-fallback) and let the
+      // next tick retry. Never render a partially recovered board.
+      return;
+    }
     climate.weather = nextWeather;
     climate.air = nextAir;
-    applyClimateToPayload(payload, nextWeather, nextAir);
     // The source chips read payload.sources, not climate.*.status — leaving them
     // alone would print "degraded" over live numbers, which is the exact lie
     // this function exists to remove.

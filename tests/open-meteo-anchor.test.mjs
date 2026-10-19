@@ -79,8 +79,8 @@ test("browser recovery cannot leave the board showing two different readings", a
   // The audit's P1: the first version swapped payload.climate and stopped, so
   // metrics/summary/operations still held the bake's fallback numbers — the
   // panel read 24 °C beside a metric strip reading 30 °C.
-  assert.match(helper, /payload\.summary = buildSummary\(/);
-  assert.match(helper, /payload\.operations = buildOperations\(/);
+  assert.match(helper, /const nextSummary = buildSummary\(/);
+  assert.match(helper, /const nextOperations = buildOperations\(/);
   assert.match(helper, /applyClimateToPayload\(payload, nextWeather, nextAir\)/);
 
   // Recompute from the same builders the bake used, not a hand-rolled subset.
@@ -102,8 +102,10 @@ test("recovering climate must not delete the non-climate metric cards", async ()
   // wards, population, headlines, trends and flood-watch and rename
   // padawan-share to pdw-share. Only the four climate cards may change.
   assert.match(helper, /const CLIMATE_CARD_IDS = \["heat", "aqi", "pm25", "rain6h"\];/);
-  assert.match(helper, /payload\.metrics = payload\.metrics\.map\(/,
+  assert.match(helper, /nextMetrics = payload\.metrics\.map\(/,
     "the strip must be mapped in place, preserving card count, order and ids");
+  assert.match(helper, /if \(nextMetrics\) payload\.metrics = nextMetrics;/,
+    "the mapped strip must still reach the payload");
   assert.ok(!/payload\.metrics = buildMetrics\(/.test(helper),
     "a wholesale assignment drops the seven server-only cards");
   // id/label/unit come from the baked card so i18n and the source map resolve.
@@ -178,4 +180,26 @@ test("every Open-Meteo anchor site uses anchorHourIndex, not an exact indexOf ma
       `${name} must anchor both the weather and the air-quality loader`,
     );
   }
+});
+test("a partially-applied recovery is impossible", async () => {
+  const app = await fs.readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  const helper = app.slice(app.indexOf("function applyClimateToPayload"), app.indexOf("async function loadEarthquakes"));
+  const fn = app.slice(app.indexOf("async function completeClimateInBrowser"), app.indexOf("async function loadEarthquakes"));
+
+  // The builders can throw on an unexpected payload shape. If the payload is
+  // mutated before that, a failure leaves live climate beside stale metrics and
+  // nothing ever corrects it. Compute first, commit last.
+  const applyIdx = helper.indexOf("applyClimateToPayload");
+  assert.ok(applyIdx > -1);
+  const firstClimateAssign = helper.indexOf("payload.summary = nextSummary;");
+  assert.ok(firstClimateAssign > -1 && helper.indexOf("const nextSummary =") < firstClimateAssign,
+    "nextSummary must be computed before it is assigned");
+  assert.match(helper, /\/\/ --- commit ---/, "commit phase must be visually separated");
+  assert.match(fn, /try \{[\s\S]*applyClimateToPayload\(payload, nextWeather, nextAir\);[\s\S]*\} catch \{[\s\S]*return;/,
+    "a throwing recompute must abandon the update, not leave it half-applied");
+  // And the payload must not be touched before the try succeeds.
+  const climateAssign = fn.indexOf("climate.weather = nextWeather;");
+  const tryIdx = fn.indexOf("try {", fn.indexOf("const nextWeather"));
+  assert.ok(tryIdx > -1 && climateAssign > tryIdx,
+    "climate is swapped only after the recompute succeeded");
 });

@@ -662,3 +662,80 @@ body::before { display: none !important; }
 @media (max-width: 720px) { .dashboard-shell .help-hint { display: none; } }
 /* A white legend swatch (ward hairlines) needs an edge to be seen on paper. */
 .dashboard-shell .legend-dot { outline: 1px solid var(--line-strong); }
+
+/* ---- Haze now (19 Oct 2026) -------------------------------------------
+   Malaysia's API colours carry meaning here, so they are allowed as small
+   swatches and station discs. Motion has one job each: the station halo
+   says "this reading is Unhealthy or worse", the moving dashes say "air is
+   arriving from this direction". Reduced motion keeps both still. */
+.hz-st-icon { background: none; border: 0; }
+.hz-st {
+  position: relative; display: grid; place-items: center; width: 40px; height: 40px;
+  border-radius: 50%; background: var(--hz); color: #111; border: 2px solid #fff;
+  font: 700 13px/1 var(--font-sans);
+}
+.hz-st[data-level="3"], .hz-st[data-level="4"] { color: #fff; }
+.hz-st::after {
+  content: ""; position: absolute; inset: -2px; border-radius: 50%;
+  border: 2px solid var(--hz); opacity: 0; pointer-events: none;
+}
+.hz-st[data-level="2"]::after, .hz-st[data-level="3"]::after, .hz-st[data-level="4"]::after {
+  animation: hz-breathe 3.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+@keyframes hz-breathe { 0% { transform: scale(1); opacity: 0.85; } 100% { transform: scale(2.4); opacity: 0; } }
+.hz-st-name {
+  position: absolute; left: 50%; top: 44px; transform: translateX(-50%); white-space: nowrap;
+  font: 600 11px/1.2 var(--font-sans); color: #fff; text-shadow: 0 0 3px #000, 0 0 2px #000;
+}
+.haze-flow { animation: hz-flow 1.6s linear infinite; }
+@keyframes hz-flow { to { stroke-dashoffset: -32; } }
+@media (prefers-reduced-motion: reduce) {
+  .hz-st::after, .haze-flow { animation: none !important; }
+  .hz-st[data-level="2"]::after, .hz-st[data-level="3"]::after, .hz-st[data-level="4"]::after { opacity: 0.6; transform: scale(1.5); }
+}
+
+.dashboard-shell .haze-card {
+  position: absolute; top: 8px; left: 8px; z-index: 900; width: min(300px, calc(100% - 16px));
+  max-height: calc(100% - 56px); overflow-y: auto; box-sizing: border-box;
+  background: var(--bg); color: var(--ink); border: 1px solid var(--line-strong);
+  border-top: 4px solid var(--hz); padding: 10px 12px;
+}
+.dashboard-shell .haze-card[hidden] { display: none; }
+.dashboard-shell .haze-card .hc-head { display: flex; justify-content: space-between; align-items: center; }
+.dashboard-shell .haze-card .hc-kicker, .dashboard-shell .haze-card .hc-label { font-size: var(--t-micro) !important; text-transform: uppercase; letter-spacing: 0.06em; color: var(--soft); font-weight: 700; }
+.dashboard-shell .haze-card .hc-close { min-width: 44px; min-height: 44px; margin: -12px -12px -12px 0; background: none !important; border: 0 !important; color: var(--ink); cursor: pointer; }
+.dashboard-shell .haze-card .hc-reading { display: flex; align-items: baseline; gap: 8px; margin: 2px 0 4px; }
+.dashboard-shell .haze-card .hc-swatch { width: 12px; height: 12px; background: var(--hz); align-self: center; }
+.dashboard-shell .haze-card .hc-api { font-size: var(--t-display) !important; line-height: 1 !important; }
+.dashboard-shell .haze-card .hc-band { font-weight: 700; }
+.dashboard-shell .haze-card .hc-source, .dashboard-shell .haze-card .hc-others { font-size: var(--t-micro) !important; color: var(--soft); }
+.dashboard-shell .haze-card .hc-source a { color: var(--cyan); }
+.dashboard-shell .haze-card .hc-group { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 6px; }
+.dashboard-shell .haze-card ul { margin: 4px 0 0; padding-left: 16px; }
+.dashboard-shell .haze-card li { margin: 2px 0; }
+.dashboard-shell .haze-card summary { cursor: pointer; min-height: 32px; display: list-item; }
+.dashboard-shell .haze-card .hc-scale { display: grid; grid-template-columns: repeat(5, 1fr); margin-top: 8px; }
+.dashboard-shell .haze-card .hc-scale span { border-top: 4px solid var(--hz); font-size: var(--t-micro) !important; color: var(--soft); padding-top: 2px; text-align: right; opacity: 0.55; }
+.dashboard-shell .haze-card .hc-scale span[data-on="true"] { opacity: 1; color: var(--ink); font-weight: 700; }
+@media (max-width: 720px) { .dashboard-shell .haze-card { width: calc(100% - 16px); max-height: 52%; } }
+
+/* The verdict is the one sentence that must read whole; the headline crawl
+   gives way to it on the one-line command bar. */
+@media (min-width: 1041px) {
+  .dashboard-shell .ticker-bar { flex: 0 1 24vw; }
+  .dashboard-shell .verdict-strip { flex: 1 0 auto; }
+}
+/* Phone: the haze card opens to one reading line so the map stays visible;
+   the advice is one tap away. */
+.dashboard-shell .haze-card .hc-more > summary { cursor: pointer; min-height: 44px; display: list-item; font-weight: 700; }
+@media (min-width: 721px) { .dashboard-shell .haze-card .hc-more > summary { display: none; } }
+@media (min-width: 1400px) {
+  .dashboard-shell { grid-template-columns: auto minmax(0, 1fr) minmax(0, 18vw); }
+}
+/* Below 1400 the verb and four chips do not fit one 34px line; the chips
+   drop to a second line rather than cutting the sentence off. */
+@media (min-width: 1041px) and (max-width: 1399px) {
+  .dashboard-shell .verdict-strip { flex-wrap: wrap; max-height: none; row-gap: 2px; padding-top: 4px; padding-bottom: 4px; }
+  .dashboard-shell .verdict-verb { flex: 1 1 100%; white-space: normal; }
+}
+.tray-tablist { display: contents; }

@@ -25,6 +25,7 @@ const { morningBrief } = await import(`./morning-brief.js?v=${encodeURIComponent
 const { classifyRainRegime, summariseOpenMeteo, RAIN_REGIME_OPEN_METEO_URL } = await import(`./rain-regime.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { gridUrl, backTrajectory, firesAlongPath, originSector } = await import(`./air-path.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { summariseTide, TIDE_URL } = await import(`./tide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { hazeState, hazeAdvice, apiBand, API_BANDS, inflowPath } = await import(`./haze.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { anchorHourIndex } = await import(`./open-meteo-anchor.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { windowComplete, seriesContinuous, observationWindow, metricFreshness } = await import(`./climate-validate.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupBuildings3D } = await import(`./buildings-3d.js?v=${encodeURIComponent(__ASSET_VER__)}`);
@@ -1497,7 +1498,7 @@ function renderMap(payload) {
     });
     const lat = item.polygons[0].reduce((s,p)=>s+p[1],0)/item.polygons[0].length;
     const lon = item.polygons[0].reduce((s,p)=>s+p[0],0)/item.polygons[0].length;
-    window.L.marker([lat,lon], { icon:window.L.divIcon({ className:"municipal-label", html:`<span>${item.code}</span>` }) }).addTo(state.labelLayerGroup);
+    window.L.marker([lat,lon], { icon:window.L.divIcon({ className:"municipal-label", html:`<span>${escapeHtml(item.code)}</span>` }), interactive:false, keyboard:false }).addTo(state.labelLayerGroup);
   });
 
   if (payload.jurisdictions.river) {
@@ -1516,7 +1517,7 @@ function renderMap(payload) {
       if (!f.latitude || !f.longitude) return;
       const color = f.type === "arrival" ? "#7fcfa6" : f.type === "departure" ? "#ffaa00" : "#00f3ff";
       window.L.circleMarker([f.latitude, f.longitude], { radius: 3, fillColor: color, fillOpacity: 1, color, weight: 1 })
-        .bindTooltip(`${f.callsign} | ${f.type} | ${f.distanceKm}km`, { className: "marker-tooltip" })
+        .bindTooltip(`${escapeHtml(f.callsign)} | ${escapeHtml(f.type)} | ${escapeHtml(f.distanceKm)}km`, { className: "marker-tooltip" })
         .addTo(state.markerLayerGroup);
     });
   }
@@ -1554,7 +1555,7 @@ function renderMap(payload) {
       : 9;
     const pulseHtml = `<div class="pulse-marker" data-station="${s.id}" style="--pulse-period:${period}s;color:${color};opacity:${isLive ? 0.9 : 0.45}"></div>`;
     const pulseIcon = window.L.divIcon({ className: "", html: pulseHtml, iconSize: [5, 5], iconAnchor: [2.5, 2.5] });
-    const pulse = window.L.marker([s.lat, s.lon], { icon: pulseIcon, interactive: false, zIndexOffset: -100 }).addTo(state.markerLayerGroup);
+    const pulse = window.L.marker([s.lat, s.lon], { icon: pulseIcon, interactive: false, keyboard: false, zIndexOffset: -100 }).addTo(state.markerLayerGroup);
     state.pulseMarkerEls.set(s.id, { lat: s.lat, lon: s.lon, marker: pulse });
     const catchmentLine = hasCatchment
       ? `<br><span style="color:${color}">Connected reach: ${s.catchment.segmentCount} seg · ${s.catchment.totalLengthKm} km · snap ${s.catchment.snapDistanceKm} km</span><br><em>Click for water-path context</em>`
@@ -1844,6 +1845,7 @@ function renderUrbanLayerToggle() {
     btn.classList.toggle("active", layer.active);
 
     if (layer.type === "tile") { await toggleWeatherTiles(layer, btn); return; }
+    if (layer.type === "haze") { state.hazeUserChoice = true; await toggleHazeNow(layer, btn); return; }
     if (layer.type === "fires" || layer.type === "airpath") { await toggleHazeLayer(layer, btn); return; }
 
     // AlphaEarth raster overlays — route by layer id.
@@ -2313,7 +2315,7 @@ function composeTodayBrief(payload) {
     stretched: "Pressure building",
   };
   const postureLabel = postureHuman[postureRaw] || postureRaw;
-  segments.push(`<span class="brief-posture" data-posture="${postureRaw}">${postureLabel}</span>`);
+  segments.push(`<span class="brief-posture" data-posture="${escapeHtml(postureRaw)}">${escapeHtml(postureLabel)}</span>`);
 
   const metCount = payload?.metWarnings?.activeCount || 0;
   if (metCount > 0) {
@@ -2326,7 +2328,7 @@ function composeTodayBrief(payload) {
   if (hydroBand && !["normal", "reference"].includes(hydroBand)) {
     const worst = payload?.infobanjir?.stations?.[0];
     const bandWord = { alert: "rising", warning: "high", danger: "critical" }[hydroBand] || hydroBand;
-    segments.push(`<span class="brief-flag" data-tone="warn">River ${bandWord}${worst?.name ? " at " + worst.name : ""}</span>`);
+    segments.push(`<span class="brief-flag" data-tone="warn">River ${bandWord}${worst?.name ? " at " + escapeHtml(worst.name) : ""}</span>`);
   }
 
   const apims = payload?.apims?.worst;
@@ -2746,7 +2748,7 @@ function renderAirportStats(airport) {
     </div>
     <div class="flight-list">${fl.slice(0,6).map(f=>`
       <div class="flight-row ${f.type}">
-        <span class="flight-callsign">${f.callsign}</span>
+        <span class="flight-callsign">${escapeHtml(f.callsign)}</span>
         <span class="flight-type">${f.type==="arrival"?"IN":"OUT"}</span>
         <span class="flight-dist">${f.distanceKm}km</span>
         ${f.etaMinutes?`<span class="flight-eta">${f.etaMinutes}min</span>`:''}
@@ -2835,7 +2837,7 @@ function renderEconBand(exchange) {
   el.innerHTML = [
     ...fxPairs.map(p => `
       <div class="econ-pill">
-        <span class="econ-pill-value">${p.code} ${p.rate}</span>
+        <span class="econ-pill-value">${escapeHtml(p.code)} ${escapeHtml(p.rate)}</span>
         <span class="econ-pill-label">per 1 MYR</span>
       </div>`),
     ...macro.map(m => `
@@ -3402,7 +3404,7 @@ function renderMppLedger(ledger) {
     return `<div class="official-pulse-block">${head}<p class="pulse-note">${t("ledgerMissing")} <a href="https://mpp.sarawak.gov.my/" target="_blank" rel="noopener noreferrer">mpp.sarawak.gov.my ↗</a></p></div>`;
   }
   const stat = (part, value, label) => part && part.status !== "unavailable" && value != null
-    ? `<a class="pulse-stat" href="${escapeHtml(part.url)}" target="_blank" rel="noopener noreferrer"><strong>${value}</strong><span>${label}</span></a>` : "";
+    ? `<a class="pulse-stat" href="${safeUrl(part.url)}" target="_blank" rel="noopener noreferrer"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></a>` : "";
   const c = ledger.charter, q = c?.quarters?.find((x) => x.label === c.latestQuarter);
   const tn = ledger.tenders, f = ledger.food, r = ledger.refuse, pk = ledger.parks, m = ledger.markets;
   const stats = [
@@ -4101,7 +4103,7 @@ function renderWardBrief(wardCode, payload) {
   const lang = state.lang || "en";
   const hydroNoneText = lang === "ms" ? "tiada dalam wad" : lang === "zh" ? "选区内无监测站" : "none in ward";
   const hydroSummary = hydroNear.length
-    ? hydroNear.slice(0, 2).map(s => `${escapeHtml(s.name)} ${s.waterLevelM != null ? s.waterLevelM + "m" : ""} (${s.bandLabel || s.band})`).join(" · ")
+    ? hydroNear.slice(0, 2).map(s => `${escapeHtml(s.name)} ${s.waterLevelM != null ? escapeHtml(s.waterLevelM) + "m" : ""} (${escapeHtml(s.bandLabel || s.band)})`).join(" · ")
     : hydroNoneText;
 
   // Flood-zone overlap (centroid in ward polygon).
@@ -4331,8 +4333,10 @@ function renderVerdict(payload) {
   const met = payload.metWarnings || {};
   const ib = payload.infobanjir || {};
   const health = dataHealth(payload, state.scope);
-  const aqiMetric = (payload.metrics || []).find(m => m.id === "aqi");
-  const aqi = typeof aqiMetric?.value === "number" && Number.isFinite(aqiMetric.value) ? Math.round(aqiMetric.value) : null;
+  // Air comes from hazeState: NREB official first, the model only as a fallback.
+  const haze = hazeState(payload);
+  const aqi = haze && Number.isFinite(haze.api) ? Math.round(haze.api) : null;
+  const hazeLevel = haze?.band?.level ?? 0;
 
   // Strip band for human eyes: only prepare/act go red. "watch" is amber —
   // painting watch as alert made "Keep watching" look like a flood emergency.
@@ -4341,13 +4345,24 @@ function renderVerdict(payload) {
   const floodWatch = fa.band === "watch";
   const airBad = aqi != null && aqi > 100;
   const weatherUnknown = warningHealth(met).uncertain;
-  const band = floodAct ? "alert" : (health.uncertain || weatherUnknown || floodPrep || floodWatch || met.activeCount > 0 || airBad) ? "watch" : "normal";
+  const band = floodAct || hazeLevel >= 3 ? "alert" : (health.uncertain || weatherUnknown || floodPrep || floodWatch || met.activeCount > 0 || airBad) ? "watch" : "normal";
   el.dataset.band = band;
 
   let verb = state.lang === "ms" ? (fa.verbBm || fa.verb) : state.lang === "zh" ? (fa.verbZh || fa.verb) : fa.verb;
   // When flood is calm but weather/air drives the amber strip, name that driver
   // in plain words — never leave a soft flood verb under a hard red chip set.
-  if (!floodAct && !floodPrep && band === "watch") {
+  // Unhealthy official air outranks a weather warning: it changes what
+  // people do today, everywhere in the city.
+  const hazeVerb = airBad && haze?.tier === "official"
+    ? (() => { const a = hazeAdvice(haze.band, state.lang); const where = haze.station;
+        // Short enough for the one-line desktop command bar; source sits in the card.
+        return state.lang === "ms" ? `Jerebu: udara ${a.label.toLowerCase()} di ${where}, IPU ${aqi}`
+          : state.lang === "zh" ? `烟霾：${where}空气${a.label}，API ${aqi}`
+          : `Haze: ${a.label.toLowerCase()} air in ${where}, API ${aqi}`; })()
+    : null;
+  if (!floodAct && !floodPrep && hazeVerb) {
+    verb = hazeVerb;
+  } else if (!floodAct && !floodPrep && band === "watch") {
     verb = !weatherUnknown && met.activeCount > 0
       ? (state.lang === "ms" ? `Pantau — ${met.activeCount} amaran cuaca` : state.lang === "zh" ? `留意 — ${met.activeCount} 则天气警报` : `Keep watching — ${met.activeCount} weather warning${met.activeCount > 1 ? "s" : ""}`)
       : airBad ? (state.lang === "ms" ? `Pantau — udara AQI ${aqi}` : state.lang === "zh" ? `留意 — 空气 AQI ${aqi}` : `Keep watching — air AQI ${aqi}`) : verb;
@@ -4361,7 +4376,8 @@ function renderVerdict(payload) {
   // t("weatherUnknown") — which is also the verb whenever weatherUnknown is
   // true — so the same sentence appeared twice, 30px apart, in a bordered box.
   chips.push(`<span class="verdict-chip" data-tone="${!weatherUnknown && met.activeCount > 0 ? "alert" : "warn"}">${weatherUnknown ? t("weatherUnverified") : met.activeCount > 0 ? met.activeCount + " · " + t("weatherWarnings") : t("weatherClear")}</span>`);
-  if (aqi != null) chips.push(`<span class="verdict-chip" data-tone="${aqi > 150 ? "alert" : aqi > 100 ? "warn" : "ok"}" title="Open-Meteo air quality index">AQI · ${aqi}</span>`);
+  // Name the scale and the source: an official API is not a modelled AQI.
+  if (aqi != null) chips.push(`<span class="verdict-chip" data-tone="${aqi > 150 ? "alert" : aqi > 100 ? "warn" : "ok"}" title="${escapeHtml(haze.tier === "official" ? `${haze.source} Air Pollutant Index` : "Open-Meteo modelled air quality index")}">${haze.tier === "official" ? "API" : "AQI (model)"} · ${aqi}</span>`);
   const ff = payload.floodForecast;
   if (ff?.todayCms != null && ff?.peakCms != null) {
     const rising = ff.peakCms > ff.todayCms * 1.15;
@@ -4831,7 +4847,13 @@ function renderDashboard(payload) {
   renderFloodMatrix(payload);
   renderCitizenReports(payload);
   // Decision-relevance order, not payload order: water first, then air, heat, context.
-  const metricOrder = ["rain6h", "flood-watch", "aqi", "pm25", "heat", "airport"];
+  // The official API card replaces the modelled AQI whenever NREB reports, and
+  // leads the strip while the city's air is Unhealthy or worse.
+  const hz = hazeState(payload);
+  const airId = payload.metrics.some(m => m.id === "nreb-api") ? "nreb-api" : "aqi";
+  const metricOrder = hz?.tier === "official" && hz.api > 100
+    ? [airId, "pm25", "rain6h", "flood-watch", "heat", "airport"]
+    : ["rain6h", "flood-watch", airId, "pm25", "heat", "airport"];
   const curated = metricOrder.map(id => payload.metrics.find(m => m.id === id)).filter(Boolean);
   renderMetrics(curated.length >= 4 ? curated : payload.metrics.slice(0, 6));
   renderMap(payload);
@@ -4847,6 +4869,7 @@ function renderDashboard(payload) {
   renderWaterSupply(payload);
   renderRainRegime(payload);
   renderHazeSource(payload);
+  autoHazeLayer(payload);
   renderTide(payload);
   renderCoverage(payload);
   renderMppServicesDirectory();
@@ -4865,9 +4888,9 @@ function renderDashboard(payload) {
 
   // Signals
   const signalHtml = payload.metrics.slice(0,4).map(s=>`
-    <div class="signal-card"><strong>${s.id.toUpperCase()} // ${s.label.toUpperCase()}</strong>
-    <div class="val">${num(s.value,1)}<sup>${s.unit}</sup></div>
-    <div class="meta">${s.context||''}</div></div>`).join("");
+    <div class="signal-card"><strong>${escapeHtml(String(s.id).toUpperCase())} // ${escapeHtml(String(s.label).toUpperCase())}</strong>
+    <div class="val">${num(s.value,1)}<sup>${escapeHtml(s.unit || "")}</sup></div>
+    <div class="meta">${escapeHtml(s.context || "")}</div></div>`).join("");
 
   // Ground-truth additions: Flood Watch (JPS Infobanjir) + APIMS ground AQ.
   const ib = payload.infobanjir;
@@ -5223,8 +5246,14 @@ function loadCesium() {
     const css = document.createElement("link");
     css.rel = "stylesheet";
     css.href = `${CESIUM_BASE_URL_CDN}Widgets/widgets.css`;
+    // Subresource integrity: a swapped CDN file is refused, not executed.
+    // Update both hashes together with CESIUM_VERSION.
+    css.integrity = "sha384-ghEeMdcWWzRv/BPeUcX835vcKDGrxvROXisl/Btpv3GeekBUXTSPVcFJpI1Tcrgp";
+    css.crossOrigin = "anonymous";
     document.head.appendChild(css);
     const script = document.createElement("script");
+    script.integrity = "sha384-q9nNk8suPYjCO59e/4iaSYbUEDnj0FxTd2QoWXfFeF0+L5FSerVuCAjKXM/EYiD9";
+    script.crossOrigin = "anonymous";
     script.src = `${CESIUM_BASE_URL_CDN}Cesium.js`;
     script.onload = () => resolve(window.Cesium);
     script.onerror = (e) => reject(new Error("Cesium CDN failed: " + (e?.message || e)));
@@ -5932,6 +5961,100 @@ async function toggleHazeLayer(layer, btn) {
     console.warn("haze layer unavailable", layer.id, err);
     layer.active = false; btn.classList.remove("active"); btn.title = "Unavailable right now — try again later";
   }
+}
+
+// --- Haze now: the city-frame haze picture -----------------------------------
+// Official station readings in Malaysia's API colours (Unhealthy or worse
+// breathe slowly), the last 18 h of the air's path drawn as a moving line
+// flowing into Kuching, and one card that says what to do. It never widens
+// the map: this is the Kuching frame, not a regional or global view.
+function hazeMarker(s, ui) {
+  const b = s.band;
+  const html = `<span class="hz-st" data-level="${b.level}" style="--hz:${b.color}"><b>${s.api}</b></span><span class="hz-st-name">${escapeHtml(s.name.replace(" (MCAQM)", ""))}</span>`;
+  return window.L.marker(s.coords, {
+    icon: window.L.divIcon({ className: "hz-st-icon", html, iconSize: [40, 40], iconAnchor: [20, 20] }),
+    keyboard: false, interactive: true, title: `NREB ${s.name}: API ${s.api}`,
+  }).bindTooltip(`<strong>NREB · ${escapeHtml(s.name)}</strong><br>API ${s.api} · ${escapeHtml(hazeAdvice(b, state.lang).label)}<br>${escapeHtml(ui.approx)}`, { className: "marker-tooltip", direction: "top" });
+}
+
+async function toggleHazeNow(layer, btn) {
+  const existing = state.urbanLayerGroups.get(layer.id);
+  if (existing) { state.map.removeLayer(existing); state.urbanLayerGroups.delete(layer.id); }
+  const card = document.getElementById("hazeCard");
+  if (!layer.active) { if (card) card.hidden = true; return; }
+  const haze = hazeState(state.payload);
+  if (!haze) {
+    layer.active = false; btn?.classList.remove("active");
+    if (btn) btn.title = "No air reading available right now";
+    return;
+  }
+  const ui = hazeAdvice(haze.band || API_BANDS[0], state.lang).ui;
+  state.hazeRenderer = state.hazeRenderer || window.L.svg({ padding: 0.5 });
+  const parts = haze.local.filter((s) => s.coords && s.band).map((s) => hazeMarker(s, ui));
+  const group = window.L.layerGroup(parts).addTo(state.map);
+  state.urbanLayerGroups.set(layer.id, group);
+  renderHazeCard(haze);
+  try {
+    const { path } = await computeAirPath();
+    const flow = inflowPath(path, 18).map((p) => [p.lat, p.lon]);
+    if (!layer.active || flow.length < 2) return;
+    const color = haze.band?.color || "#d4a900";
+    window.L.polyline(flow, { renderer: state.hazeRenderer, color, weight: 14, opacity: 0.18, lineCap: "round", interactive: false, className: "haze-flow-bed" }).addTo(group);
+    window.L.polyline(flow, { renderer: state.hazeRenderer, color, weight: 3, opacity: 0.95, lineCap: "round", dashArray: "2 14", interactive: false, className: "haze-flow" })
+      .bindTooltip(escapeHtml(ui.flow), { className: "marker-tooltip", sticky: true }).addTo(group);
+  } catch { /* the stations and the card still stand without the wind model */ }
+}
+
+function renderHazeCard(haze) {
+  const frame = document.querySelector(".map-frame");
+  if (!frame || !haze) return;
+  let card = document.getElementById("hazeCard");
+  if (!card) {
+    card = document.createElement("aside");
+    card.id = "hazeCard";
+    card.className = "haze-card";
+    card.setAttribute("aria-live", "polite");
+    frame.appendChild(card);
+  }
+  const a = hazeAdvice(haze.band, state.lang);
+  if (!a) { card.hidden = true; return; }
+  const ui = a.ui;
+  const when = haze.takenAt ? ` · ${escapeHtml(haze.takenAt)}` : "";
+  const others = haze.local.filter((s) => s.name !== "KUCHING").map((s) => `${escapeHtml(s.name.replace(" (MCAQM)", ""))} <strong>${s.api}</strong>`).join(" · ");
+  card.hidden = false;
+  card.dataset.level = haze.band.level;
+  card.style.setProperty("--hz", haze.band.color);
+  card.innerHTML = `
+    <div class="hc-head"><span class="hc-kicker">${escapeHtml(ui.title)}</span><button type="button" class="hc-close" aria-label="${escapeHtml(ui.hide)}">✕</button></div>
+    <div class="hc-reading"><span class="hc-swatch" aria-hidden="true"></span><strong class="hc-api">${haze.api}</strong><span class="hc-band">${escapeHtml(a.label)} · ${escapeHtml(haze.station)}</span></div>
+    <div class="hc-source">${escapeHtml(haze.tier === "official" ? `${ui.official} · ${haze.source}` : ui.model)}${when}${haze.url ? ` · <a href="${safeUrl(haze.url)}" target="_blank" rel="noopener noreferrer">NREB ↗</a>` : ""}</div>
+    ${others ? `<div class="hc-others">${others}</div>` : ""}
+    <details class="hc-more"${matchMedia("(max-width: 720px)").matches ? "" : " open"}><summary>${escapeHtml(a.publicHead)}</summary>
+    <div class="hc-group"><span class="hc-label">${escapeHtml(a.publicHead)}</span><ul>${a.public.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></div>
+    ${a.council.length ? `<details class="hc-group"><summary class="hc-label">${escapeHtml(a.councilHead)}</summary><ul>${a.council.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
+    <div class="hc-scale" aria-label="${escapeHtml(ui.scale)}">${API_BANDS.map((b) => `<span style="--hz:${b.color}" data-on="${b.level === haze.band.level}">${b.max === Infinity ? "300+" : b.max}</span>`).join("")}</div>
+    </details>`;
+  card.querySelector(".hc-close").addEventListener("click", () => {
+    card.hidden = true;
+    const layer = URBAN_LAYERS.find((l) => l.id === "haze_now");
+    const btn = document.querySelector('#urbanLayerToggle button[data-id="haze_now"]');
+    if (layer?.active) { layer.active = false; btn?.classList.remove("active"); state.hazeUserChoice = true; toggleHazeNow(layer, btn); }
+  });
+}
+
+// Unhealthy official air turns the haze layer on by itself, once; after the
+// operator chooses, the board stops deciding for them.
+function autoHazeLayer(payload) {
+  if (state.hazeUserChoice || !state.map) return;
+  const haze = hazeState(payload);
+  const layer = URBAN_LAYERS.find((l) => l.id === "haze_now");
+  if (!layer) return;
+  const want = haze?.tier === "official" && haze.api > 100;
+  const btn = document.querySelector('#urbanLayerToggle button[data-id="haze_now"]');
+  if (want === layer.active) { if (want) { renderHazeCard(haze); } return; }
+  layer.active = want;
+  btn?.classList.toggle("active", want);
+  toggleHazeNow(layer, btn);
 }
 
 function renderHazeSource(payload) {

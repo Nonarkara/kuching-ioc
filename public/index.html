@@ -3,24 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/png" href="./assets/brand/app-icon-192.png?v=354dc26b12e9-025705" />
-    <link rel="apple-touch-icon" href="./assets/brand/apple-touch-icon.png?v=354dc26b12e9-025705" />
+    <link rel="icon" type="image/png" href="./assets/brand/app-icon-192.png?v=9c3c6623ebca-033142" />
+    <link rel="apple-touch-icon" href="./assets/brand/apple-touch-icon.png?v=9c3c6623ebca-033142" />
     <link rel="manifest" href="./manifest.json" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Kuching IOC" />
-    <link rel="mask-icon" href="./favicon.svg?v=354dc26b12e9-025705" color="#1f4e79" />
+    <link rel="mask-icon" href="./favicon.svg?v=9c3c6623ebca-033142" color="#1f4e79" />
     <meta name="theme-color" content="#f6f5f2" />
     <title>Greater Kuching IOC</title>
     <meta name="description" content="Greater Kuching Intelligent Operation Center — a municipal command surface for Secretary Daniel Goh, MPP." />
     <!-- Typography per 25 Sep 2026 decision: Helvetica + Georgia system stacks.
          No Google Fonts request — no third-party font leak, tokens in styles.css. -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="" />
-    <link rel="stylesheet" href="./styles.css?v=354dc26b12e9-025705" />
-    <link rel="stylesheet" href="./brand.css?v=354dc26b12e9-025705" />
-    <link rel="stylesheet" href="./reading.css?v=354dc26b12e9-025705" />
+    <link rel="stylesheet" href="./styles.css?v=9c3c6623ebca-033142" />
+    <link rel="stylesheet" href="./brand.css?v=9c3c6623ebca-033142" />
+    <link rel="stylesheet" href="./reading.css?v=9c3c6623ebca-033142" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin=""></script>
-    <script>window.__IOC_BOOT__ = {"version":"0.2.0","assetVersion":"354dc26b12e9-025705","builtAt":"2026-10-19T02:58:11.302Z","deploymentMode":"pages-static","boardLabel":"SNAPSHOT BOARD","pagesUrl":"https://kuching.nonarkara.org/","liveUrl":"https://kuching.nonarkara.org/"};</script>
+    <script>window.__IOC_BOOT__ = {"version":"0.2.0","assetVersion":"9c3c6623ebca-033142","builtAt":null,"deploymentMode":"pages-static","boardLabel":"SNAPSHOT BOARD","pagesUrl":"https://kuching.nonarkara.org/","liveUrl":"https://kuching.nonarkara.org/"};</script>
   </head>
   <body>
     <div class="dashboard-shell">
@@ -223,13 +223,15 @@
         </section>
 
           <section class="deep-tray" aria-label="Outlook, growth, localities and sources">
-            <div class="tray-tabs" role="tablist">
+            <div class="tray-tabs">
+              <div class="tray-tablist" role="tablist">
               <button type="button" role="tab" class="tray-tab" data-pane="outlook" aria-selected="true" data-i18n="trayOutlook">Outlook · 14 days</button>
               <button type="button" role="tab" class="tray-tab" data-pane="growth" aria-selected="false" data-i18n="trayGrowth">Growth vs drains</button>
               <button type="button" role="tab" class="tray-tab" data-pane="localities" aria-selected="false" data-i18n="trayLocalities">525 localities</button>
               <button type="button" role="tab" class="tray-tab" data-pane="economy" aria-selected="false" data-i18n="trayEconomy">Economy · pulse</button>
               <button type="button" role="tab" class="tray-tab" data-pane="coverage" aria-selected="false" data-i18n="trayCoverage">Who covers</button>
               <button type="button" role="tab" class="tray-tab" data-pane="sources" aria-selected="false" data-i18n="traySources">Sources</button>
+              </div>
               <button type="button" id="trayCollapseBtn" class="tray-collapse-btn" aria-label="Toggle evidence tray" title="Collapse or expand evidence tray">
                 <span class="collapse-icon">▾</span>
               </button>
@@ -466,8 +468,8 @@
         </footer>
       </div>
     </div>
-    <script src="./app.js?v=354dc26b12e9-025705" type="module"></script>
-    <script src="./web-app.js?v=354dc26b12e9-025705" type="module"></script>
+    <script src="./app.js?v=9c3c6623ebca-033142" type="module"></script>
+    <script src="./web-app.js?v=9c3c6623ebca-033142" type="module"></script>
 
     <!-- Visitor beacon: off unless VISITOR_BEACON_URL is set at build time.
          When set, ipwho.is sees the visitor IP and the operator's sheet gets

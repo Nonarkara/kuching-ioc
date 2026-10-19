@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -73,7 +74,8 @@ export function resolveAssetVersion({ env = process.env, builtAt = new Date().to
 }
 
 function escapeScriptJson(value) {
-  return JSON.stringify(value).replace(/</g, "\\u003c");
+  // U+2028/2029 are legal in JSON but end a line in older JS parsers.
+  return JSON.stringify(value).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
 }
 
 export async function renderIndexHtml({
@@ -107,12 +109,59 @@ export async function renderIndexHtml({
 
   return template
     .replaceAll("__ASSET_VERSION__", resolvedAssetVersion)
-    .replace("__VISITOR_BEACON_URL__", escapeScriptJson(visitorBeaconUrl))
-    .replace("__IOC_BOOT_JSON__", escapeScriptJson(bootMeta));
+    // Function replacements: a "$&" or "$'" in an env value must stay literal.
+    .replace("__VISITOR_BEACON_URL__", () => escapeScriptJson(visitorBeaconUrl))
+    .replace("__IOC_BOOT_JSON__", () => escapeScriptJson(bootMeta));
+}
+
+// Every origin the board's own code loads from, by directive. Anything not
+// listed is refused by the browser, so an injected script or a swapped
+// third-party asset cannot run or phone home.
+const CSP_SOURCES = {
+  // Cesium compiles WebAssembly (draco/basis decoders): wasm only, not eval.
+  script: ["'self'", "'wasm-unsafe-eval'", "https://unpkg.com", "https://cdn.jsdelivr.net"],
+  connect: ["'self'", "https://api.open-meteo.com", "https://air-quality-api.open-meteo.com", "https://marine-api.open-meteo.com",
+    "https://opensky-network.org", "https://open.er-api.com", "https://api.rainviewer.com", "https://tilecache.rainviewer.com",
+    "https://cdn.jsdelivr.net", "https://server.arcgisonline.com", "https://services.arcgisonline.com",
+    "https://gibs.earthdata.nasa.gov", "https://earthquake.usgs.gov", "https://ipwho.is", "https://script.google.com",
+    "https://script.googleusercontent.com"],
+};
+
+// Hash each inline <script> that the browser executes. JSON blocks are data,
+// so CSP does not apply to them.
+export function inlineScriptHashes(html) {
+  const hashes = [];
+  for (const [, attrs, body] of html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g)) {
+    if (/type="(?!module|text\/javascript)/.test(attrs)) continue;
+    hashes.push(`'sha256-${createHash("sha256").update(body, "utf8").digest("base64")}'`);
+  }
+  return hashes;
+}
+
+export function contentSecurityPolicy(html) {
+  return [
+    "default-src 'self'",
+    `script-src ${[...CSP_SOURCES.script, ...inlineScriptHashes(html)].join(" ")}`,
+    // Cesium spawns its workers from blob: URLs built from the CDN build.
+    "worker-src 'self' blob: https://cdn.jsdelivr.net",
+    // Leaflet, Cesium and our own renderers set element styles at runtime.
+    "style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data: https://cdn.jsdelivr.net",
+    `connect-src ${CSP_SOURCES.connect.join(" ")}`,
+    "frame-src 'none'", "object-src 'none'", "base-uri 'self'", "frame-ancestors 'none'", "form-action 'self'",
+    "upgrade-insecure-requests",
+  ].join("; ");
 }
 
 export async function writeRenderedIndex(options = {}) {
   const html = await renderIndexHtml(options);
   await fs.writeFile(INDEX_OUTPUT_PATH, html);
+  // The inline boot script changes every build, so its hash is written into
+  // Cloudflare's _headers in the same step as the page it protects.
+  const headersPath = path.join(PUBLIC_DIR, "_headers");
+  const headers = await fs.readFile(headersPath, "utf8");
+  const next = headers.replace(/^  Content-Security-Policy: .*$/m, () => `  Content-Security-Policy: ${contentSecurityPolicy(html)}`);
+  if (next !== headers) await fs.writeFile(headersPath, next);
   return html;
 }

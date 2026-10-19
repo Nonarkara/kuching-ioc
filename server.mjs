@@ -8,6 +8,7 @@ import { classifyRainRegime, summariseOpenMeteo, RAIN_REGIME_OPEN_METEO_URL } fr
 import { summariseTide, TIDE_URL } from "./public/tide.js";
 import { anchorHourIndex } from "./public/open-meteo-anchor.js";
 import { windowComplete, seriesContinuous, observationWindow } from "./public/climate-validate.js";
+import { hazeState, hazeAdvice, LOCAL_STATIONS } from "./public/haze.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
@@ -2675,16 +2676,23 @@ async function loadNrebApi() {
     const rows = parsePubhtmlTable(stationHtml)
       .filter((cells) => cells.length >= 4 && /^\d+$/.test(cells[0]) && !/^station$/i.test(cells[1]) && /^\d+$/.test(cells[2]));
     if (!rows.length) return { status: "absent" };
-    const stations = rows.map((cells) => ({
-      name: cells[1],
-      api: parseInt(cells[2], 10),
-      band: cells[3] || "Unknown",
-      tone: NREB_BAND_TONE[cells[3]] || "neutral",
-    }));
+    // A published sheet is still external input: stripTags() decodes
+    // entities, so names, bands and the time stamp are checked against a
+    // narrow shape before they reach the payload.
+    const stations = rows
+      .filter((cells) => /^[A-Za-z0-9 ().'\/-]{2,40}$/.test(cells[1]))
+      .map((cells) => ({
+        name: cells[1],
+        api: parseInt(cells[2], 10),
+        band: Object.hasOwn(NREB_BAND_TONE, cells[3]) ? cells[3] : "Unknown",
+        tone: NREB_BAND_TONE[cells[3]] || "neutral",
+      }));
+    if (!stations.length) return { status: "absent" };
     const sorted = stations.slice().sort((a, b) => b.api - a.api);
     // The time sheet is a separate publication; if we can't read it, omit
     // takenAt rather than invent a stamp.
-    const takenAt = parsePubhtmlTable(timeHtml).find((cells) => cells.length >= 2 && cells[1])?.[1] || null;
+    const rawTakenAt = parsePubhtmlTable(timeHtml).find((cells) => cells.length >= 2 && cells[1])?.[1] || null;
+    const takenAt = rawTakenAt && /^[A-Za-z0-9 ,.:]{5,60}$/.test(rawTakenAt) ? rawTakenAt : null;
     return {
       status: "ready",
       takenAt,
@@ -3361,15 +3369,16 @@ function buildMapScene(jurisdictions, padawanZoning, infobanjir) {
   };
 }
 
-function buildSummary(weather, air, airport, jurisdictions, news, padawanZoning, trends, infobanjir, apims) {
+function buildSummary(weather, air, airport, jurisdictions, news, padawanZoning, trends, infobanjir, apims, nrebApi) {
   const rain6h = round(weather.nextHours.reduce((sum, hour) => sum + hour.precipitationMm, 0), 1);
   const padawan = jurisdictions.items.find((item) => item.id === "mpp");
   const conditions = [];
 
   if (rain6h >= 8) conditions.push("drainage watch");
-  // Prefer ground-truth APIMS AQI when available, fall back to Open-Meteo modelled value.
-  const groundAqi = apims?.worst?.aqi ?? null;
-  const effectiveAqi = groundAqi != null ? groundAqi : air.current.aqi;
+  // Official first: NREB's Kuching API, then DOE APIMS, then the Open-Meteo model.
+  const haze = hazeState({ nrebApi, apims, climate: { air } });
+  const groundAqi = haze?.tier === "official" ? haze.api : null;
+  const effectiveAqi = haze?.api ?? air.current.aqi;
   if (effectiveAqi >= 75) conditions.push("air-quality watch");
   if (airport.movements.totalTracked >= 6) conditions.push("airport spillover");
   if (infobanjir?.highestBand && ["alert", "warning", "danger"].includes(infobanjir.highestBand)) {
@@ -3389,8 +3398,8 @@ function buildSummary(weather, air, airport, jurisdictions, news, padawanZoning,
   const hydroLabel = infobanjir?.highestBand && infobanjir.highestBand !== "normal" && infobanjir.highestBand !== "reference"
     ? ` Sg. Sarawak basin is at ${infobanjir.highestBandLabel} — gauge crews should be on standby.`
     : "";
-  const aqiLabel = effectiveAqi >= 100
-    ? ` Haze is building (AQI ${effectiveAqi}) — schools and outdoor sites feel it first.`
+  const aqiLabel = effectiveAqi > 100
+    ? ` Haze: ${haze?.source || "air"} reads ${effectiveAqi} (${haze?.band ? hazeAdvice(haze.band).label : "Unhealthy"}) in ${haze?.station || "Kuching"} — keep sensitive groups indoors and stop open burning.`
     : effectiveAqi >= 75
       ? ` Air quality is moderate but trending — keep DOE haze trajectory in view.`
       : "";
@@ -3410,7 +3419,7 @@ function buildSummary(weather, air, airport, jurisdictions, news, padawanZoning,
   return {
     posture,
     headline: headlineMap[posture],
-    detail: `Heat index ${weather.current.apparentTemperatureC}°C · AQI ${effectiveAqi}${groundAqi != null ? " (APIMS ground)" : ""} · ${rain6h}mm rain/6h · ${airport.movements.totalTracked} aircraft · ${infobanjir?.liveCount ?? 0}/${infobanjir?.stationCount ?? 6} hydro stations · ${news.counts?.total ?? news.items.length} headlines across ${(news.languageLanes ?? []).filter(l => l.count > 0).length} languages`,
+    detail: `Heat index ${weather.current.apparentTemperatureC}°C · ${groundAqi != null ? `API ${effectiveAqi} (${haze.source})` : `AQI ${effectiveAqi} (model)`} · ${rain6h}mm rain/6h · ${airport.movements.totalTracked} aircraft · ${infobanjir?.liveCount ?? 0}/${infobanjir?.stationCount ?? 6} hydro stations · ${news.counts?.total ?? news.items.length} headlines across ${(news.languageLanes ?? []).filter(l => l.count > 0).length} languages`,
   };
 }
 
@@ -3465,14 +3474,19 @@ function buildOperations({ weather, air, airport, news, jurisdictions, padawanZo
   // Fires only when ANY Sarawak station reads Unhealthy (API 100+) or worse;
   // the detail names the worst station and the Kuching reading so the chief
   // can brief the council in one glance. Never fires on absent data.
-  if (nrebApi?.status === "ready" && Array.isArray(nrebApi.stations) && nrebApi.stations.some((s) => s.api >= 100)) {
-    const worst = nrebApi.stations.slice().sort((a, b) => b.api - a.api)[0];
+  if (nrebApi?.status === "ready" && Array.isArray(nrebApi.stations) && nrebApi.stations.some((s) => s.api > 100)) {
+    // Greater Kuching's own stations decide severity; a bad reading in Miri
+    // is context, not an instruction for MPP crews.
+    const local = nrebApi.stations.filter((s) => LOCAL_STATIONS.includes(s.name));
+    const localWorst = local.slice().sort((a, b) => b.api - a.api)[0];
+    const worst = localWorst?.api > 100 ? localWorst : nrebApi.stations.slice().sort((a, b) => b.api - a.api)[0];
     const kuching = nrebApi.kuching;
+    const advice = hazeAdvice(hazeState({ nrebApi })?.band || null);
     items.push({
-      severity: worst.api >= 200 ? "high" : "medium",
+      severity: localWorst?.api > 100 ? "high" : "medium",
       owner: "Haze Watch",
       title: `NREB API ${worst.api} (${worst.band}) — ${worst.name}`,
-      detail: `NREB Sarawak monitoring${nrebApi.takenAt ? `, ${nrebApi.takenAt}` : ""}: Kuching ${kuching ? `${kuching.api} (${kuching.band})` : "no reading"}. Suspend any open burning, stage masks for outdoor crews, defer non-essential outdoor work.`,
+      detail: `NREB Sarawak monitoring${nrebApi.takenAt ? `, ${nrebApi.takenAt}` : ""}: Kuching ${kuching ? `${kuching.api} (${kuching.band})` : "no reading"}. ${(advice?.council?.length ? advice.council : ["Suspend any open burning, stage masks for outdoor crews, defer non-essential outdoor work."]).join(" ")}`,
       humanContext: "These are the state's own gauges, not a model — sensitive groups feel this first. NREB outranks this board.",
     });
   }
@@ -4600,7 +4614,7 @@ async function buildDashboard() {
 
   const generatedAt = nowIso();
   const mapLayers = buildMapLayers();
-  const summary = buildSummary(weather, air, airport, jurisdictions, news, padawanZoning, trends, infobanjir, apims);
+  const summary = buildSummary(weather, air, airport, jurisdictions, news, padawanZoning, trends, infobanjir, apims, nrebApi);
   const mapScene = buildMapScene(jurisdictions, padawanZoning, infobanjir);
 
   return {
@@ -4888,7 +4902,9 @@ async function serveStatic(requestPath, response) {
   const cleanPath = requestPath === "/" ? "/index.html" : requestPath;
   const filePath = path.normalize(path.join(publicDir, cleanPath));
 
-  if (!filePath.startsWith(publicDir)) {
+  // Boundary check, not a string prefix: "/public-backup" starts with "/public".
+  const relative = path.relative(publicDir, filePath);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
     response.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
     response.end("Forbidden");
     return;
@@ -4913,6 +4929,11 @@ async function loadMockAuthorityLayer(layerId) {
 }
 
 const server = http.createServer(async (request, response) => {
+  // The same baseline Cloudflare Pages adds from public/_headers, so a live
+  // server bound beyond localhost is not weaker than the static site.
+  response.setHeader("x-content-type-options", "nosniff");
+  response.setHeader("x-frame-options", "DENY");
+  response.setHeader("referrer-policy", "strict-origin-when-cross-origin");
   // A malformed Host header makes this constructor throw ERR_INVALID_URL. In an
   // async callback that throw is an unhandled rejection, which terminates the
   // process — one odd request could take the whole board down. Parse the URL
@@ -4942,10 +4963,11 @@ const server = http.createServer(async (request, response) => {
       });
       response.end(JSON.stringify(payload));
     } catch (error) {
+      console.error("dashboard build failed", error);
       response.writeHead(500, { "content-type": "application/json; charset=utf-8" });
       response.end(
         JSON.stringify({
-          message: error instanceof Error ? error.message : "Unknown error",
+          message: "Dashboard build failed; see the server log.",
         }),
       );
     }
@@ -4992,7 +5014,8 @@ const server = http.createServer(async (request, response) => {
       response.end(JSON.stringify(collection));
     } catch (error) {
       response.writeHead(500, { "content-type": "application/json; charset=utf-8" });
-      response.end(JSON.stringify({ message: error instanceof Error ? error.message : "Layer fetch failed" }));
+      console.error("layer fetch failed", error);
+      response.end(JSON.stringify({ message: "Layer fetch failed" }));
     }
     return;
   }

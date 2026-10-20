@@ -45,3 +45,9 @@ What: Removed the white plane at the bottom left of the board. The News digest p
 Why: The cap and the flex rule together, not a styling accident: 330px of panel in a 554px rail left 174px of empty warm paper. Measured with a geometry probe in headless Chrome at 2560x1440, and A/B'd against the pre-fix build at five viewport sizes.
 Diff: public/app.js renderNewsIntake(); public/reading.css; public/data.js; tests/news-rail.test.mjs.
 Tags: layout · data-honesty · measurement · regression-test
+
+Date: 2026-10-20
+What: Stopped the left column eating its own height. The News digest rendered fourteen headlines into a zero-height box on any laptop, because the brief strip was `flex: 0 0 auto` and refused to yield.
+Why: flex-shrink: 0 on a content-sized block in a fixed-height column is a claim that the column is always tall enough. At 1440x900 the brief took 736px of an 813px column, the insights bar 69px, and the rail computed to 0px — with no page scroll that would ever reach it.
+Diff: public/reading.css (.col-now .brief-strip / .col-now .news-rail); tests/news-rail.test.mjs.
+Tags: layout · flex · measurement · regression-test

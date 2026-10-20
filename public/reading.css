@@ -850,3 +850,32 @@ body::before { display: none !important; }
 .dashboard-shell .news-intake-grid,
 .dashboard-shell .news-intake-note { flex: 0 0 auto; }
 .dashboard-shell .news-intake-list { flex: 0 0 auto; }
+
+/* --- Left column: the brief yields, the rail gets a floor --------------------
+   Measured 20 Oct 2026. The left column is a fixed-height flex stack —
+   brief → insights → news — and .brief-strip was content-sized with
+   `flex: 0 0 auto`, so flex-shrink: 0 meant it could not yield. At 1440x900
+   it took 736px of an 813px column, the insights bar took 69px, and
+   .news-rail computed to ZERO height: fourteen real headlines in the DOM
+   with no visible window at all, and no page scroll to reach them.
+
+   This is the wasted space in the left bar. It is vertical, not horizontal:
+   across 1100→2560px the rail is 250-340px wide and 92% full, so there is no
+   half-width to reclaim, and narrowing it would wrap the brief taller and
+   starve the rail further.
+
+   Let the brief shrink and scroll inside itself, and give the rail a real
+   floor so it is always operable. 40% basis: with room to spare the rail
+   takes 40% of the column, and when there is not, the brief absorbs the
+   deficit instead of the rail disappearing. */
+.dashboard-shell .col-now .brief-strip {
+  flex: 0 1 auto; min-height: 0;
+  overflow-y: auto; overscroll-behavior: contain;
+}
+.dashboard-shell .col-now .news-rail {
+  /* 168px, not a rounder number: the panel head is ~51px and one headline is
+     ~67px, so anything under ~160 leaves a window too short to read a single
+     story in. The brief strip shrinks further to pay for it rather than
+     letting the digest collapse again. */
+  flex: 1 1 40%; min-height: 168px;
+}

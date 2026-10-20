@@ -68,3 +68,28 @@ test("the news rail has exactly one scroll container", () => {
   assert.match(reading, /\.dashboard-shell \.news-rail \.panel-inner\s*\{[^}]*overflow-y:\s*auto/,
     "panel-inner is the single scroller that lets a short column still reach the tail of the list");
 });
+// The left column is a fixed-height flex stack: brief → insights → news. The
+// brief strip shipped as `flex: 0 0 auto`, so flex-shrink: 0 meant it could not
+// yield to a short column. At 1440x900 it took 736px of an 813px column and
+// the rail computed to ZERO height — fourteen headlines, no visible window, and
+// no page scroll that would ever reach them.
+
+test("the brief strip can yield to a short column", () => {
+  assert.match(reading, /\.dashboard-shell \.col-now \.brief-strip\s*\{[^}]*flex:\s*0 1 auto/,
+    "flex: 0 0 auto pins the brief at its content height and starves the rail");
+  assert.match(reading, /\.dashboard-shell \.col-now \.brief-strip\s*\{[^}]*min-height:\s*0/,
+    "without min-height: 0 the brief cannot shrink below its content");
+  assert.match(reading, /\.dashboard-shell \.col-now \.brief-strip\s*\{[^}]*overflow-y:\s*auto/,
+    "the brief must scroll inside itself once it yields, or its tail becomes unreachable");
+});
+
+test("the news rail keeps a window big enough to read a headline in", () => {
+  const rule = reading.match(/\.dashboard-shell \.col-now \.news-rail\s*\{([^}]*)\}/);
+  assert.ok(rule, "the rail floor rule must exist");
+  const floor = rule[1].match(/min-height:\s*(\d+)px/);
+  assert.ok(floor, "the rail needs a min-height floor or it collapses to zero again");
+  // Measured 20 Oct 2026: the panel head is ~51px and one headline ~67px, so
+  // 96px left a 45px window — below a single story.
+  assert.ok(Number(floor[1]) >= 160,
+    `a ${floor[1]}px floor leaves too little list to read (needs >= 160)`);
+});

@@ -128,6 +128,12 @@ html, body { overflow-x: clip; }
   font:600 14px/1.35 var(--font-sans); min-height:44px; min-width:44px; padding:8px 12px;
 }
 .dashboard-shell .view-tools .partner-row { display:flex; flex-wrap:wrap; gap:8px; }
+.dashboard-shell .view-tools .partner-row img {
+  background:none; border:0; box-shadow:none; padding:0; border-radius:0;
+}
+.dashboard-shell .view-tools .partner-row .axiom-on-dark { display:none; }
+[data-theme="dark"] .dashboard-shell .view-tools .partner-row .axiom-on-light { display:none; }
+[data-theme="dark"] .dashboard-shell .view-tools .partner-row .axiom-on-dark { display:inline; }
 .dashboard-shell .view-tools .runtime-detail { display:block; font-size:14px; white-space:normal; }
 .dashboard-shell .view-tools .operator-tools {
   display:flex; gap:8px; flex-wrap:wrap; padding:12px 0 0; margin:12px 0 0;

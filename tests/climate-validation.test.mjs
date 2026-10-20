@@ -125,15 +125,33 @@ test("only climate cards may borrow the climate observation's age", () => {
   // The first version's guard was effectively a no-op, so the OpenSky airport
   // card and the census card were captioned with the weather's timestamp - a
   // new wrong provenance, the same defect as the literal it replaced.
+  //
+  // metricFreshness ages each stamp against Date.now() and, once the reading
+  // is an hour old, prints whole hours. A fixed pair 30 minutes apart (the
+  // 19 Oct fixture, 10:30 weather and 10:00 air) rounds to the same "N h old"
+  // string after that, so the inequality can never fail and every deploy
+  // stops. Derive both stamps from the same clock the formatter uses. Two
+  // hours and five hours sit in the middle of distinct hour buckets (each 60
+  // minutes wide); truncating to the minute Open-Meteo actually reports
+  // cannot pull them together. The +08:00 suffix is still applied inside
+  // metricFreshness — these stamps carry no offset, matching the feed.
+  const minute = 60_000;
+  const openMeteoLocal = (epochMs) => new Date(epochMs + 8 * 3600_000).toISOString().slice(0, 16);
+  const now = Date.now();
+  const weatherAt = openMeteoLocal(now - 120 * minute);
+  const airAt = openMeteoLocal(now - 300 * minute);
   const payload = { delivery: { mode: "static-snapshot" }, climate: {
-    weather: { observedAt: "2026-10-19T10:30" },
-    air: { observedAt: "2026-10-19T10:00" },
+    weather: { observedAt: weatherAt },
+    air: { observedAt: airAt },
   } };
 
-  for (const id of ["heat", "rain6h", "aqi", "pm25"]) {
-    const out = metricFreshness(payload, id, "declared");
-    assert.ok(/\d+ (min|h) old/.test(out), `${id} must report a real observation age, got "${out}"`);
-    assert.match(out, /baked$/, `${id} must disclose the baked tier`);
+  for (const id of ["heat", "rain6h"]) {
+    assert.equal(metricFreshness(payload, id, "declared"), "2 h old · baked",
+      `${id} must read the weather observation`);
+  }
+  for (const id of ["aqi", "pm25"]) {
+    assert.equal(metricFreshness(payload, id, "declared"), "5 h old · baked",
+      `${id} must read the air observation`);
   }
   for (const id of ["airport", "wards", "population", "headlines", "flood-watch", "trends", "area"]) {
     assert.equal(metricFreshness(payload, id, "declared"), "declared",
@@ -142,9 +160,11 @@ test("only climate cards may borrow the climate observation's age", () => {
   // Weather cards read the weather stamp; air cards the air stamp.
   assert.notEqual(metricFreshness(payload, "heat", "d"), metricFreshness(payload, "aqi", "d"),
     "heat and aqi come from different observations");
-  // A browser-completed reading must say so.
-  const recovered = { ...payload, climate: { ...payload.climate, weather: { observedAt: "2026-10-19T10:30", computedIn: "browser" } } };
-  assert.match(metricFreshness(recovered, "heat", "d"), /browser-completed/);
+  // A browser-completed reading must say so, and only on the reading that was.
+  const recovered = { ...payload, climate: { ...payload.climate, weather: { observedAt: weatherAt, computedIn: "browser" } } };
+  assert.equal(metricFreshness(recovered, "heat", "d"), "2 h old · browser-completed · baked");
+  assert.equal(metricFreshness(recovered, "aqi", "d"), "5 h old · baked",
+    "an air card must not borrow the weather reading's origin");
   // No climate on the payload at all must fall back, not throw.
   assert.equal(metricFreshness({}, "heat", "declared"), "declared");
   assert.equal(metricFreshness({ climate: {} }, "aqi", "declared"), "declared");

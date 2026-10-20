@@ -27,3 +27,15 @@ What: Closed four release blockers from the CSO audit against a tree with 114/11
 Why: `.slice(a,b).every()` is vacuously true on an empty slice; a recovery path that swaps a payload slice without recomputing its derived consumers leaves the board showing two readings; and a test asserting `payload.metrics = buildMetrics(` passes while the behaviour deletes seven metric cards.
 Diff: public/climate-validate.js; public/app.js; server.mjs; tests/climate-validation.test.mjs; tests/release-hardening.test.mjs; tests/fixtures/; docs/security/; tasks/RELEASE-HARDENING-2026-10-19-PLAN.md.
 Tags: release · security · data-honesty · regression-tests
+
+Date: 2026-10-20
+What: Benchmarked the board against the Jakarta and Ho Chi Minh City atlases and added a Research tab: the public blueprint for people who want to change this board rather than only read it.
+Why: Both siblings ship a research guide in the repository and neither has one on screen. Kuching had neither, and no data dictionary a reader could see beside the number it qualifies.
+Diff: public/research-data.js; public/app.js renderResearch(); public/index.template.html; public/reading.css; public/styles.css; public/data.js; tests/research-tab.test.mjs.
+Tags: research · blueprint · provenance · data-dictionary · trilingual
+
+Date: 2026-10-20
+What: Found that headless Chrome renders this board correctly while the in-app browser shows it as an empty shell — including on unmodified production.
+Why: Two sessions were spent diagnosing an empty board that did not exist. `python3 -m http.server` deadlocks on parallel ES-module imports, and the in-app Browser in this environment does not capture or render the board. Neither is a defect in the product.
+Diff: tasks/lessons.md.
+Tags: harness · verification · false-alarm

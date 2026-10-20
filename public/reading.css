@@ -739,3 +739,91 @@ body::before { display: none !important; }
   .dashboard-shell .verdict-verb { flex: 1 1 100%; white-space: normal; }
 }
 .tray-tablist { display: contents; }
+
+/* --- Research tab ------------------------------------------------------------
+   The blueprint pane. Same rules as the rest of the board: square corners,
+   no glow, quiet chrome, and the limitation column given the visual weight
+   because that is the column a sceptic actually needs. Laid out to survive a
+   30%-height tray pane, so it scrolls rather than compressing the type. */
+.dashboard-shell .research-panel-body { font-size: var(--t-micro, 11px); line-height: 1.45; }
+
+.dashboard-shell .sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* Build record — the facts that make this screen reproducible. */
+.dashboard-shell .rp-record {
+  display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center;
+  padding: 7px 9px; margin-bottom: 10px;
+  border: 1px solid var(--line); background: var(--card-bg);
+  font-family: var(--font-mono); font-size: 11px; color: var(--soft);
+}
+.dashboard-shell .rp-record b { color: var(--ink); font-weight: 700; }
+.dashboard-shell .rp-copy {
+  margin-inline-start: auto; min-height: 22px; padding: 2px 8px;
+  border: 1px solid var(--line-strong); background: transparent;
+  color: var(--ink); font-family: var(--font-mono); font-size: 11px;
+  cursor: pointer;
+}
+.dashboard-shell .rp-copy:hover { background: var(--card-hover); }
+.dashboard-shell .rp-copy:focus-visible { outline: 2px solid var(--cyan, #1f4e79); outline-offset: 1px; }
+
+/* Pipeline — four stages, one line each, numbered. */
+.dashboard-shell .rp-pipeline {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px; margin: 0 0 4px; padding: 0; list-style: none;
+}
+.dashboard-shell .rp-step { display: flex; gap: 7px; align-items: flex-start; }
+.dashboard-shell .rp-step-n {
+  flex: 0 0 auto; width: 17px; height: 17px; border: 1px solid var(--line-strong);
+  display: grid; place-items: center; font-family: var(--font-mono); font-size: 10px;
+  color: var(--ink);
+}
+.dashboard-shell .rp-step-body { display: flex; flex-direction: column; gap: 2px; }
+.dashboard-shell .rp-step-body strong { color: var(--ink); font-size: 12px; }
+.dashboard-shell .rp-step-body span { color: var(--soft); }
+
+/* Signal dictionary. The limit column is the point of the table. */
+.dashboard-shell .rp-table {
+  width: 100%; border-collapse: collapse; margin-bottom: 4px;
+  font-size: 11px;
+}
+.dashboard-shell .rp-table th, .dashboard-shell .rp-table td {
+  text-align: start; vertical-align: top; padding: 5px 7px;
+  border-bottom: 1px solid var(--line);
+}
+.dashboard-shell .rp-table thead th {
+  font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--soft); border-bottom-color: var(--line-strong);
+}
+.dashboard-shell .rp-table tbody th { color: var(--ink); font-weight: 700; white-space: nowrap; }
+.dashboard-shell .rp-table td { color: var(--soft); }
+.dashboard-shell .rp-table .rp-limit { color: var(--ink); }
+.dashboard-shell .rp-table .rp-state { width: 26px; text-align: center; }
+.dashboard-shell .rp-glyph { font-family: var(--font-mono); font-size: 12px; }
+.dashboard-shell .rp-glyph[data-tone="ok"] { color: var(--green); }
+.dashboard-shell .rp-glyph[data-tone="alert"] { color: var(--red); }
+.dashboard-shell .rp-glyph[data-tone="warn"] { color: var(--amber); }
+.dashboard-shell .rp-glyph[data-tone="muted"] { color: var(--soft); }
+
+/* Recipes — "I want to X" beside the file to open. */
+.dashboard-shell .rp-recipes { margin: 0 0 4px; padding: 0; list-style: none; }
+.dashboard-shell .rp-recipe {
+  display: grid; grid-template-columns: minmax(150px, 34%) 1fr; gap: 10px;
+  padding: 5px 0; border-bottom: 1px solid var(--line); align-items: baseline;
+}
+.dashboard-shell .rp-want { color: var(--ink); font-weight: 700; }
+.dashboard-shell .rp-do { color: var(--soft); font-family: var(--font-mono); font-size: 11px; }
+
+/* Omissions — the sceptic's section. Deliberately plain. */
+.dashboard-shell .rp-omissions { margin: 0; padding-inline-start: 16px; color: var(--soft); }
+.dashboard-shell .rp-omissions li { padding: 2px 0; }
+
+@media (max-width: 720px) {
+  .dashboard-shell .rp-recipe { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .dashboard-shell .rp-record { gap: 3px 10px; }
+  .dashboard-shell .rp-copy { margin-inline-start: 0; }
+  .dashboard-shell .rp-table { font-size: 11px; }
+  .dashboard-shell .rp-table th, .dashboard-shell .rp-table td { padding: 5px 5px; }
+}

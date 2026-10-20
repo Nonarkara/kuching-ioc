@@ -231,6 +231,7 @@
               <button type="button" role="tab" class="tray-tab" data-pane="economy" aria-selected="false" data-i18n="trayEconomy">Economy · pulse</button>
               <button type="button" role="tab" class="tray-tab" data-pane="coverage" aria-selected="false" data-i18n="trayCoverage">Who covers</button>
               <button type="button" role="tab" class="tray-tab" data-pane="sources" aria-selected="false" data-i18n="traySources">Sources</button>
+              <button type="button" role="tab" class="tray-tab" data-pane="research" aria-selected="false" data-i18n="trayResearch">Research</button>
               </div>
               <button type="button" id="trayCollapseBtn" class="tray-collapse-btn" aria-label="Toggle evidence tray" title="Collapse or expand evidence tray">
                 <span class="collapse-icon">▾</span>
@@ -342,6 +343,15 @@
           </div>
           <div id="sourceMatrix" class="source-matrix"></div>
           <div id="sourceList" class="source-list"></div>
+        </section>
+            </div>
+            <div class="tray-pane" role="tabpanel" data-pane="research" hidden>
+        <section class="panel research-panel">
+          <div class="panel-head">
+            <div class="kicker" data-i18n="researchKicker">Blueprint</div>
+            <h2 data-i18n="researchTitle">How this board is built</h2>
+          </div>
+          <div id="researchPanel" class="research-panel-body"></div>
         </section>
             </div>
           </section>

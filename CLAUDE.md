@@ -63,6 +63,7 @@ FOOTER    · operator shortcuts + disclaimer · telemetry heartbeat · KEYS · S
 | `renderLocalityKpis` / `renderLocalitySummary` / `renderLocalityList` | `#localityExplorer` (tray: localities) | `localities` |
 | `renderIntelPanel` / `renderGroundPulse` / `renderNewsIntake` / `renderNewsDigest` / `renderEconBand` / `renderTrendsBand` | tray: economy | `news`, `exchange`, `trends` |
 | `renderSourceMatrix` / `renderSourceList` | `#sourceMatrix` / `#sourceList` (tray: sources) | `sources[]` |
+| `renderResearch` | `#researchPanel` (tray: research) | `PIPELINE`/`DICTIONARY`/`RECIPES`/`OMISSIONS` + live `sources[]`, `climate` |
 | `renderFloodAction` / `renderHydroGauges` / `renderFloodMatrix` | `.situation-rail` | `infobanjir` |
 | `renderBriefStrip` / `renderOperations` / `renderPosture` | `.col-now` brief + rail | derived |
 | `renderCitizenReports` / `renderOfficialPulse` / `renderMppCouncillors` | `.situation-rail` | `cityReports`, `govStats`, `councillors` |
@@ -72,6 +73,8 @@ FOOTER    · operator shortcuts + disclaimer · telemetry heartbeat · KEYS · S
 | `renderRuntimeMeta` / `renderScopeToggle` / `renderDimensionToggle` / `renderTextScaleToggle` | masthead | boot + state |
 
 Helpers: `dataHealth()` in `public/data-health.js` (UI coverage check — not a flood model or agency freshness standard). `anchorHourIndex()` in `public/open-meteo-anchor.js` maps Open-Meteo's `current.time` (`:00`/`:30` on `/v1/forecast`, on the hour on `/v1/air-quality`) onto the always-hourly `hourly.time` series; all four weather/AQI loaders in `server.mjs` and `app.js` must use it, never `times.indexOf(current.time)`. `public/climate-validate.js` holds the shared window/continuity/observation-age rules — `windowComplete` needs an **exact** length because `slice(a,b).every()` is vacuously true on an empty slice and true on a short one. `completeClimateInBrowser()` in `app.js` finishes weather/AQI from the visitor's browser when the Pages bake could not reach Open-Meteo; it must recompute `metrics`/`summary`/`operations` from the accepted reading (never just relabel), re-check payload identity after its `await`, and keep a bounded retry budget. Operator guide: `public/operator-guide.js` + `public/operator-guide.css` (native `<dialog>` with EN/BM/ZH instructions, opens via the "How to use" manual button; `?` opens the `#helpOverlay` keyboard shortcuts modal).
+
+**Research tab** (tray: research) is the public blueprint — how a reading reaches the screen, a signal dictionary whose *limit* column is the point, "how to change it yourself" recipes, and what the board deliberately does not show. Authored prose lives in `public/research-data.js` (`PIPELINE`, `DICTIONARY`, `RECIPES`, `OMISSIONS`, `DICT_SOURCE_IDS`) in en/ms/zh; **never inline that content into `app.js`** and never hardcode a status there — `renderResearch()` reads status, age and tier from the live payload so a dictionary row cannot outlive the feed it describes. `tFill()` exists because `t()` has no interpolation; a visible `{placeholder}` means a missing key, not a silent gap. Its "Copy evidence record" button is the reproducibility answer to *a screenshot cannot be reproduced*: it copies asset version, snapshot build time, delivery mode, per-source status and observation times.
 
 ---
 

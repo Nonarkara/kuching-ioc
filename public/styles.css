@@ -4750,7 +4750,7 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
   .tray-pane .panel { border: 0; }
   .tray-pane .outlook-grid { min-height: 100%; }
   .tray-pane .lower-grid { height: auto; max-height: none; flex: none; border-top: 0; }
-  .tray-pane .intel-panel, .tray-pane .qualitative-panel, .tray-pane .source-panel { height: auto; max-height: none; overflow: visible; }
+  .tray-pane .intel-panel, .tray-pane .qualitative-panel, .tray-pane .source-panel, .tray-pane .research-panel { height: auto; max-height: none; overflow: visible; }
   .tray-pane .locality-panel { max-height: none; }
   .tray-pane .locality-list { max-height: none; overflow: visible; }
 

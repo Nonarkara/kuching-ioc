@@ -28,6 +28,7 @@ const { summariseTide, TIDE_URL } = await import(`./tide.js?v=${encodeURICompone
 const { hazeState, hazeAdvice, apiBand, API_BANDS, inflowPath } = await import(`./haze.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { anchorHourIndex } = await import(`./open-meteo-anchor.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { windowComplete, seriesContinuous, observationWindow, metricFreshness } = await import(`./climate-validate.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { PIPELINE, DICTIONARY, RECIPES, OMISSIONS, buildRecord, DICT_SOURCE_IDS } = await import(`./research-data.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupBuildings3D } = await import(`./buildings-3d.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupRegionalBuildings } = await import(`./regional-buildings.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupOperatorGuide } = await import(`./operator-guide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
@@ -561,6 +562,14 @@ async function fetchOptionalJson(url, ms = 5000) {
 
 // --- i18n ---
 function t(key) { return (TRANSLATIONS[state.lang] ?? TRANSLATIONS.en)[key] ?? key; }
+
+// t() has no interpolation and never had. Added for the handful of strings that
+// genuinely substitute a value — the build-record line in the Research tab. An
+// unknown placeholder is left visible so a missing key shows up as "{at}"
+// rather than silently rendering an empty gap.
+function tFill(key, vars = {}) {
+  return t(key).replace(/\{(\w+)\}/g, (match, name) => (name in vars ? String(vars[name]) : match));
+}
 // Translation with an explicit fallback for payload-driven labels.
 function tOr(key, fallback) { return (TRANSLATIONS[state.lang] ?? TRANSLATIONS.en)[key] ?? fallback; }
 
@@ -2755,6 +2764,116 @@ function renderAirportStats(airport) {
         ${airport.status === "fallback" ? `<span class="flight-feed-tag">REF</span>` : ""}
       </div>`).join("")}
     </div>`;
+}
+
+// --- Research tab ------------------------------------------------------------
+// The blueprint for people who want to change this board rather than just read
+// it. Authored prose lives in research-data.js; everything factual about the
+// build on screen is read from the live payload, so a dictionary row cannot
+// outlive the feed it describes.
+
+function localeText(field) {
+  return field?.[state.lang] ?? field?.en ?? "";
+}
+
+// Worst status across the feeds a dictionary row depends on. A row that depends
+// on two sources is only as good as its weaker one.
+function dictStatus(payload, ids) {
+  const byId = new Map((payload?.sources || []).map((s) => [s.id, s]));
+  const found = ids.map((id) => byId.get(id)).filter(Boolean);
+  if (!found.length) return null;
+  const rank = { live: 0, official: 1, partial: 2, reference: 3, fallback: 4, offline: 5, degraded: 5 };
+  return found.reduce((worst, s) => ((rank[s.status] ?? 3) > (rank[worst.status] ?? 3) ? s : worst), found[0]);
+}
+
+function renderResearch(payload) {
+  const el = $("researchPanel");
+  if (!el || !payload) return;
+  const record = buildRecord(payload, {
+    assetVersion: payload?.delivery?.assetVersion,
+    builtAt: payload?.delivery?.snapshotBuiltAt,
+  });
+  const glyph = (status) => statusGlyph(status || "offline");
+
+  const pipelineHtml = PIPELINE.map((p) => `
+    <li class="rp-step">
+      <span class="rp-step-n">${escapeHtml(p.step)}</span>
+      <div class="rp-step-body">
+        <strong>${escapeHtml(localeText(p.title))}</strong>
+        <span>${escapeHtml(localeText(p.body))}</span>
+      </div>
+    </li>`).join("");
+
+  const dictHtml = DICTIONARY.map((d) => {
+    const src = dictStatus(payload, DICT_SOURCE_IDS[d.id] || []);
+    return `
+    <tr>
+      <th scope="row">${escapeHtml(localeText(d.signal))}</th>
+      <td>${escapeHtml(localeText(d.is))}</td>
+      <td class="rp-limit">${escapeHtml(localeText(d.limit))}</td>
+      <td class="rp-state"><span class="rp-glyph" data-tone="${statusTone(src?.status || "offline")}" title="${escapeHtml(src?.name || "")}">${glyph(src?.status)}</span></td>
+    </tr>`;
+  }).join("");
+
+  const recipeHtml = RECIPES.map((r) => `
+    <li class="rp-recipe">
+      <span class="rp-want">${escapeHtml(localeText(r.want))}</span>
+      <code class="rp-do">${escapeHtml(localeText(r.do))}</code>
+    </li>`).join("");
+
+  const omitHtml = OMISSIONS.map((o) => `<li>${escapeHtml(localeText(o))}</li>`).join("");
+
+  el.innerHTML = `
+    <div class="rp-record">
+      <span><b>${escapeHtml(record.assetVersion || "—")}</b></span>
+      <span>${escapeHtml(record.mode)}</span>
+      <span>${escapeHtml(tFill("researchBuilt", { at: formatShortStamp(record.builtAt) }))}</span>
+      <span><b>${record.live}/${record.total}</b> ${escapeHtml(t("researchSourcesLive"))}</span>
+      <button type="button" id="copyEvidenceRecord" class="rp-copy">${escapeHtml(t("researchCopyRecord"))}</button>
+    </div>
+
+    <div class="section-label">${escapeHtml(t("researchHowItWorks"))}</div>
+    <ol class="rp-pipeline">${pipelineHtml}</ol>
+
+    <div class="section-label">${escapeHtml(t("researchDictionary"))}</div>
+    <table class="rp-table">
+      <thead><tr>
+        <th>${escapeHtml(t("researchColSignal"))}</th>
+        <th>${escapeHtml(t("researchColIs"))}</th>
+        <th>${escapeHtml(t("researchColLimit"))}</th>
+        <th><span class="sr-only">${escapeHtml(t("researchColState"))}</span></th>
+      </tr></thead>
+      <tbody>${dictHtml}</tbody>
+    </table>
+
+    <div class="section-label">${escapeHtml(t("researchRecipes"))}</div>
+    <ul class="rp-recipes">${recipeHtml}</ul>
+
+    <div class="section-label">${escapeHtml(t("researchOmissions"))}</div>
+    <ul class="rp-omissions">${omitHtml}</ul>`;
+
+  // A screenshot cannot be reproduced later. This copies the facts that can.
+  $("copyEvidenceRecord")?.addEventListener("click", (e) => {
+    const btn = e.currentTarget;
+    const blob = {
+      board: "Greater Kuching IOC",
+      capturedAt: nowIso(),
+      assetVersion: record.assetVersion,
+      snapshotBuiltAt: record.builtAt,
+      deliveryMode: record.mode,
+      note: "A snapshot proves what the board showed at this moment. It does not archive upstream responses; re-capture rather than replay.",
+      climate: {
+        weather: { status: payload?.climate?.weather?.status, observedAt: payload?.climate?.weather?.observedAt || null, current: payload?.climate?.weather?.current || null },
+        air: { status: payload?.climate?.air?.status, observedAt: payload?.climate?.air?.observedAt || null, current: payload?.climate?.air?.current || null },
+      },
+      sources: (payload?.sources || []).map((s) => ({ id: s.id, name: s.name, status: s.status, generatedAt: s.generatedAt || null })),
+    };
+    const text = JSON.stringify(blob, null, 2);
+    navigator.clipboard?.writeText(text).then(
+      () => { btn.textContent = t("researchCopied"); setTimeout(() => { btn.textContent = t("researchCopyRecord"); }, 1800); },
+      () => { btn.textContent = t("researchCopyFailed"); setTimeout(() => { btn.textContent = t("researchCopyRecord"); }, 1800); },
+    );
+  });
 }
 
 function renderSourceMatrix(payload) {
@@ -4981,6 +5100,7 @@ function renderDashboard(payload) {
   // Sources — rendered in every scope: the Sources tab and the operator
   // guide's "Data sources" shortcut must never open an empty panel.
   renderSourceMatrix(payload);
+  renderResearch(payload);
   $("sourceList").innerHTML = (payload.sources || []).map(s=>`
       <div class="source-item">
         <div class="source-copy">
@@ -5070,6 +5190,7 @@ function setLang(lang) {
     renderHazeSource(state.payload);
     renderTide(state.payload);
     renderCoverage(state.payload);
+    renderResearch(state.payload);
     renderMppLocalities(state.payload);
     renderMppServicesDirectory();
     if (state.activeWard) {

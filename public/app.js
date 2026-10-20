@@ -2910,7 +2910,22 @@ function renderNewsIntake(news) {
     { code: "ms", label: "Bahasa", badge: "BM", count: news.counts?.ms ?? news.items.filter((item) => item.language === "ms").length },
     { code: "zh", label: "Chinese", badge: "ZH", count: news.counts?.zh ?? news.items.filter((item) => item.language === "zh").length },
   ];
-  const operatorItems = news.operatorItems?.length ? news.operatorItems.slice(0, 3) : news.items.slice(0, 3);
+  // The rail reserves a fixed share of the one-screen column. Showing three
+  // headlines left roughly 690px of empty panel below them on a tall window,
+  // because nothing else in this rail grows. Show what is already in the
+  // window — operator notices first, then the rest — and let CSS scroll the
+  // list if the column turns out to be shorter than the content.
+  const seen = new Set();
+  const queue = [...(news.operatorItems || []), ...(news.items || [])]
+    .filter((item) => {
+      const key = item?.title + "|" + (item?.source || "");
+      if (!item || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 14);
+  const operatorItems = queue;
+  const hidden = Math.max(0, (news.items?.length || 0) - operatorItems.length);
   el.innerHTML = `
     <div class="news-intake-grid">
       ${lanes.map((lane) => `
@@ -2920,7 +2935,7 @@ function renderNewsIntake(news) {
           <span>${lane.label}</span>
         </div>`).join("")}
     </div>
-    <div class="news-intake-note">${escapeHtml(news.summary || news.systemLabel || "Multilingual intake active.")}</div>
+    <div class="news-intake-note">${escapeHtml(news.summary || news.systemLabel || "Multilingual intake active.")}${hidden ? ` ${escapeHtml(tFill("newsMoreInWindow", { n: hidden }))}` : ""}</div>
     <div class="news-intake-list">
       ${operatorItems.map((item) => `
         <article class="news-intake-item">

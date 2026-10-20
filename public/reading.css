@@ -827,3 +827,26 @@ body::before { display: none !important; }
   .dashboard-shell .rp-table { font-size: 11px; }
   .dashboard-shell .rp-table th, .dashboard-shell .rp-table td { padding: 5px 5px; }
 }
+
+/* --- News rail fills its reserved column ------------------------------------
+   The rail is flex:1 in a one-screen column, but nothing inside it grew: four
+   lane cards, a note and three headlines came to 474px against a ~1164px rail,
+   leaving a large empty plane under "Ground pulse". Measured 20 Oct 2026.
+   The panel now absorbs that space and shows more of the window's headlines.
+
+   One scroll container, not two. The first attempt also gave the inner list its
+   own overflow and let the panel shrink (min-height:0); on a short column the
+   panel then collapsed to 72px while its fixed children overflowed to 992px and
+   painted over the sibling disclosures. Now panel-inner is the only scroller and
+   the panel grows but never below its own content. */
+.dashboard-shell .news-rail .panel-inner {
+  display: flex; flex-direction: column;
+  overflow-y: auto; overscroll-behavior: contain;
+}
+.dashboard-shell .sentiment-panel {
+  flex: 1 0 auto; min-height: min-content;
+  display: flex; flex-direction: column;
+}
+.dashboard-shell .news-intake-grid,
+.dashboard-shell .news-intake-note { flex: 0 0 auto; }
+.dashboard-shell .news-intake-list { flex: 0 0 auto; }

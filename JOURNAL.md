@@ -39,3 +39,9 @@ What: Found that headless Chrome renders this board correctly while the in-app b
 Why: Two sessions were spent diagnosing an empty board that did not exist. `python3 -m http.server` deadlocks on parallel ES-module imports, and the in-app Browser in this environment does not capture or render the board. Neither is a defect in the product.
 Diff: tasks/lessons.md.
 Tags: harness · verification · false-alarm
+
+Date: 2026-10-20
+What: Removed the white plane at the bottom left of the board. The News digest printed three headlines out of fourteen already in the payload, inside a panel that never grew into the column the layout had reserved for it.
+Why: The cap and the flex rule together, not a styling accident: 330px of panel in a 554px rail left 174px of empty warm paper. Measured with a geometry probe in headless Chrome at 2560x1440, and A/B'd against the pre-fix build at five viewport sizes.
+Diff: public/app.js renderNewsIntake(); public/reading.css; public/data.js; tests/news-rail.test.mjs.
+Tags: layout · data-honesty · measurement · regression-test

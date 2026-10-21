@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
-import { PIPELINE, DICTIONARY, RECIPES, OMISSIONS, buildRecord, DICT_SOURCE_IDS } from "../public/research-data.js";
+import { PIPELINE, DICTIONARY, RECIPES, OMISSIONS, SYSTEM_BLUEPRINT, buildRecord, DICT_SOURCE_IDS } from "../public/research-data.js";
 
 // The Research tab is the blueprint for people who want to change this board.
 // Two failure modes matter and neither is caught by asserting a function call
@@ -86,6 +86,37 @@ test("omissions are explicit and complete in all three languages", () => {
   });
 });
 
+test("system blueprint defines four operational pillars and anti-hallucination laws in three languages", () => {
+  assert.ok(SYSTEM_BLUEPRINT, "SYSTEM_BLUEPRINT must be exported");
+  assert.equal(SYSTEM_BLUEPRINT.pillars.length, 4, "must define exactly 4 operational pillars");
+  
+  const expectedPillars = ["sensors", "engine", "vault", "cockpit"];
+  SYSTEM_BLUEPRINT.pillars.forEach((p, idx) => {
+    assert.equal(p.id, expectedPillars[idx]);
+    assert.ok(p.step, "pillar must have a step number");
+    for (const locale of ["en", "ms", "zh"]) {
+      assert.ok(p.pillar?.[locale]?.trim(), `pillar ${p.id}.pillar.${locale} missing`);
+      assert.ok(p.title?.[locale]?.trim(), `pillar ${p.id}.title.${locale} missing`);
+      assert.ok(p.role?.[locale]?.trim(), `pillar ${p.id}.role.${locale} missing`);
+      assert.ok(p.desc?.[locale]?.trim(), `pillar ${p.id}.desc.${locale} missing`);
+      assert.ok(p.rule?.[locale]?.trim(), `pillar ${p.id}.rule.${locale} missing`);
+    }
+  });
+
+  assert.ok(SYSTEM_BLUEPRINT.schematic?.includes("SENSOR MESH"), "schematic must include sensor mesh");
+  assert.ok(SYSTEM_BLUEPRINT.schematic?.includes("TRUTH ENGINE"), "schematic must include truth engine");
+  assert.ok(SYSTEM_BLUEPRINT.schematic?.includes("SNAPSHOT VAULT"), "schematic must include snapshot vault");
+  assert.ok(SYSTEM_BLUEPRINT.schematic?.includes("WAR ROOM"), "schematic must include war room");
+
+  assert.equal(SYSTEM_BLUEPRINT.laws.length, 3, "must define 3 anti-hallucination laws");
+  SYSTEM_BLUEPRINT.laws.forEach((law, idx) => {
+    for (const locale of ["en", "ms", "zh"]) {
+      assert.ok(law.name?.[locale]?.trim(), `law ${idx}.name.${locale} missing`);
+      assert.ok(law.text?.[locale]?.trim(), `law ${idx}.text.${locale} missing`);
+    }
+  });
+});
+
 test("the pipeline describes four stages and each has a body", () => {
   assert.equal(PIPELINE.length, 4, "source -> loader -> snapshot -> renderer");
   for (const step of PIPELINE) {
@@ -149,7 +180,7 @@ test("every interpolated value in the Research tab is escaped", async () => {
   // them here makes that a stated contract rather than an assumption: each one
   // must escape every value it interpolates, which the assertions below check
   // by requiring the named expressions to appear wrapped.
-  const COMPOSED = new Set(["pipelineHtml", "dictHtml", "recipeHtml", "omitHtml"]);
+  const COMPOSED = new Set(["pillarsHtml", "lawsHtml", "blueprintHtml", "pipelineHtml", "dictHtml", "recipeHtml", "omitHtml"]);
   const SAFE = /^(p\.step|record\.(live|total)|glyph\(|statusTone\()/;
   const interpolations = [...body.matchAll(/\$\{([^}]*)\}/g)].map((m) => m[1].trim());
   assert.ok(interpolations.length > 20, `expected a populated template, found ${interpolations.length} interpolations`);
@@ -161,6 +192,9 @@ test("every interpolated value in the Research tab is escaped", async () => {
 
   // Each composed template must escape its own inputs — prove it, don't assume it.
   const composedBodies = {
+    pillarsHtml: body.slice(body.indexOf("const pillarsHtml"), body.indexOf("const lawsHtml")),
+    lawsHtml: body.slice(body.indexOf("const lawsHtml"), body.indexOf("const blueprintHtml")),
+    blueprintHtml: body.slice(body.indexOf("const blueprintHtml"), body.indexOf("const pipelineHtml")),
     pipelineHtml: body.slice(body.indexOf("const pipelineHtml"), body.indexOf("const dictHtml")),
     dictHtml: body.slice(body.indexOf("const dictHtml"), body.indexOf("const recipeHtml")),
     recipeHtml: body.slice(body.indexOf("const recipeHtml"), body.indexOf("const omitHtml")),
@@ -168,7 +202,7 @@ test("every interpolated value in the Research tab is escaped", async () => {
   };
   for (const [name, chunk] of Object.entries(composedBodies)) {
     const inner = [...chunk.matchAll(/\$\{([^}]*)\}/g)].map((m) => m[1].trim())
-      .filter((e) => !e.startsWith("escapeHtml(") && !SAFE.test(e));
+      .filter((e) => !e.startsWith("escapeHtml(") && !SAFE.test(e) && !COMPOSED.has(e));
     assert.deepEqual(inner, [], `${name} interpolates unescaped: ${inner.join(", ")}`);
   }
 
@@ -177,6 +211,8 @@ test("every interpolated value in the Research tab is escaped", async () => {
     "localeText(p.title)", "localeText(p.body)", "localeText(d.signal)",
     "localeText(d.is)", "localeText(d.limit)", "localeText(r.want)",
     "localeText(r.do)", "localeText(o)", 'src?.name || ""',
+    "SYSTEM_BLUEPRINT.schematic", "localeText(p.role)", "localeText(p.desc)",
+    "localeText(p.rule)", "localeText(law.name)", "localeText(law.text)",
   ]) {
     assert.ok(interpolations.includes(`escapeHtml(${expr})`),
       `${expr} must reach the DOM through escapeHtml()`);

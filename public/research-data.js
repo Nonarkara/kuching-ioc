@@ -17,6 +17,117 @@
 
 const L = (en, ms, zh) => ({ en, ms, zh });
 
+// Four operational pillars of the Integrated Operations Center blueprint.
+// Written in accessible language for city operators, councillors, and citizens.
+export const SYSTEM_BLUEPRINT = {
+  pillars: [
+    {
+      id: "sensors",
+      step: "01",
+      pillar: L("Pillar 1", "Tonggak 1", "第一支柱"),
+      title: L("Sensor Mesh & Telemetry Feeds", "Jaringan Sensor & Suapan Telemetri", "传感器网络与遥测馈送"),
+      role: L("Physical Observation", "Cerapan Fizikal", "物理实体观测"),
+      desc: L(
+        "Ingests real ground readings from JPS river gauges, DOE/NREB air quality stations, Open-Meteo numerical weather forecasts, NASA FIRMS thermal anomaly satellites, OpenSky ADS-B transponders, and verified citizen reports.",
+        "Menerima bacaan fizikal sebenar daripada tolok sungai JPS, stesen kualiti udara DOE/NREB, ramalan cuaca berangka Open-Meteo, satelit anomali haba NASA FIRMS, transponder ADS-B OpenSky dan aduan awam yang disahkan.",
+        "接入来自砂水利局河流传感器、环境局/天然资源与环境局空气站、Open-Meteo 数值气象预报、NASA FIRMS 卫星热异常、OpenSky 航空应答机及已核实市民报案的真实读数。"
+      ),
+      rule: L(
+        "No phantom telemetry: gauges and stations without live readings are flagged degraded or missing — never synthesized into false green.",
+        "Tiada telemetri hantu: tolok dan stesen tanpa bacaan langsung ditandakan terjejas atau hilang — tidak sekali-kali disintesis menjadi hijau palsu.",
+        "拒绝虚构遥测：无实时读数的测站一律标为降级或缺失，绝不用合成数据粉饰安全假象。"
+      ),
+    },
+    {
+      id: "engine",
+      step: "02",
+      pillar: L("Pillar 2", "Tonggak 2", "第二支柱"),
+      title: L("Truth Engine & Spatial Guard", "Enjin Kebenaran & Pengawal Ruang", "真实性引擎与空间防幻觉守卫"),
+      role: L("Deterministic Validation", "Pengesahan Deterministik", "确定性校验与防幻觉"),
+      desc: L(
+        "Enforces strict finite number validation, runs 48h backward air path trajectories, and applies spatial guards that eliminate Null Island [0,0], horizon ellipsoid blowouts, and inverted lat/long.",
+        "Menguatkuasakan pengesahan nombor terhad, mengira lintasan undur udara 48 jam, dan menggunakan pengawal ruang untuk menghapuskan Pulau Sifar [0,0], herotan ufuk Cesium dan lat/long terbalik.",
+        "执行严格的有限数值校验，运算 48 小时反向风场轨迹，并实施空间防幻觉守卫以根除零岛 [0,0]、地平线发散及经纬度倒置。"
+      ),
+      rule: L(
+        "Spatial bounding laws: points outside the Borneo/Sarawak theater are rejected at intake; hydro catchment snapping refuses to connect waterways farther than 2 km.",
+        "Hukum sempadan ruang: koordinat di luar Sarawak/Borneo ditolak semasa pengambilan; penarikan lembangan hidrologi enggan menyambung aliran lebih 2 km.",
+        "空间界限法则：砂拉越/婆罗洲战区之外的坐标在入口处即被拒收；水文汇水区吸附拒绝连接 2 公里之外的水道。"
+      ),
+    },
+    {
+      id: "vault",
+      step: "03",
+      pillar: L("Pillar 3", "Tonggak 3", "第三支柱"),
+      title: L("Immutable Snapshot Vault", "Kubah Rakaman Kebal", "不可变快照保全库"),
+      role: L("Zero-Downtime Resilience", "Ketahanan Sifar Masa Henti", "零停机脱机韧性"),
+      desc: L(
+        "Bakes all validated streams into deterministic, static JSON snapshots (dashboard.json). The board queries local snapshots so upstream API crashes or external internet failures cannot crash the cockpit.",
+        "Membakar semua aliran disahkan ke dalam rakaman statik JSON yang deterministik (dashboard.json). Papan membaca fail tempatan supaya kegagalan API luar tidak meruntuhkan kokpit.",
+        "将所有验证后的数据流烘焙为确定性静态 JSON 快照（dashboard.json）。看板直接读取本地快照，因此上游接口故障或外网中断绝不会拖垮指挥舱。"
+      ),
+      rule: L(
+        "Honest gaps: if upstream sources are unreachable, the board publishes the exact observation age rather than an illusion of current reality.",
+        "Jurang jujur: jika sumber gagal dihubungi, papan menerbitkan umur cerapan sebenar dan bukan ilusi realiti terkini.",
+        "诚实的空缺：若上游来源失联，看板如实公布其实际观测时效，绝不掩饰为最新现状。"
+      ),
+    },
+    {
+      id: "cockpit",
+      step: "04",
+      pillar: L("Pillar 4", "Tonggak 4", "第四支柱"),
+      title: L("Unified War-Room Cockpit", "Kokpit Bilik Gerakan Bersepadu", "战情室一体化指挥舱"),
+      role: L("Tactical Decision Support", "Sokongan Keputusan Taktikal", "战术决策执行"),
+      desc: L(
+        "A 3-column operator console: Left rail (morning briefs, news intake, analytical insights), Hero Center (Padawan vs Greater Kuching scope switch, 2D Leaflet GIS, 3D Cesium digital twin, analytical deep tray), Right rail (official emergency directory, flood readiness protocols, client charter KPIs).",
+        "Konsol pengendali 3 lajur: Lajur kiri (taklimat pagi, suapan berita, pandangan analitik), Pusat Hero (suis skop Padawan/Kuching, GIS 2D Leaflet, kembar digital 3D Cesium, dulang analitik), Lajur kanan (direktori kecemasan rasmi, protokol banjir, KPI piagam pelanggan).",
+        "三栏操作员控制台：左栏（晨报、多语种新闻摄入、分析研判），英雄中心位（巴达旺与大古晋视野切换、2D Leaflet GIS、3D Cesium 数字孪生、深度分析托盘），右栏（官方应急通讯录、防汛响应预案、客户宪章 KPI）。"
+      ),
+      rule: L(
+        "Observe-to-act chain: telemetry without an operational owner is noise. Every critical alert maps directly to a direct phone number, responsible desk, and verified field procedure.",
+        "Rantaian pantau-ke-tindakan: telemetri tanpa pemilik operasi ialah hingar. Setiap amaran kritikal dipautkan terus ke nombor telefon, pegawai bertugas dan prosedur lapangan yang sah.",
+        "观察到行动闭环：缺乏责任经办人的遥测纯属噪音。每一项危急警报均直通直拨电话、责任科室及经过核验的现场预案。"
+      ),
+    },
+  ],
+  schematic: `[ 01 SENSOR MESH ]    DID iHYDRO · APIMS Air · MetMalaysia · NASA FIRMS · OpenSky · Citizen Reports
+       │
+       ▼
+[ 02 TRUTH ENGINE ]   Contract Validation · Spatial Guard (No [0,0], No Inversions) · 48h Air Path
+       │
+       ▼
+[ 03 SNAPSHOT VAULT ] Deterministic JSON · Zero-Downtime Resilience · Honest Observation Timestamps
+       │
+       ▼
+[ 04 WAR ROOM ]       3-Column Cockpit · Padawan / Greater Kuching Scope · Observe-to-Act Protocol`,
+  laws: [
+    {
+      name: L("Law of Spatial Grounding", "Hukum Ketetapan Ruang", "空间锚定法则"),
+      text: L(
+        "Every coordinate on screen must exist within the real Sarawak / Borneo theater. Null Island [0,0], inverted lat/long, and horizon-grazing 3D camera projections are rejected before they touch the DOM or map canvas.",
+        "Setiap koordinat pada skrin mesti wujud dalam wilayah Sarawak / Borneo sebenar. Pulau Sifar [0,0], lat/long terbalik dan unjuran ufuk 3D ditolak sebelum menyentuh kanvas peta.",
+        "屏幕上的每个坐标必须真实存在于砂拉越/婆罗洲战区之内。零岛 [0,0]、经纬度颠倒及地平线 3D 投影在触及 DOM 或地图画布前即被剔除。"
+      ),
+    },
+    {
+      name: L("Law of Civic Honesty", "Hukum Kejujuran Awam", "市政诚实法则"),
+      text: L(
+        "The board never invents green status. Missing, degraded, or delayed data is plainly declared with its real source age. An empty or offline gauge is never reported as normal.",
+        "Papan tidak sekali-kali mencipta status hijau palsu. Data yang hilang, terjejas atau tertangguh dinyatakan dengan umur sumber sebenar. Tolok kosong atau luar talian tidak sekali-kali dilaporkan sebagai normal.",
+        "面板绝不虚构安全绿灯。缺失、降级或延迟的数据均明确标明其实际时效。空白或离线的水位站绝不谎报为正常。"
+      ),
+    },
+    {
+      name: L("Law of Operational Actionability", "Hukum Kebolehtindakan Operasi", "实战行动力法则"),
+      text: L(
+        "Observability without an operational owner is waste. Every warning, risk zone, and tension hotspot links to a direct extension, a verified desk, and a concrete action protocol.",
+        "Kebolehlihatan tanpa pemilik operasi adalah sia-sia. Setiap amaran, zon risiko dan titik ketegangan memaut ke sambungan telefon langsung, pegawai bertugas dan protokol tindakan konkrit.",
+        "缺乏处置责任主体的可观测性毫无价值。每一个警报、风险区与矛盾焦点均关联直拨分机、核准经办科室与具体执行方案。"
+      ),
+    },
+  ],
+};
+
 // Which live feeds each dictionary row depends on. The glyph in the status
 // column shows the WORST of these, because a row resting on two sources is only
 // as good as its weaker one. Kept beside the prose so a new row cannot ship

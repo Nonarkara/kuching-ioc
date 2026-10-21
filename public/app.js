@@ -28,7 +28,8 @@ const { summariseTide, TIDE_URL } = await import(`./tide.js?v=${encodeURICompone
 const { hazeState, hazeAdvice, apiBand, API_BANDS, inflowPath } = await import(`./haze.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { anchorHourIndex } = await import(`./open-meteo-anchor.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { windowComplete, seriesContinuous, observationWindow, metricFreshness } = await import(`./climate-validate.js?v=${encodeURIComponent(__ASSET_VER__)}`);
-const { PIPELINE, DICTIONARY, RECIPES, OMISSIONS, buildRecord, DICT_SOURCE_IDS } = await import(`./research-data.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { PIPELINE, DICTIONARY, RECIPES, OMISSIONS, SYSTEM_BLUEPRINT, buildRecord, DICT_SOURCE_IDS } = await import(`./research-data.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { isValidCoord, isValidSarawakCoord, isValidKuchingCoord, detectInvertedCoord, sanitizeMarkerCoord, clampRegionBounds, filterViewportSamples } = await import(`./spatial-guard.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupBuildings3D } = await import(`./buildings-3d.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupRegionalBuildings } = await import(`./regional-buildings.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupOperatorGuide } = await import(`./operator-guide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
@@ -1373,7 +1374,7 @@ function highlightCatchment(station, bandColor) {
 // layer loads. OSM geometry describes network connection only: it cannot prove
 // flow direction, arrival time, or an inundation footprint.
 function deriveConnectedWaterPath(station, features) {
-  if (!station || !Array.isArray(features) || !features.length) return null;
+  if (!station || !isValidSarawakCoord(station.lat, station.lon) || !Array.isArray(features) || !features.length) return null;
   const quant = (lon, lat) => `${Math.round(lon * 1e4)}|${Math.round(lat * 1e4)}`;
   const kmBetween = (aLat, aLon, bLat, bLon) => {
     const rad = Math.PI / 180;
@@ -1507,7 +1508,9 @@ function renderMap(payload) {
     });
     const lat = item.polygons[0].reduce((s,p)=>s+p[1],0)/item.polygons[0].length;
     const lon = item.polygons[0].reduce((s,p)=>s+p[0],0)/item.polygons[0].length;
-    window.L.marker([lat,lon], { icon:window.L.divIcon({ className:"municipal-label", html:`<span>${escapeHtml(item.code)}</span>` }), interactive:false, keyboard:false }).addTo(state.labelLayerGroup);
+    if (isValidKuchingCoord(lat, lon)) {
+      window.L.marker([lat,lon], { icon:window.L.divIcon({ className:"municipal-label", html:`<span>${escapeHtml(item.code)}</span>` }), interactive:false, keyboard:false }).addTo(state.labelLayerGroup);
+    }
   });
 
   if (payload.jurisdictions.river) {
@@ -1517,13 +1520,14 @@ function renderMap(payload) {
   // One marker colour: category lives in the tooltip, not in ten hues.
   const catColors = {};
   (payload.jurisdictions.localMarkers||[]).forEach(m => {
+    if (!isValidKuchingCoord(m.lat, m.lon)) return;
     window.L.circleMarker([m.lat,m.lon], { radius:5, fillColor:catColors[m.category]||"#ffffff", fillOpacity:0.9, color:"#1f4e79", weight:1, opacity:0.6 }).bindTooltip(m.name, { permanent:false, className:"marker-tooltip" }).addTo(state.markerLayerGroup);
   });
 
   // Airport flights on map
   if (payload.airport?.liveFlights) {
     payload.airport.liveFlights.forEach(f => {
-      if (!f.latitude || !f.longitude) return;
+      if (!isValidSarawakCoord(f.latitude, f.longitude, { allowBorneo: true })) return;
       const color = f.type === "arrival" ? "#7fcfa6" : f.type === "departure" ? "#ffaa00" : "#00f3ff";
       window.L.circleMarker([f.latitude, f.longitude], { radius: 3, fillColor: color, fillOpacity: 1, color, weight: 1 })
         .bindTooltip(`${escapeHtml(f.callsign)} | ${escapeHtml(f.type)} | ${escapeHtml(f.distanceKm)}km`, { className: "marker-tooltip" })
@@ -1551,7 +1555,7 @@ function renderMap(payload) {
     : allHydroStations;
   state.pulseMarkerEls = new Map();
   hydroStations.forEach(s => {
-    if (s.lat == null || s.lon == null) return;
+    if (!isValidSarawakCoord(s.lat, s.lon)) return;
     state.hydroStationsByName.set(s.id, s);
     const color = hydroBandColors[s.band] || "#8aa2c8";
     const isLive = s.waterLevelM != null;
@@ -1601,7 +1605,7 @@ function renderMap(payload) {
   // Apims ground stations: square-ish markers via different radius/weight to distinguish.
   const apimsStations = payload.apims?.stations || [];
   apimsStations.forEach(s => {
-    if (s.lat == null || s.lon == null || s.status !== "live") return;
+    if (!isValidSarawakCoord(s.lat, s.lon) || s.status !== "live") return;
     const tone = s.band?.tone;
     const c = tone === "good" ? "#7fcfa6" : tone === "watch" ? "#f2b705" : tone === "warn" ? "#ef6c00" : tone === "alert" || tone === "critical" ? "#d32f2f" : "#8aa2c8";
     window.L.circleMarker([s.lat, s.lon], {
@@ -1625,7 +1629,7 @@ function renderMap(payload) {
   const crReports = payload.cityReports?.status === "live" ? (payload.cityReports.recent || []) : [];
   const crColors = { high: "#d32f2f", medium: "#f59e0b", low: "#7fcfa6", completed: "#8aa2c8" };
   crReports.forEach((r) => {
-    if (r.lat == null || r.lon == null) return;
+    if (!isValidSarawakCoord(r.lat, r.lon)) return;
     const color = r.status === "completed" ? crColors.completed : (crColors[r.urgency] || crColors.medium);
     window.L.circleMarker([r.lat, r.lon], {
       radius: r.urgency === "high" ? 8 : 7,
@@ -1645,6 +1649,7 @@ function renderMap(payload) {
 
   // JKM open relief centres (PPS) — official, with coordinates. Empty = none open.
   (payload.reliefCentres?.status === "live" ? payload.reliefCentres.items || [] : []).forEach((c) => {
+    if (!isValidSarawakCoord(c.lat, c.lon)) return;
     window.L.circleMarker([c.lat, c.lon], { radius: 8, fillColor: "#1f4e79", fillOpacity: 0.95, color: "#ffffff", weight: 2 })
       .bindTooltip(`<strong>${escapeHtml(c.name)}</strong><br>JKM PPS · ${escapeHtml(c.district)} · ${escapeHtml(c.disaster || "")}<br>${c.evacuees} evacuees${c.capacity ? ` / capacity ${c.capacity}` : ""}`, { className: "marker-tooltip", direction: "top" })
       .addTo(state.markerLayerGroup);
@@ -2795,6 +2800,38 @@ function renderResearch(payload) {
   });
   const glyph = (status) => statusGlyph(status || "offline");
 
+  const pillarsHtml = SYSTEM_BLUEPRINT.pillars.map((p) => `
+    <div class="rp-pillar-card" data-pillar="${escapeHtml(p.id)}">
+      <div class="rp-pillar-head">
+        <span class="rp-pillar-badge">${escapeHtml(p.step)}</span>
+        <div>
+          <strong>${escapeHtml(localeText(p.title))}</strong>
+          <span class="rp-pillar-role">${escapeHtml(localeText(p.role))}</span>
+        </div>
+      </div>
+      <p class="rp-pillar-desc">${escapeHtml(localeText(p.desc))}</p>
+      <div class="rp-pillar-rule"><em>${escapeHtml(localeText(p.rule))}</em></div>
+    </div>`).join("");
+
+  const lawsHtml = SYSTEM_BLUEPRINT.laws.map((law) => `
+    <li class="rp-law-item">
+      <strong>${escapeHtml(localeText(law.name))}:</strong>
+      <span>${escapeHtml(localeText(law.text))}</span>
+    </li>`).join("");
+
+  const blueprintHtml = `
+    <div class="rp-blueprint">
+      <div class="rp-blueprint-lead">${escapeHtml(t("researchBlueprintDesc"))}</div>
+      <div class="rp-schematic-wrap">
+        <div class="rp-subhead">${escapeHtml(t("researchSchematicTitle"))}</div>
+        <pre class="rp-schematic"><code>${escapeHtml(SYSTEM_BLUEPRINT.schematic)}</code></pre>
+      </div>
+      <div class="rp-subhead">${escapeHtml(t("researchPillarsTitle"))}</div>
+      <div class="rp-pillars-grid">${pillarsHtml}</div>
+      <div class="rp-subhead">${escapeHtml(t("researchLawsTitle"))}</div>
+      <ul class="rp-laws-list">${lawsHtml}</ul>
+    </div>`;
+
   const pipelineHtml = PIPELINE.map((p) => `
     <li class="rp-step">
       <span class="rp-step-n">${escapeHtml(p.step)}</span>
@@ -2831,6 +2868,9 @@ function renderResearch(payload) {
       <span><b>${record.live}/${record.total}</b> ${escapeHtml(t("researchSourcesLive"))}</span>
       <button type="button" id="copyEvidenceRecord" class="rp-copy">${escapeHtml(t("researchCopyRecord"))}</button>
     </div>
+
+    <div class="section-label">${escapeHtml(t("researchBlueprint"))}</div>
+    ${blueprintHtml}
 
     <div class="section-label">${escapeHtml(t("researchHowItWorks"))}</div>
     <ol class="rp-pipeline">${pipelineHtml}</ol>
@@ -5647,7 +5687,7 @@ function renderCesiumEntities(payload) {
     ? allHydro.filter(s => s.focus === "padawan" || s.council === "MPP")
     : allHydro;
   hydroStations.forEach(s => {
-    if (s.lat == null || s.lon == null) return;
+    if (!isValidSarawakCoord(s.lat, s.lon)) return;
     const color = hydroBandColors[s.band] || "#8aa2c8";
     const height = hydroBandHeight[s.band] || 60;
     const elevated = ["alert", "warning", "danger"].includes(s.band);
@@ -5712,11 +5752,13 @@ function renderCesiumEntities(payload) {
 
   // 5) JKM open relief centres and this browser's saved report pins.
   (payload.reliefCentres?.status === "live" ? payload.reliefCentres.items || [] : []).forEach((rc) => {
+    if (!isValidSarawakCoord(rc.lat, rc.lon)) return;
     viewer.entities.add({ name: `pps-${rc.id}`, position: Cesium.Cartesian3.fromDegrees(rc.lon, rc.lat, 30),
       point: { pixelSize: 14, color: Cesium.Color.fromCssColorString("#1f4e79"), outlineColor: Cesium.Color.WHITE, outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY },
       label: { text: `JKM PPS · ${rc.name}`, font: "11px sans-serif", pixelOffset: new Cesium.Cartesian2(0, -18), showBackground: true, disableDepthTestDistance: Number.POSITIVE_INFINITY } });
   });
   loadPins().forEach((p) => {
+    if (!isValidSarawakCoord(p.lat, p.lon, { allowBorneo: true })) return;
     viewer.entities.add({ name: `pin-${p.id}`, position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 20),
       point: { pixelSize: 11, color: Cesium.Color.WHITE, outlineColor: Cesium.Color.fromCssColorString("#b45309"), outlineWidth: 3, disableDepthTestDistance: Number.POSITIVE_INFINITY } });
   });
@@ -5975,6 +6017,7 @@ function renderMyPins() {
   if (!state.pinLayer) state.pinLayer = window.L.layerGroup().addTo(state.map);
   state.pinLayer.clearLayers();
   loadPins().forEach((p) => {
+    if (!isValidSarawakCoord(p.lat, p.lon, { allowBorneo: true })) return;
     window.L.circleMarker([p.lat, p.lon], { radius: 7, color: "#b45309", weight: 2, fillColor: "#ffffff", fillOpacity: 0.9, dashArray: "3 2" })
       .bindTooltip(`<strong>${escapeHtml(t("pinCat_" + p.category))}</strong>${p.note ? "<br>" + escapeHtml(p.note) : ""}<br><em>${escapeHtml(t("pinMine"))}</em>`, { className: "marker-tooltip", direction: "top" })
       .on("click", () => openSpotReport(p.lat, p.lon))

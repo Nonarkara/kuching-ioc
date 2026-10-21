@@ -769,6 +769,50 @@ body::before { display: none !important; }
 .dashboard-shell .rp-copy:hover { background: var(--card-hover); }
 .dashboard-shell .rp-copy:focus-visible { outline: 2px solid var(--cyan, #1f4e79); outline-offset: 1px; }
 
+/* Architecture Blueprint — 4 operational pillars & anti-hallucination laws */
+.dashboard-shell .rp-blueprint { margin-bottom: 12px; }
+.dashboard-shell .rp-blueprint-lead { font-size: 12px; color: var(--soft); margin-bottom: 8px; line-height: 1.4; }
+.dashboard-shell .rp-subhead {
+  font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--soft); margin: 8px 0 4px;
+}
+.dashboard-shell .rp-schematic-wrap { margin-bottom: 8px; }
+.dashboard-shell .rp-schematic {
+  margin: 0; padding: 8px 10px; background: var(--card-bg);
+  border: 1px solid var(--line); font-family: var(--font-mono);
+  font-size: 10px; line-height: 1.35; color: var(--ink);
+  overflow-x: auto;
+}
+.dashboard-shell .rp-pillars-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px; margin-bottom: 8px;
+}
+.dashboard-shell .rp-pillar-card {
+  padding: 8px 10px; background: var(--card-bg); border: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.dashboard-shell .rp-pillar-head { display: flex; gap: 8px; align-items: baseline; }
+.dashboard-shell .rp-pillar-badge {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--cyan, #1f4e79); background: var(--tint, rgba(31,78,121,0.08));
+  padding: 1px 4px; border-radius: 2px;
+}
+.dashboard-shell .rp-pillar-head strong { font-size: 12px; color: var(--ink); }
+.dashboard-shell .rp-pillar-role { display: block; font-family: var(--font-mono); font-size: 10px; color: var(--soft); }
+.dashboard-shell .rp-pillar-desc { margin: 0; font-size: 11px; color: var(--soft); line-height: 1.35; }
+.dashboard-shell .rp-pillar-rule {
+  margin-top: auto; padding-top: 4px; border-top: 1px dashed var(--line);
+  font-size: 10px; color: var(--ink);
+}
+.dashboard-shell .rp-laws-list {
+  margin: 0 0 6px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px;
+}
+.dashboard-shell .rp-law-item {
+  font-size: 11px; line-height: 1.35; color: var(--soft);
+  padding: 4px 6px; background: var(--card-bg); border-left: 2px solid var(--cyan, #1f4e79);
+}
+.dashboard-shell .rp-law-item strong { color: var(--ink); font-weight: 700; }
+
 /* Pipeline — four stages, one line each, numbered. */
 .dashboard-shell .rp-pipeline {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));

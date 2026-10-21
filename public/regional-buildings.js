@@ -1,6 +1,7 @@
 const version=new URL(import.meta.url).searchParams.get('v')||'';
 const {tilesForBounds,TileCache,validateRegionManifest}=await import(`./building-tiles.js?v=${encodeURIComponent(version)}`);
 const {validateBuildingAsset}=await import(`./building-geometry.js?v=${encodeURIComponent(version)}`);
+const {filterViewportSamples}=await import(`./spatial-guard.js?v=${encodeURIComponent(version)}`);
 const COPY={
   en:{tools:'Tools',layers:'Map layers',open:'3D city',back:'Return to 2D',assembly:'Sarawak Assembly',
     idle:'Explore places in 3D, or open Map layers for rivers, drainage and sources.',busy:'Preparing mapped buildings…',
@@ -155,8 +156,14 @@ export function setupRegionalBuildings({getViewer,getDimension,setDimension,getL
           const p=v.camera.pickEllipsoid(new C.Cartesian2(x,y),v.scene.globe.ellipsoid);
           if(p){const ll=C.Cartographic.fromCartesian(p);points.push([C.Math.toDegrees(ll.longitude),C.Math.toDegrees(ll.latitude)]);}
         }
+        // Filter out horizon rays and out-of-theater projections that blow out tile budgets.
+        const validPoints=filterViewportSamples(points,manifest?.bounds||null,0.05);
+        const pts=validPoints.length>=2?validPoints:(validPoints.length===1?[
+          [validPoints[0][0]-0.005,validPoints[0][1]-0.005],
+          [validPoints[0][0]+0.005,validPoints[0][1]+0.005]
+        ]:(points.length>=2?points:[]));
         // Two samples may bracket a useful rectangle; degenerate bounds draw none.
-        if(points.length>=2)bounds={south:Math.min(...points.map(p=>p[1])),north:Math.max(...points.map(p=>p[1])),west:Math.min(...points.map(p=>p[0])),east:Math.max(...points.map(p=>p[0]))};
+        if(pts.length>=2)bounds={south:Math.min(...pts.map(p=>p[1])),north:Math.max(...pts.map(p=>p[1])),west:Math.min(...pts.map(p=>p[0])),east:Math.max(...pts.map(p=>p[0]))};
       }
       const keys=tilesForBounds(bounds,14,25);
       clear();

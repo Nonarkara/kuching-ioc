@@ -46,15 +46,12 @@ jobs:
       # (<meta name="spatial-ready"> + data-board-ready on <html>). (2) "N min
       # ago" strings moved widths; under the gate's own __spatial token the
       # board pins its clock to the snapshot build time and skips live weather
-      # self-completion. Verified: two full sweeps 7 minutes apart agree on
+      # self-completion. (3) The live bake changes content every run, so the gate
+      # measures a committed fixture snapshot (design/measure-fixture), not the
+      # day's news. Verified: two full sweeps 7 minutes apart agree on
       # every finding, container, chrome and first-action value.
-      - name: Spatial gate (MSH)
-        run: >
-          node scripts/spatial/spatial-check.mjs
-          --dir public
-          --baseline design/spatial-baseline.json
-          --widths 390,479,480,481,719,720,721,722,959,960,961,1024,1039,1040,1041,1042,1239,1240,1241,1399,1400,1401,1440,1499,1500,1501
-          --json artifacts/spatial-report.json
+      - name: Spatial gate (MSH, frozen fixture)
+        run: scripts/spatial/measure-frozen.sh --json artifacts/spatial-report.json
       - name: Upload spatial receipt
         if: always()
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4

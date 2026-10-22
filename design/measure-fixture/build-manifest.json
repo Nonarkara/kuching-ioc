@@ -1,0 +1,42 @@
+{
+  "builtAt": "2026-10-22T13:59:30.636Z",
+  "buildDurationMs": 137855,
+  "dashboardSizeKb": 365,
+  "assetVersion": "0b0ec8d47a2e-135712",
+  "deploymentMode": "pages-static",
+  "boardLabel": "SNAPSHOT BOARD",
+  "pagesUrl": "https://kuching.nonarkara.org/",
+  "liveUrl": "https://kuching.nonarkara.org/",
+  "layers": [
+    {
+      "id": "drainage",
+      "status": "fulfilled",
+      "features": 666
+    },
+    {
+      "id": "transit",
+      "status": "fulfilled",
+      "features": 2335
+    },
+    {
+      "id": "land_use",
+      "status": "fulfilled",
+      "features": 848
+    },
+    {
+      "id": "flood_risk",
+      "status": "fulfilled",
+      "features": 34
+    },
+    {
+      "id": "flood_zones",
+      "status": "fulfilled",
+      "features": 10
+    },
+    {
+      "id": "mpp_wards",
+      "status": "fulfilled",
+      "features": 10
+    }
+  ]
+}

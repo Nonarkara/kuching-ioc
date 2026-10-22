@@ -49,7 +49,7 @@ const { anchorHourIndex } = await import(`./open-meteo-anchor.js?v=${encodeURICo
 const { windowComplete, seriesContinuous, observationWindow, metricFreshness: readingFreshness } = await import(`./climate-validate.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const metricFreshness = (p, id, fallback) => readingFreshness(p, id, fallback, Date.now());
 const { PIPELINE, DICTIONARY, RECIPES, OMISSIONS, SYSTEM_BLUEPRINT, buildRecord, DICT_SOURCE_IDS } = await import(`./research-data.js?v=${encodeURIComponent(__ASSET_VER__)}`);
-const { evidenceText, localityEvidence, waterEvidence, dictionaryArtifact, FUNNEL, RESEARCH_REFERENCES } = await import(`./evidence.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { evidenceText, localityEvidence, waterEvidence, dictionaryArtifact, nrebFreshness, FUNNEL, RESEARCH_REFERENCES } = await import(`./evidence.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { isValidCoord, isValidSarawakCoord, isValidKuchingCoord, detectInvertedCoord, sanitizeMarkerCoord, clampRegionBounds, filterViewportSamples } = await import(`./spatial-guard.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupBuildings3D } = await import(`./buildings-3d.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupRegionalBuildings } = await import(`./regional-buildings.js?v=${encodeURIComponent(__ASSET_VER__)}`);
@@ -1331,26 +1331,29 @@ function renderMetrics(metrics) {
   state.lastMetrics = metrics;
   $("metricBand").innerHTML = metrics.slice(0,12).map(m => {
     const prov = METRIC_SOURCES[m.id];
-    const fresh = m.id === 'nreb-api' ? state.payload?.nrebApi?.takenAt || evidenceText('unknown', state.lang) : prov ? metricFreshness(state.payload, m.id, prov.fresh) : "";
+    const nreb = m.id === 'nreb-api' ? nrebFreshness(state.payload?.nrebApi, Date.now(), state.lang) : null;
+    const fresh = nreb?.label || (prov ? metricFreshness(state.payload, m.id, prov.fresh) : "");
     const provHtml = prov
-      ? `<div class="metric-source"><span class="src-name" title="${escapeHtml(prov.src)}">${escapeHtml(prov.src)}</span><span class="src-fresh" title="${escapeHtml(fresh)}">${escapeHtml(fresh)}</span></div>`
+      ? `<div class="metric-source"><span class="src-name" title="${escapeHtml(prov.src)}">${escapeHtml(prov.src)}</span><span class="src-fresh" title="${escapeHtml(nreb?.title || fresh)}">${escapeHtml(fresh)}</span></div>`
       : "";
     return `
     <article class="metric-card" data-tone="${m.tone||'neutral'}" data-metric-id="${m.id}">
-      <div class="metric-label" title="${escapeHtml(tOr(`m_${m.id}`, m.label))}">${escapeHtml(tOr(`m_${m.id}`, m.label))}</div>
+      <div class="metric-heading"><div class="metric-label" title="${escapeHtml(tOr(`m_${m.id}`, m.label))}">${escapeHtml(tOr(`m_${m.id}`, m.label))}</div>
+      <button type="button" class="metric-evidence-open" data-evidence-metric="${escapeHtml(m.id)}" aria-label="${escapeHtml(evidenceText('why', state.lang) + ' ' + tOr(`m_${m.id}`, m.label))}">?</button></div>
       <div class="metric-value">${m.value == null ? "—" : num(m.value,m.value%1===0?0:1)}<span class="metric-unit">${m.value == null ? "" : m.unit||''}</span></div>
       <div class="metric-context" title="${escapeHtml(m.context||'')}">${escapeHtml(m.context||'')}</div>
       <div class="sparkline-shell">${m.history?sparkline(m.history,m.tone):''}</div>
       ${provHtml}
-      <button type="button" class="metric-evidence-open" data-evidence-metric="${escapeHtml(m.id)}" aria-label="${escapeHtml(evidenceText('why', state.lang) + ' ' + tOr(`m_${m.id}`, m.label))}">?</button>
     </article>`;
   }).join("");
   $('metricBand').querySelectorAll('[data-evidence-metric]').forEach(button => button.addEventListener('click', () => {
     const m = state.payload?.metrics?.find(x => x.id === button.dataset.evidenceMetric);
     if (!m) return;
     const prov = METRIC_SOURCES[m.id];
-    openEvidenceDialog(tOr(`m_${m.id}`, m.label), `<p><strong>${m.value == null ? '—' : escapeHtml(num(m.value))} ${escapeHtml(m.unit || '')}</strong></p><p>${escapeHtml(m.context || '')}</p>
-      <p>${escapeHtml(prov?.src || evidenceText('unknown', state.lang))} · ${escapeHtml(m.id === 'nreb-api' ? state.payload?.nrebApi?.takenAt || '—' : metricFreshness(state.payload, m.id, prov?.fresh || '—'))}</p>
+    const context = m.id === 'nreb-api' && state.payload?.nrebApi?.takenAt ? String(m.context || '').replace(' · ' + state.payload.nrebApi.takenAt, '') : m.context || '';
+    openEvidenceDialog(tOr(`m_${m.id}`, m.label), `<p><strong>${m.value == null ? '—' : escapeHtml(num(m.value))} ${escapeHtml(m.unit || '')}</strong></p><p>${escapeHtml(context)}</p>
+      <p>${escapeHtml(prov?.src || evidenceText('unknown', state.lang))}${m.id === 'nreb-api' ? '' : ' · ' + escapeHtml(metricFreshness(state.payload, m.id, prov?.fresh || '—'))}</p>
+      ${m.id === 'nreb-api' ? `<p>${escapeHtml(evidenceText('observation', state.lang))}: ${escapeHtml(state.payload?.nrebApi?.takenAt || '—')} MYT</p><p>${escapeHtml(evidenceText('retrieved', state.lang))}: ${escapeHtml(state.payload?.nrebApi?.fetchedAt || '—')}</p>` : ''}
       <p>${escapeHtml(evidenceText('verify', state.lang))}</p>
       ${['heat','rain6h','aqi','pm25'].includes(m.id) ? `<p>${escapeHtml(evidenceText('modelLimit', state.lang))}</p>` : ''}
       ${prov?.link ? `<a href="${safeUrl(prov.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(evidenceText('source', state.lang))} ↗</a>` : ''}`);

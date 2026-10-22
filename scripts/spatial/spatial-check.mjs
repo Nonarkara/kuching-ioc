@@ -69,6 +69,8 @@ import { execFileSync, spawn } from "node:child_process";
 import { tmpdir, homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { measureMetricEvidence } from '../../public/measurement.js';
+import { withDeadline, releaseBrowser } from './deadline.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -321,6 +323,10 @@ function measureDoc(d, route, w, cb) {
       map: !!d.querySelector('#mapCanvas .leaflet-pane'),
       font: wv.getComputedStyle(d.body).fontFamily
     };
+    rec.board.metricEvidence = (__METRIC_PROBE__)(d);
+    for (var item of rec.board.metricEvidence) {
+      if (item.overlap > 0) rec.findings.push({ kind: 'overlap', sel: 'metric-evidence:' + item.id, metric: item.overlap, detail: 'Evidence control covers visible freshness glyphs' });
+    }
     if (rec.board.state !== 'ready' || rec.board.metrics < 4 || rec.board.brief < 1 || rec.board.funnel !== 5 || !rec.board.map) {
       return cb({ route: route, w: w, error: 'critical board content missing', board: rec.board });
     }
@@ -455,6 +461,7 @@ run();
 function harnessHtml(widths, routes) {
   return HARNESS.replace("__WIDTHS__", JSON.stringify(widths))
     .replace("__ROUTES__", JSON.stringify(routes))
+    .replace("__METRIC_PROBE__", measureMetricEvidence.toString())
     .replace("__PROBE__", JSON.stringify(PROBE_SRC));
 }
 
@@ -899,15 +906,8 @@ for (let attempt = 1; attempt <= 3; attempt++) {
   // mid-sweep and the gate reports a failure that is really a timeout — the
   // measurement was fine.
   const timeout = Symbol("timeout");
-  const got = await Promise.race([
-    waiting,
-    new Promise((r) => setTimeout(() => r(timeout), RUN_TIMEOUT_MS)),
-  ]);
-  try {
-    child.kill("SIGKILL");
-  } catch {
-    /* already gone */
-  }
+  const got = await withDeadline(waiting, RUN_TIMEOUT_MS, timeout);
+  releaseBrowser(child);
   if (got !== timeout) {
     payload = got;
     chromeError = null;

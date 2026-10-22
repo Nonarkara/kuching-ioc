@@ -95,7 +95,7 @@ test('actual dictionary reducer fails closed on missing dependencies',()=>{
   assert.equal(f({sources:[{id:'a',status:'live'}]},['a','missing']).status,'offline');
 });
 test('portable release floor refuses skeletons, duplicates, errors and overlap',()=>{
-  const rows=REQUIRED_WIDTHS.map(w=>({route:'/',w,board:{state:'ready',metrics:6,brief:3,funnel:5,map:true},findings:[]}));
+  const rows=REQUIRED_WIDTHS.map(w=>({route:'/',w,board:{state:'ready',metrics:6,brief:3,funnel:5,map:true,metricEvidence:Array.from({length:6},(_,i)=>({id:String(i),overlap:0,freshnessClip:0}))},findings:[]}));
   assert.deepEqual(portableFailures({measurements:rows}),[]);
   assert.ok(portableFailures({measurements:[]}).length);
   rows[0].board.metrics=0;assert.ok(portableFailures({measurements:rows}).length);

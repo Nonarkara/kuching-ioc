@@ -13,3 +13,21 @@ export function boardContentReady(document) {
     && document.querySelectorAll('#researchPanel .evidence-funnel .rp-step').length === 5
     && !!document.querySelector('#mapCanvas .leaflet-pane');
 }
+
+// A normal-flow band heuristic misses absolutely positioned evidence buttons.
+// Measure their intersection with the visible freshness glyphs explicitly.
+export function measureMetricEvidence(document) {
+  return Array.from(document.querySelectorAll('#metricBand .metric-card')).map(card => {
+    const button = card.querySelector('.metric-evidence-open');
+    const fresh = card.querySelector('.src-fresh');
+    if (!button || !fresh) return { id: card.dataset.metricId, missing: true };
+    const b = button.getBoundingClientRect(), f = fresh.getBoundingClientRect();
+    const range = document.createRange(); range.selectNodeContents(fresh);
+    const glyphs = Array.from(range.getClientRects());
+    if (!(b.right - b.left >= 24 && b.bottom - b.top >= 24 && f.right > f.left && f.bottom > f.top) || !glyphs.some(g => g.right > g.left && g.bottom > g.top)) return { id: card.dataset.metricId, missing: true };
+    const overlap = glyphs.reduce((area, g) => Math.max(area,
+      Math.max(0, Math.min(b.right, f.right, g.right) - Math.max(b.left, f.left, g.left)) *
+      Math.max(0, Math.min(b.bottom, f.bottom, g.bottom) - Math.max(b.top, f.top, g.top))), 0);
+    return { id: card.dataset.metricId, overlap, freshnessClip: Math.max(0, fresh.scrollWidth - fresh.clientWidth) };
+  });
+}

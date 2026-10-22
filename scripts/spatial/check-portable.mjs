@@ -11,6 +11,8 @@ export function portableFailures(report) {
     if (seen.has(key)) errors.push(`Duplicate ${key}`);
     seen.add(key);
     if (r.error || r.board?.state !== 'ready' || !Number.isInteger(r.board.metrics) || r.board.metrics < 4 || !Number.isInteger(r.board.brief) || r.board.brief < 1 || r.board.funnel !== 5 || r.board.map !== true) errors.push(`Unreadable board ${key}`);
+    const evidence = r.board?.metricEvidence;
+    if (!Array.isArray(evidence) || evidence.length !== r.board?.metrics || evidence.some(x => x.missing || !Number.isFinite(x.overlap) || x.overlap > 0 || !Number.isFinite(x.freshnessClip) || (x.id === 'nreb-api' && x.freshnessClip > 1))) errors.push(`Unverified or obscured metric provenance ${key}`);
     for (const f of r.findings || []) if (['overflow','overlap'].includes(f.kind)) errors.push(`${key}: ${f.kind} ${f.sel}`);
   }
   for (const w of REQUIRED_WIDTHS) if (!rows.some(r => r.w === w)) errors.push(`Missing width ${w}`);

@@ -57,9 +57,9 @@
     "dead|div#mapKicker": "The map's title line, in the map panel header. The tall thing in that row is the map panel below it, not empty space: re-measured with the disclosure open, the title-wrap is 38px and the kicker fills it. The 302px band only exists while the panel is closed.",
     "dead|div.hg-level": "The current gauge reading in a three-column haze row whose first column is the gauge drawing at 142x111. The drawing fills the row.",
     "dead|div.hg-band": "The severity band label in the same three-column haze row — one word beside the gauge drawing that gives the band its meaning.",
-    "clip|div.metric-label": "A KPI tile is a fixed cell in a six-across band: 115px at 1240px, 90px at 1041px. The label is a fixed i18n string ('Rain next 6h'), so its width is stable and one line with a title attribute is the honest answer. Widening the band to fit would make it two rows tall, which takes the map down with it.",
+    "clip|div.metric-label": "Keep the simultaneous rain, warning, air, particulate, heat and airport overview above the working map. At narrow desktop widths some headings abbreviate; each adjoining normal-flow Why this action exposes the full metric name, value, context and provenance to keyboard and touch readers. Font size is not reduced. This does not exempt a control from covering any reading or freshness text.",
     "clip|div.metric-context": "Truncation here is a measured trade, not an oversight. The context is DATA — 'NREB official · Moderate · 21 October 2026, Wednesday 15:45' — and a KPI tile is a fixed cell of a six-across band (90px at 1041px), so the qualifier does not fit on one line. It was changed to a two-line wrap on 22 Oct and reverted the same day: tests/anti-slop.test.mjs records the band regrowing to 118px, which took 118px off the map. The map is the product, so the qualifier truncates — and carries its full text in a title attribute, so hover recovers it.",
-    "clip|span.src-fresh": "The observation time in the provenance row, revealed on hover by design. The source identity beside it never truncates; a timestamp is what abbreviates when the two compete for a 90px tile. Full text is in its title.",
+    "clip|span.src-fresh": "Climate provenance combines observation age with baked/browser tier; at the narrowest desktop tiles that supplemental line abbreviates while the metric remains visible. Full age and tier are available through the adjoining keyboard/touch Why this action and title. NREB uses a compact observation-age caption, never retrieval age: its clipping and any evidence-control/glyph overlap are independently rejected by the portable gate, regardless of this reason.",
     "clip|div.metric-source": "The provenance row is not on screen at rest: opacity:0, max-height:0, revealed on hover inside a 30px box. At the narrowest tile (90px at 1041px) the name and its timestamp need two lines, so the row's scroll width exceeds its box. Nothing is hidden from a reader because nothing is shown until they ask for it.",
     "clip|span.news-digest-title": "A news headline under a deliberate two-line clamp (reading.css, same clamp the ground pulse uses). A headline can be longer than two lines of a 254-340px rail; the clamp keeps the map's rail from growing, and the full headline is in the title attribute so hover recovers it. Truncation here is chosen and recoverable, not loss."
   },
@@ -518,12 +518,6 @@
           },
           {
             "kind": "clip",
-            "sel": "div.metric-label",
-            "metric": 44,
-            "detail": "div.metric-label hides 44px of its own content"
-          },
-          {
-            "kind": "clip",
             "sel": "div.metric-context",
             "metric": 248,
             "detail": "div.metric-context hides 248px of its own content"
@@ -609,12 +603,6 @@
           },
           {
             "kind": "clip",
-            "sel": "div.metric-label",
-            "metric": 44,
-            "detail": "div.metric-label hides 44px of its own content"
-          },
-          {
-            "kind": "clip",
             "sel": "div.metric-context",
             "metric": 248,
             "detail": "div.metric-context hides 248px of its own content"
@@ -688,15 +676,15 @@
           },
           {
             "kind": "clip",
-            "sel": "div.metric-context",
-            "metric": 217,
-            "detail": "div.metric-context hides 217px of its own content"
+            "sel": "div.metric-label",
+            "metric": 41,
+            "detail": "div.metric-label hides 41px of its own content"
           },
           {
             "kind": "clip",
-            "sel": "div.metric-label",
-            "metric": 13,
-            "detail": "div.metric-label hides 13px of its own content"
+            "sel": "div.metric-context",
+            "metric": 217,
+            "detail": "div.metric-context hides 217px of its own content"
           }
         ],
         "firstAction": {
@@ -755,15 +743,15 @@
           },
           {
             "kind": "clip",
-            "sel": "div.metric-context",
-            "metric": 216,
-            "detail": "div.metric-context hides 216px of its own content"
+            "sel": "div.metric-label",
+            "metric": 40,
+            "detail": "div.metric-label hides 40px of its own content"
           },
           {
             "kind": "clip",
-            "sel": "div.metric-label",
-            "metric": 12,
-            "detail": "div.metric-label hides 12px of its own content"
+            "sel": "div.metric-context",
+            "metric": 216,
+            "detail": "div.metric-context hides 216px of its own content"
           }
         ],
         "firstAction": {
@@ -822,15 +810,15 @@
           },
           {
             "kind": "clip",
-            "sel": "div.metric-context",
-            "metric": 216,
-            "detail": "div.metric-context hides 216px of its own content"
+            "sel": "div.metric-label",
+            "metric": 40,
+            "detail": "div.metric-label hides 40px of its own content"
           },
           {
             "kind": "clip",
-            "sel": "div.metric-label",
-            "metric": 12,
-            "detail": "div.metric-label hides 12px of its own content"
+            "sel": "div.metric-context",
+            "metric": 216,
+            "detail": "div.metric-context hides 216px of its own content"
           }
         ],
         "firstAction": {
@@ -880,6 +868,12 @@
             "sel": "div.metric-context",
             "metric": 199,
             "detail": "div.metric-context hides 199px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-label",
+            "metric": 23,
+            "detail": "div.metric-label hides 23px of its own content"
           }
         ],
         "firstAction": {
@@ -929,6 +923,12 @@
             "sel": "div.metric-context",
             "metric": 199,
             "detail": "div.metric-context hides 199px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-label",
+            "metric": 23,
+            "detail": "div.metric-label hides 23px of its own content"
           }
         ],
         "firstAction": {
@@ -978,6 +978,12 @@
             "sel": "div.metric-context",
             "metric": 199,
             "detail": "div.metric-context hides 199px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-label",
+            "metric": 23,
+            "detail": "div.metric-label hides 23px of its own content"
           }
         ],
         "firstAction": {
@@ -1027,6 +1033,12 @@
             "sel": "div.metric-context",
             "metric": 195,
             "detail": "div.metric-context hides 195px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-label",
+            "metric": 19,
+            "detail": "div.metric-label hides 19px of its own content"
           }
         ],
         "firstAction": {
@@ -1070,6 +1082,12 @@
             "sel": "div.metric-context",
             "metric": 189,
             "detail": "div.metric-context hides 189px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-label",
+            "metric": 13,
+            "detail": "div.metric-label hides 13px of its own content"
           }
         ],
         "firstAction": {
@@ -1113,6 +1131,12 @@
             "sel": "div.metric-context",
             "metric": 189,
             "detail": "div.metric-context hides 189px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-label",
+            "metric": 13,
+            "detail": "div.metric-label hides 13px of its own content"
           }
         ],
         "firstAction": {
@@ -1156,6 +1180,12 @@
             "sel": "div.metric-context",
             "metric": 189,
             "detail": "div.metric-context hides 189px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-label",
+            "metric": 13,
+            "detail": "div.metric-label hides 13px of its own content"
           }
         ],
         "firstAction": {

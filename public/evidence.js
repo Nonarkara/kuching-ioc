@@ -35,9 +35,39 @@ export const EVIDENCE_COPY = {
   modelLimit: L('Model grid context; not a measurement at this locality. Missing inputs are not zero.', 'Konteks grid model; bukan ukuran di lokaliti ini. Input tiada bukan sifar.', '模型网格背景，并非此聚落的测量。缺失输入不等于零。'),
   evidence: L('Evidence', 'Bukti', '证据'),
   readMethod: L('Read method', 'Baca kaedah', '阅读方法'),
+  retrieved: L('Retrieved', 'Diambil', '获取时间'),
 };
 export function evidenceText(key, lang = 'en') {
   return EVIDENCE_COPY[key]?.[lang] ?? EVIDENCE_COPY[key]?.en ?? key;
+}
+
+// NREB publishes a Malaysian observation clock, not an ISO retrieval clock.
+// Parse only its known English date shape; never
+// fall back to fetchedAt and never let the browser's local timezone decide.
+export function nrebObservationTime(value) {
+  if (typeof value !== 'string') return null;
+  const m = value.trim().match(/^(\d{1,2}) ([A-Za-z]+) (\d{4}), (?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (\d{1,2}):(\d{2}) ([AP])\.?M\.?$/i);
+  if (!m) return null;
+  const month = ['january','february','march','april','may','june','july','august','september','october','november','december'].indexOf(m[2].toLowerCase());
+  const day = Number(m[1]), year = Number(m[3]), hour = Number(m[4]), minute = Number(m[5]);
+  if (month < 0 || day < 1 || hour < 1 || hour > 12 || minute > 59) return null;
+  const h = hour % 12 + (m[6].toUpperCase() === 'P' ? 12 : 0);
+  const local = new globalThis.Date(globalThis.Date.UTC(year, month, day, h, minute));
+  if (local.getUTCFullYear() !== year || local.getUTCMonth() !== month || local.getUTCDate() !== day) return null;
+  return local.getTime() - 8 * 3600000;
+}
+
+export function nrebFreshness(reading, at, lang = 'en') {
+  const observed = nrebObservationTime(reading?.takenAt);
+  const minutes = observed == null ? null : Math.floor((at - observed) / 60000);
+  const prefix = ({en:'Obs', ms:'Cer', zh:'观测'})[lang] || 'Obs';
+  let age = '?';
+  if (minutes != null && minutes >= 0) {
+    const units = ({en:['m','h','d'], ms:['m','j','h'], zh:['分','时','天']})[lang] || ['m','h','d'];
+    const n = minutes < 60 ? minutes : minutes < 1440 ? Math.floor(minutes / 60) : Math.floor(minutes / 1440);
+    age = `${n}${units[minutes < 60 ? 0 : minutes < 1440 ? 1 : 2]}`;
+  }
+  return { label: `${prefix} ${age}`, title: `${evidenceText('observation', lang)} · ${reading?.takenAt || evidenceText('unknown', lang)} MYT${minutes != null && minutes < 0 ? ' · ' + evidenceText('future', lang) : ''}` };
 }
 
 export function readingAge(value, at = Date.now()) {

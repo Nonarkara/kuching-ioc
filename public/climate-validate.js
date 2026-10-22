@@ -63,7 +63,7 @@ export function observationWindow(observedAt, nowMs = Date.now()) {
 // provenance, the same defect as the literal it replaces.
 export const CLIMATE_METRIC_READING = { heat: "weather", rain6h: "weather", aqi: "air", pm25: "air" };
 
-export function metricFreshness(payload, id, fallback) {
+export function metricFreshness(payload, id, fallback, at = Date.now()) {
   const which = CLIMATE_METRIC_READING[id];
   if (!which) return fallback;
   const reading = which === "air" ? payload?.climate?.air : payload?.climate?.weather;
@@ -74,7 +74,7 @@ export function metricFreshness(payload, id, fallback) {
   const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(stamp) ? `${stamp}:00+08:00` : stamp;
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return fallback;
-  const mins = Math.max(0, Math.round((Date.now() - t) / 60000));
+  const mins = Math.max(0, Math.round((at - t) / 60000));
   const age = mins < 1 ? "just now" : mins < 60 ? `${mins} min old` : `${Math.round(mins / 60)} h old`;
   const tier = payload?.delivery?.mode === "static-snapshot" ? " · baked" : "";
   const origin = reading.computedIn === "browser" ? " · browser-completed" : "";

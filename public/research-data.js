@@ -25,12 +25,12 @@ export const SYSTEM_BLUEPRINT = {
       id: "sensors",
       step: "01",
       pillar: L("Pillar 1", "Tonggak 1", "第一支柱"),
-      title: L("Sensor Mesh & Telemetry Feeds", "Jaringan Sensor & Suapan Telemetri", "传感器网络与遥测馈送"),
-      role: L("Physical Observation", "Cerapan Fizikal", "物理实体观测"),
+      title: L("Public sources", "Sumber awam", "公共来源"),
+      role: L("Observations, models and accounts", "Pemerhatian, model dan laporan", "观测、模型与报道"),
       desc: L(
-        "Ingests real ground readings from JPS river gauges, DOE/NREB air quality stations, Open-Meteo numerical weather forecasts, NASA FIRMS thermal anomaly satellites, OpenSky ADS-B transponders, and verified citizen reports.",
-        "Menerima bacaan fizikal sebenar daripada tolok sungai JPS, stesen kualiti udara DOE/NREB, ramalan cuaca berangka Open-Meteo, satelit anomali haba NASA FIRMS, transponder ADS-B OpenSky dan aduan awam yang disahkan.",
-        "接入来自砂水利局河流传感器、环境局/天然资源与环境局空气站、Open-Meteo 数值气象预报、NASA FIRMS 卫星热异常、OpenSky 航空应答机及已核实市民报案的真实读数。"
+        "JPS water levels and NREB readings are observations. Open-Meteo is model output; satellite detections and published news are different evidence types. Optional feeds may be disconnected. Citizen accounts are not independently verified here.",
+        "Paras air JPS dan bacaan NREB ialah pemerhatian. Open-Meteo ialah output model; pengesanan satelit dan berita ialah jenis bukti berbeza. Suapan pilihan mungkin tidak disambungkan. Laporan awam tidak disahkan secara bebas di sini.",
+        "JPS水位与NREB读数属于观测。Open-Meteo是模型输出；卫星探测与新闻是不同证据。部分可选数据源可能未接入，市民报告不在此独立核实。"
       ),
       rule: L(
         "No phantom telemetry: gauges and stations without live readings are flagged degraded or missing — never synthesized into false green.",
@@ -42,29 +42,29 @@ export const SYSTEM_BLUEPRINT = {
       id: "engine",
       step: "02",
       pillar: L("Pillar 2", "Tonggak 2", "第二支柱"),
-      title: L("Truth Engine & Spatial Guard", "Enjin Kebenaran & Pengawal Ruang", "真实性引擎与空间防幻觉守卫"),
+      title: L("Checks and interpretation", "Semakan dan tafsiran", "检查与解释"),
       role: L("Deterministic Validation", "Pengesahan Deterministik", "确定性校验与防幻觉"),
       desc: L(
-        "Enforces strict finite number validation, runs 48h backward air path trajectories, and applies spatial guards that eliminate Null Island [0,0], horizon ellipsoid blowouts, and inverted lat/long.",
-        "Menguatkuasakan pengesahan nombor terhad, mengira lintasan undur udara 48 jam, dan menggunakan pengawal ruang untuk menghapuskan Pulau Sifar [0,0], herotan ufuk Cesium dan lat/long terbalik.",
-        "执行严格的有限数值校验，运算 48 小时反向风场轨迹，并实施空间防幻觉守卫以根除零岛 [0,0]、地平线发散及经纬度倒置。"
+        "Climate loaders check finite values, time and complete windows. Map renderers check regional bounds. The wind path is a simplified model. These checks reduce specific errors; they do not certify every input or establish causation.",
+        "Pemuat iklim menyemak nilai, masa dan tetingkap lengkap. Peta menyemak sempadan wilayah. Laluan angin ialah model ringkas. Semakan ini mengurangkan ralat tertentu, bukan mengesahkan semua input atau sebab kejadian.",
+        "气候加载器检查数值、时间与完整时段，地图渲染器检查区域边界。风向轨迹是简化模型。这些检查减少特定错误，并不认证所有输入或证明因果关系。"
       ),
       rule: L(
-        "Spatial bounding laws: points outside the Borneo/Sarawak theater are rejected at intake; hydro catchment snapping refuses to connect waterways farther than 2 km.",
-        "Hukum sempadan ruang: koordinat di luar Sarawak/Borneo ditolak semasa pengambilan; penarikan lembangan hidrologi enggan menyambung aliran lebih 2 km.",
-        "空间界限法则：砂拉越/婆罗洲战区之外的坐标在入口处即被拒收；水文汇水区吸附拒绝连接 2 公里之外的水道。"
+        "A geographic bounds check is not a surveyed boundary. A nearby waterway does not establish flow direction, flood depth or exposure at a locality.",
+        "Semakan sempadan geografi bukan sempadan ukur. Saliran berhampiran tidak membuktikan arah aliran, kedalaman banjir atau pendedahan lokaliti.",
+        "地理范围检查不等于测绘边界；附近水道不能证明流向、洪水深度或聚落暴露情况。"
       ),
     },
     {
       id: "vault",
       step: "03",
       pillar: L("Pillar 3", "Tonggak 3", "第三支柱"),
-      title: L("Immutable Snapshot Vault", "Kubah Rakaman Kebal", "不可变快照保全库"),
-      role: L("Zero-Downtime Resilience", "Ketahanan Sifar Masa Henti", "零停机脱机韧性"),
+      title: L("Dated snapshots", "Rakaman bertarikh", "带日期的快照"),
+      role: L("A record of the last build", "Rekod binaan terakhir", "上次构建的记录"),
       desc: L(
-        "Bakes all validated streams into deterministic, static JSON snapshots (dashboard.json). The board queries local snapshots so upstream API crashes or external internet failures cannot crash the cockpit.",
-        "Membakar semua aliran disahkan ke dalam rakaman statik JSON yang deterministik (dashboard.json). Papan membaca fail tempatan supaya kegagalan API luar tidak meruntuhkan kokpit.",
-        "将所有验证后的数据流烘焙为确定性静态 JSON 快照（dashboard.json）。看板直接读取本地快照，因此上游接口故障或外网中断绝不会拖垮指挥舱。"
+        "The build writes a dashboard snapshot and map artifacts. Later builds replace them. This reduces dependence on live upstream requests but does not guarantee availability or archive every raw response. Check each observation time.",
+        "Binaan menulis rakaman papan dan artifak peta. Binaan kemudian menggantikannya. Ini mengurangkan kebergantungan pada permintaan langsung tetapi tidak menjamin ketersediaan atau mengarkibkan setiap respons asal. Semak masa setiap pemerhatian.",
+        "构建生成看板快照及地图文件，后续构建会替换它们。这减少对即时上游请求的依赖，但不保证可用性，也不归档所有原始响应。请核对每项观测时间。"
       ),
       rule: L(
         "Honest gaps: if upstream sources are unreachable, the board publishes the exact observation age rather than an illusion of current reality.",
@@ -76,37 +76,37 @@ export const SYSTEM_BLUEPRINT = {
       id: "cockpit",
       step: "04",
       pillar: L("Pillar 4", "Tonggak 4", "第四支柱"),
-      title: L("Unified War-Room Cockpit", "Kokpit Bilik Gerakan Bersepadu", "战情室一体化指挥舱"),
-      role: L("Tactical Decision Support", "Sokongan Keputusan Taktikal", "战术决策执行"),
+      title: L("Map and human decisions", "Peta dan keputusan manusia", "地图与人工决策"),
+      role: L("Decision support, not dispatch", "Sokongan keputusan, bukan penghantaran", "辅助决策，并非调度"),
       desc: L(
-        "A 3-column operator console: Left rail (morning briefs, news intake, analytical insights), Hero Center (Padawan vs Greater Kuching scope switch, 2D Leaflet GIS, 3D Cesium digital twin, analytical deep tray), Right rail (official emergency directory, flood readiness protocols, client charter KPIs).",
-        "Konsol pengendali 3 lajur: Lajur kiri (taklimat pagi, suapan berita, pandangan analitik), Pusat Hero (suis skop Padawan/Kuching, GIS 2D Leaflet, kembar digital 3D Cesium, dulang analitik), Lajur kanan (direktori kecemasan rasmi, protokol banjir, KPI piagam pelanggan).",
-        "三栏操作员控制台：左栏（晨报、多语种新闻摄入、分析研判），英雄中心位（巴达旺与大古晋视野切换、2D Leaflet GIS、3D Cesium 数字孪生、深度分析托盘），右栏（官方应急通讯录、防汛响应预案、客户宪章 KPI）。"
+        "The map is the main view. Briefs, news, agency readings, contacts and evidence sit beside it on desktop and follow it on a phone. Open details when needed instead of showing every explanation at once.",
+        "Peta ialah paparan utama. Ringkasan, berita, bacaan agensi, hubungan dan bukti berada di sisinya pada desktop dan selepasnya pada telefon. Buka butiran apabila perlu, bukan semua penjelasan serentak.",
+        "地图是主视图。桌面上的简报、新闻、机构读数、联系方式和证据位于地图旁，手机上位于地图之后。按需打开详情，不必同时显示所有说明。"
       ),
       rule: L(
-        "Observe-to-act chain: telemetry without an operational owner is noise. Every critical alert maps directly to a direct phone number, responsible desk, and verified field procedure.",
-        "Rantaian pantau-ke-tindakan: telemetri tanpa pemilik operasi ialah hingar. Setiap amaran kritikal dipautkan terus ke nombor telefon, pegawai bertugas dan prosedur lapangan yang sah.",
-        "观察到行动闭环：缺乏责任经办人的遥测纯属噪音。每一项危急警报均直通直拨电话、责任科室及经过核验的现场预案。"
+        "Published council and agency channels support the next human check. Confirm who is responsible; this board does not assign or acknowledge official work orders.",
+        "Saluran majlis dan agensi menyokong semakan manusia seterusnya. Sahkan pihak bertanggungjawab; papan ini tidak menugaskan atau mengesahkan arahan kerja rasmi.",
+        "通过公布的市议会与机构渠道进行下一步人工核查。请确认责任单位；本看板不分派或签收正式工单。"
       ),
     },
   ],
-  schematic: `[ 01 SENSOR MESH ]    DID iHYDRO · APIMS Air · MetMalaysia · NASA FIRMS · OpenSky · Citizen Reports
+  schematic: `[ 01 PUBLIC SOURCES ] Observations · Models · Satellite products · News · Optional reports
        │
        ▼
-[ 02 TRUTH ENGINE ]   Contract Validation · Spatial Guard (No [0,0], No Inversions) · 48h Air Path
+[ 02 CHECKS ]         Time · Units · Coverage · Explicit spatial assumptions
        │
        ▼
-[ 03 SNAPSHOT VAULT ] Deterministic JSON · Zero-Downtime Resilience · Honest Observation Timestamps
+[ 03 SNAPSHOT ]       Last build · Source timestamps · Missing feeds remain visible
        │
        ▼
-[ 04 WAR ROOM ]       3-Column Cockpit · Padawan / Greater Kuching Scope · Observe-to-Act Protocol`,
+[ 04 HUMAN DECISION ] Map context · Inspect evidence · Confirm through agency channels`,
   laws: [
     {
       name: L("Law of Spatial Grounding", "Hukum Ketetapan Ruang", "空间锚定法则"),
       text: L(
-        "Every coordinate on screen must exist within the real Sarawak / Borneo theater. Null Island [0,0], inverted lat/long, and horizon-grazing 3D camera projections are rejected before they touch the DOM or map canvas.",
-        "Setiap koordinat pada skrin mesti wujud dalam wilayah Sarawak / Borneo sebenar. Pulau Sifar [0,0], lat/long terbalik dan unjuran ufuk 3D ditolak sebelum menyentuh kanvas peta.",
-        "屏幕上的每个坐标必须真实存在于砂拉越/婆罗洲战区之内。零岛 [0,0]、经纬度颠倒及地平线 3D 投影在触及 DOM 或地图画布前即被剔除。"
+        "Coordinate validity is a data-quality check. Spatial hallucination (SH) is a separate design failure: space without a reading or task purpose. The owner's MSH law addresses that interface geometry.",
+        "Kesahan koordinat ialah semakan kualiti data. Halusinasi ruang (SH) ialah kegagalan reka bentuk berasingan: ruang tanpa tujuan membaca atau bertugas. Hukum MSH pemilik menangani geometri antara muka itu.",
+        "坐标有效性属于数据质量检查。空间幻觉（SH）是另一种设计问题：空间占用缺乏阅读或任务目的。所有者的MSH原则针对界面几何。"
       ),
     },
     {
@@ -120,9 +120,9 @@ export const SYSTEM_BLUEPRINT = {
     {
       name: L("Law of Operational Actionability", "Hukum Kebolehtindakan Operasi", "实战行动力法则"),
       text: L(
-        "Observability without an operational owner is waste. Every warning, risk zone, and tension hotspot links to a direct extension, a verified desk, and a concrete action protocol.",
-        "Kebolehlihatan tanpa pemilik operasi adalah sia-sia. Setiap amaran, zon risiko dan titik ketegangan memaut ke sambungan telefon langsung, pegawai bertugas dan protokol tindakan konkrit.",
-        "缺乏处置责任主体的可观测性毫无价值。每一个警报、风险区与矛盾焦点均关联直拨分机、核准经办科室与具体执行方案。"
+        "Keep the evidence beside the decision. Missing service ownership or location remains unknown until confirmed; a suggested check is not an official instruction.",
+        "Letakkan bukti bersama keputusan. Tanggungjawab perkhidmatan atau lokasi yang tiada kekal tidak diketahui sehingga disahkan; cadangan semakan bukan arahan rasmi.",
+        "证据应紧邻决策。服务责任或位置缺失时，须保留未知直至确认；建议核查不等于正式指令。"
       ),
     },
   ],
@@ -134,11 +134,12 @@ export const SYSTEM_BLUEPRINT = {
 // without deciding where its status comes from.
 export const DICT_SOURCE_IDS = {
   weather: ["open-meteo-weather"],
-  aqi: ["open-meteo-air", "doe-apims"],
+  aqi: [], // Selected NREB observation or Open-Meteo model; not an AND dependency.
   gauges: ["did-ihydro"],
   rainregime: ["rain-regime"],
-  floodforecast: ["did-ihydro", "flood-action"],
-  growth: ["nasa-gibs"],
+  floodforecast: [], // Direct GloFAS artifact, not the composite action card.
+  timesfm: [],
+  growth: [],
   localities: ["mpp-localities"],
   census: ["gov-stats"],
   warnings: ["official-warnings"],
@@ -172,9 +173,9 @@ export const PIPELINE = [
     step: "3",
     title: L("Snapshot", "Rakaman", "快照"),
     body: L(
-      "Every loader writes one JSON file. The board reads that file, so a bad fetch can never take the page down — the worst case is an honest gap, not a blank screen.",
-      "Setiap pemuat menulis satu fail JSON. Papan membaca fail itu, jadi kegagalan tidak boleh menjatuhkan halaman — kes terburuk ialah jurang yang jujur, bukan skrin kosong.",
-      "每个加载器写入一个 JSON 文件。面板读取该文件，因此抓取失败不会导致页面崩溃——最坏情况是诚实的空缺，而非空白屏幕。",
+      "The build combines loader results into dashboard.json and map files. Snapshots can be stale or incomplete; they do not guarantee an outage-free page.",
+      "Binaan menggabungkan hasil pemuat ke dashboard.json dan fail peta. Rakaman boleh lama atau tidak lengkap; ia tidak menjamin halaman bebas gangguan.",
+      "构建将加载结果汇入dashboard.json与地图文件。快照可能过时或不完整，不保证页面永不中断。",
     ),
   },
   {
@@ -200,7 +201,7 @@ export const DICTIONARY = [
   {
     id: "aqi",
     signal: L("Air quality", "Kualiti udara", "空气质量"),
-    is: L("US AQI and particulate readings, preferring Sarawak ground stations when a key is configured.", "AQI AS dan bacaan particulate, mengutamakan stesen ground Sarawak apabila kunci dikonfigurasikan.", "美国 AQI 与颗粒物读数，配置密钥后优先使用砂拉越地面站。"),
+    is: L("Dated NREB Kuching API when available; otherwise the Open-Meteo US AQI model. These are different scales and sources.", "API NREB Kuching bertarikh jika tersedia; jika tiada, model AQI AS Open-Meteo. Skala dan sumber ini berbeza.", "优先显示有日期的NREB古晋API，否则显示Open-Meteo美国AQI模型。两者量表与来源不同。"),
     limit: L("Modelled AQI can be driven by ozone rather than PM2.5, so a moderate band is not always good air.", "AQI model boleh digerakkan ozon bukan PM2.5, jadi jalur sederhana tidak sentiasa udara baik.", "模型 AQI 可能由臭氧而非 PM2.5 驱动，因此“中等”不一定代表空气好。"),
   },
   {
@@ -218,19 +219,24 @@ export const DICTIONARY = [
   {
     id: "floodforecast",
     signal: L("River forecast", "Ramalan sungai", "河流预报"),
-    is: L("A 14-day probability band from a foundation model, refreshed by a local pipeline.", "Julat kebarangkalian 14 hari daripada model asas, disegarkan oleh saluran paip tempatan.", "本地管线刷新的 14 天概率带，来自基础模型。"),
+    is: L("GloFAS modelled discharge in cubic metres per second, with a dated ensemble outlook.", "Aliran model GloFAS dalam meter padu sesaat, dengan unjuran ensemble bertarikh.", "GloFAS模型流量，单位为立方米每秒，附带日期的集合预报。"),
     limit: L("A model range, not a flood warning. Never treat the upper band as a river level.", "Julat model, bukan amaran banjir. Jangan anggap julat atas sebagai paras sungai.", "模型区间，而非洪水警报。切勿将上界视为河流水位。"),
+  },
+  {
+    id: "timesfm", signal: L("Experimental outlook", "Unjuran eksperimen", "实验性展望"),
+    is: L("TimesFM fourteen-day forecast artifact, generated by the local pipeline at its stated date.", "Artifak ramalan empat belas hari TimesFM, dijana saluran tempatan pada tarikh dinyatakan.", "本地管线在所示日期生成的TimesFM十四日预报文件。"),
+    limit: L("Not an agency flood warning. An old artifact is an archive, not today's forecast.", "Bukan amaran banjir agensi. Artifak lama ialah arkib, bukan ramalan hari ini.", "并非机构洪水警报。旧文件是存档，不是今日预报。"),
   },
   {
     id: "growth",
     signal: L("Satellite growth", "Pertumbuhan satelit", "卫星增长"),
     is: L("Built-up area and impervious surface compared between satellite passes.", "Kawasan terbina dan permukaan tidak lutus dibandingkan antara laluan satelit.", "卫星过境之间对比建成区与不透水面。"),
-    limit: L("Most building heights are estimates. A footprint count is not a building census.", "Kebanyakan tinggi bangunan ialah anggaran. Kiraan jejak bukan bancii bangunan.", "多数建筑高度为估算。轮廓计数不等于建筑普查。"),
+    limit: L("Embedding change is not proof of construction or its cause. Compare the stated years and area; imagery availability alone does not validate change.", "Perubahan embedding bukan bukti pembinaan atau puncanya. Bandingkan tahun dan kawasan dinyatakan; imej tersedia sahaja tidak mengesahkan perubahan.", "嵌入变化不能证明建设或其原因。请核对年份和范围；有影像不等于变化已获验证。"),
   },
   {
     id: "localities",
     signal: L("Localities", "Localiti", "聚落"),
-    is: L("Named settlements with coordinates, from open map data.", "Kampung bertanah dengan koordinat, daripada data peta terbuka.", "来自开放地图数据的具名聚落及坐标。"),
+    is: L("Named entries from the MPP directory, with locality codes and known ward links. No precise coordinates are supplied.", "Entri bernama daripada direktori MPP, dengan kod lokaliti dan hubungan wad diketahui. Tiada koordinat tepat dibekalkan.", "MPP目录中的具名条目，附聚落代码及已知辖区关联，不提供精确坐标。"),
     limit: L("A place name is not a population register and the board does not pretend it is.", "Nama tempat bukan daftar penduduk dan papan tidak berpura-pura.", "地名不等于人口登记，面板不作此声称。"),
   },
   {

@@ -312,6 +312,19 @@ function measureDoc(d, route, w, cb) {
   // down would be of a page nobody sees.
   try { wv.scrollTo(0, 0); } catch (e) { /* nothing to scroll */ }
   var rec = wv.__SPATIAL_MEASURE__(route, w, d);
+  if (d.querySelector('meta[name="spatial-ready"]')) {
+    rec.board = {
+      state: d.documentElement.getAttribute('data-board-state'),
+      metrics: d.querySelectorAll('#metricBand [data-metric-id]').length,
+      brief: d.querySelectorAll('#briefNow .brief-item').length,
+      funnel: d.querySelectorAll('#researchPanel .evidence-funnel .rp-step').length,
+      map: !!d.querySelector('#mapCanvas .leaflet-pane'),
+      font: wv.getComputedStyle(d.body).fontFamily
+    };
+    if (rec.board.state !== 'ready' || rec.board.metrics < 4 || rec.board.brief < 1 || rec.board.funnel !== 5 || !rec.board.map) {
+      return cb({ route: route, w: w, error: 'critical board content missing', board: rec.board });
+    }
+  }
   // Clear what this page left behind, so the NEXT measurement of this route
   // starts from an empty state. A receipt of a page that remembers the last
   // measurement is a receipt of the instrument, not of the product.
@@ -361,6 +374,9 @@ function loadPage(route, w, h, cb) {
       // gate wait for that attribute on <html>. Without it the gate settles
       // on a skeleton between two async stages and measures nothing real.
       var rm = d.querySelector('meta[name="spatial-ready"]');
+      if (rm && d.documentElement.getAttribute('data-board-state') === 'error') {
+        return finish({ route: route, w: w, error: 'board render failed' });
+      }
       if (rm && !d.documentElement.hasAttribute(rm.getAttribute('content'))) {
         return setTimeout(wait, 50);
       }

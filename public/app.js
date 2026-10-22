@@ -6,16 +6,11 @@
 // below, skip the live weather self-completion. Layout is untouched — only
 // the clock and one network completion are frozen. Visitors never carry the token.
 const __MEASURING__ = /[?&]__spatial=/.test(location.search);
+const { measurementClock, boardContentReady } = await import(`./measurement.js${new URL(import.meta.url).search}`);
+let Date = globalThis.Date;
 if (__MEASURING__) {
   const built = await fetch("./api/build-manifest.json").then((r) => r.json()).catch(() => null);
-  const t0 = Date.parse(built?.builtAt) + 5 * 60_000;
-  if (Number.isFinite(t0)) {
-    const RealDate = Date;
-    globalThis.Date = class extends RealDate {
-      constructor(...a) { a.length ? super(...a) : super(t0); }
-      static now() { return t0; }
-    };
-  }
+  Date = measurementClock(built?.builtAt, true);
 }
 
 // Dynamic versioned import of data.js — pulls the asset version from the
@@ -40,15 +35,21 @@ const {
   WARD_TENSION, WARD_TENSION_ILLUSTRATIVE, MPP_OFFICIAL_SERVICES,
   MPP_WARD_CATEGORIES, WARD_TO_CATEGORY
 } = await import(__dataUrl__);
-const { dataHealth, observationHealth, warningHealth } = await import(`./data-health.js?v=${encodeURIComponent(__ASSET_VER__)}`);
-const { morningBrief } = await import(`./morning-brief.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const healthModule = await import(`./data-health.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const dataHealth = (p, scope, at = Date.now()) => healthModule.dataHealth(p, scope, at);
+const observationHealth = (s, at = Date.now()) => healthModule.observationHealth(s, at);
+const warningHealth = (m, at = Date.now()) => healthModule.warningHealth(m, at);
+const briefModule = await import(`./morning-brief.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const morningBrief = (p, lang, scope, at = Date.now()) => briefModule.morningBrief(p, lang, scope, at);
 const { classifyRainRegime, summariseOpenMeteo, RAIN_REGIME_OPEN_METEO_URL } = await import(`./rain-regime.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { gridUrl, backTrajectory, firesAlongPath, originSector } = await import(`./air-path.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { summariseTide, TIDE_URL } = await import(`./tide.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { hazeState, hazeAdvice, apiBand, API_BANDS, inflowPath } = await import(`./haze.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { anchorHourIndex } = await import(`./open-meteo-anchor.js?v=${encodeURIComponent(__ASSET_VER__)}`);
-const { windowComplete, seriesContinuous, observationWindow, metricFreshness } = await import(`./climate-validate.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { windowComplete, seriesContinuous, observationWindow, metricFreshness: readingFreshness } = await import(`./climate-validate.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const metricFreshness = (p, id, fallback) => readingFreshness(p, id, fallback, Date.now());
 const { PIPELINE, DICTIONARY, RECIPES, OMISSIONS, SYSTEM_BLUEPRINT, buildRecord, DICT_SOURCE_IDS } = await import(`./research-data.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { evidenceText, localityEvidence, waterEvidence, dictionaryArtifact, FUNNEL, RESEARCH_REFERENCES } = await import(`./evidence.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { isValidCoord, isValidSarawakCoord, isValidKuchingCoord, detectInvertedCoord, sanitizeMarkerCoord, clampRegionBounds, filterViewportSamples } = await import(`./spatial-guard.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupBuildings3D } = await import(`./buildings-3d.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupRegionalBuildings } = await import(`./regional-buildings.js?v=${encodeURIComponent(__ASSET_VER__)}`);
@@ -147,6 +148,7 @@ const state = {
   tileLayers: new Map(), activeLayerId: "imagery", payload: null, hasInitialMapFit: false,
   theme: "light", lang: "en", mapResizeObserver: null,
   activeWard: null,
+  activeLocality: null,
   activeWaterPath: null,
   scope: readStoredScope(),
   dimension: readStoredDim(),
@@ -1302,6 +1304,7 @@ const METRIC_SOURCES = {
   heat:        { src: "Open-Meteo",     fresh: "60 s",  link: "https://open-meteo.com/" },
   aqi:         { src: "Open-Meteo AQI", fresh: "60 s",  link: "https://open-meteo.com/en/docs/air-quality-api" },
   pm25:        { src: "Open-Meteo AQI", fresh: "60 s",  link: "https://open-meteo.com/en/docs/air-quality-api" },
+  'nreb-api':  { src: 'NREB Sarawak', fresh: 'official station', link: 'https://www.nreb.gov.my/' },
   rain6h:      { src: "Open-Meteo",     fresh: "60 s",  link: "https://open-meteo.com/" },
   airport:     { src: "OpenSky Network",fresh: "live",  link: "https://opensky-network.org/" },
   wards:       { src: "MPP zoning map", fresh: "static",link: "https://mpp.sarawak.gov.my/" },
@@ -1328,7 +1331,7 @@ function renderMetrics(metrics) {
   state.lastMetrics = metrics;
   $("metricBand").innerHTML = metrics.slice(0,12).map(m => {
     const prov = METRIC_SOURCES[m.id];
-    const fresh = prov ? metricFreshness(state.payload, m.id, prov.fresh) : "";
+    const fresh = m.id === 'nreb-api' ? state.payload?.nrebApi?.takenAt || evidenceText('unknown', state.lang) : prov ? metricFreshness(state.payload, m.id, prov.fresh) : "";
     const provHtml = prov
       ? `<div class="metric-source"><span class="src-name" title="${escapeHtml(prov.src)}">${escapeHtml(prov.src)}</span><span class="src-fresh" title="${escapeHtml(fresh)}">${escapeHtml(fresh)}</span></div>`
       : "";
@@ -1339,8 +1342,19 @@ function renderMetrics(metrics) {
       <div class="metric-context" title="${escapeHtml(m.context||'')}">${escapeHtml(m.context||'')}</div>
       <div class="sparkline-shell">${m.history?sparkline(m.history,m.tone):''}</div>
       ${provHtml}
+      <button type="button" class="metric-evidence-open" data-evidence-metric="${escapeHtml(m.id)}" aria-label="${escapeHtml(evidenceText('why', state.lang) + ' ' + tOr(`m_${m.id}`, m.label))}">?</button>
     </article>`;
   }).join("");
+  $('metricBand').querySelectorAll('[data-evidence-metric]').forEach(button => button.addEventListener('click', () => {
+    const m = state.payload?.metrics?.find(x => x.id === button.dataset.evidenceMetric);
+    if (!m) return;
+    const prov = METRIC_SOURCES[m.id];
+    openEvidenceDialog(tOr(`m_${m.id}`, m.label), `<p><strong>${m.value == null ? '—' : escapeHtml(num(m.value))} ${escapeHtml(m.unit || '')}</strong></p><p>${escapeHtml(m.context || '')}</p>
+      <p>${escapeHtml(prov?.src || evidenceText('unknown', state.lang))} · ${escapeHtml(m.id === 'nreb-api' ? state.payload?.nrebApi?.takenAt || '—' : metricFreshness(state.payload, m.id, prov?.fresh || '—'))}</p>
+      <p>${escapeHtml(evidenceText('verify', state.lang))}</p>
+      ${['heat','rain6h','aqi','pm25'].includes(m.id) ? `<p>${escapeHtml(evidenceText('modelLimit', state.lang))}</p>` : ''}
+      ${prov?.link ? `<a href="${safeUrl(prov.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(evidenceText('source', state.lang))} ↗</a>` : ''}`);
+  }));
 }
 
 function highlightCatchment(station, bandColor) {
@@ -2806,7 +2820,7 @@ function localeText(field) {
 // on two sources is only as good as its weaker one.
 function dictStatus(payload, ids) {
   const byId = new Map((payload?.sources || []).map((s) => [s.id, s]));
-  const found = ids.map((id) => byId.get(id)).filter(Boolean);
+  const found = ids.map((id) => byId.get(id) || { id, name: id, status: 'offline' });
   if (!found.length) return null;
   const rank = { live: 0, official: 1, partial: 2, reference: 3, fallback: 4, offline: 5, degraded: 5 };
   return found.reduce((worst, s) => ((rank[s.status] ?? 3) > (rank[worst.status] ?? 3) ? s : worst), found[0]);
@@ -2863,7 +2877,7 @@ function renderResearch(payload) {
     </li>`).join("");
 
   const dictHtml = DICTIONARY.map((d) => {
-    const src = dictStatus(payload, DICT_SOURCE_IDS[d.id] || []);
+    const src = dictionaryArtifact(payload, d.id, Date.now()) || dictStatus(payload, DICT_SOURCE_IDS[d.id] || []);
     return `
     <tr>
       <th scope="row">${escapeHtml(localeText(d.signal))}</th>
@@ -2880,6 +2894,9 @@ function renderResearch(payload) {
     </li>`).join("");
 
   const omitHtml = OMISSIONS.map((o) => `<li>${escapeHtml(localeText(o))}</li>`).join("");
+  const funnelHtml = FUNNEL.map((p, i) => `<li class="rp-step"><span class="rp-step-n">${escapeHtml(i + 1)}</span><div class="rp-step-body"><strong>${escapeHtml(localeText(p.title))}</strong><span>${escapeHtml(localeText(p.body))}</span></div></li>`).join('');
+  const referenceHtml = RESEARCH_REFERENCES.map(r => `<li><a href="${safeUrl(r.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.title)}</a> · ${escapeHtml(localeText(r.applied))}</li>`).join('');
+  const waterHtml = waterEvidenceHtml(payload);
 
   el.innerHTML = `
     <div class="rp-record">
@@ -2888,13 +2905,17 @@ function renderResearch(payload) {
       <span>${escapeHtml(tFill("researchBuilt", { at: formatShortStamp(record.builtAt) }))}</span>
       <span><b>${record.live}/${record.total}</b> ${escapeHtml(t("researchSourcesLive"))}</span>
       <button type="button" id="copyEvidenceRecord" class="rp-copy">${escapeHtml(t("researchCopyRecord"))}</button>
+      <button type="button" id="readEvidenceMethod" class="rp-copy">${escapeHtml(evidenceText('readMethod', state.lang))}</button>
     </div>
 
-    <div class="section-label">${escapeHtml(t("researchBlueprint"))}</div>
-    ${blueprintHtml}
+    <div class="section-label">${escapeHtml(evidenceText('evidence', state.lang))}</div>
+    <ol class="rp-pipeline evidence-funnel">${funnelHtml}</ol>
+    ${waterHtml}
+    <details class="research-method"><summary>${escapeHtml(t("researchBlueprint"))}</summary>${blueprintHtml}</details>
 
-    <div class="section-label">${escapeHtml(t("researchHowItWorks"))}</div>
-    <ol class="rp-pipeline">${pipelineHtml}</ol>
+    <details class="research-method"><summary>${escapeHtml(t("researchHowItWorks"))}</summary><ol class="rp-pipeline">${pipelineHtml}</ol></details>
+    <div class="section-label">${escapeHtml(evidenceText('source', state.lang))}</div>
+    <ul class="rp-omissions">${referenceHtml}</ul>
 
     <div class="section-label">${escapeHtml(t("researchDictionary"))}</div>
     <table class="rp-table">
@@ -2914,6 +2935,7 @@ function renderResearch(payload) {
     <ul class="rp-omissions">${omitHtml}</ul>`;
 
   // A screenshot cannot be reproduced later. This copies the facts that can.
+  $("readEvidenceMethod")?.addEventListener("click", () => openEvidenceDialog(evidenceText('source', state.lang), `<ol class="rp-pipeline evidence-funnel">${funnelHtml}</ol>${waterHtml}<h3>${escapeHtml(evidenceText('source', state.lang))}</h3><ul>${referenceHtml}</ul>`));
   $("copyEvidenceRecord")?.addEventListener("click", (e) => {
     const btn = e.currentTarget;
     const blob = {
@@ -2935,6 +2957,45 @@ function renderResearch(payload) {
       () => { btn.textContent = t("researchCopyFailed"); setTimeout(() => { btn.textContent = t("researchCopyRecord"); }, 1800); },
     );
   });
+}
+
+function waterEvidenceHtml(payload) {
+  const w = waterEvidence(payload, state.activeStation || null, Date.now());
+  if (!w) return `<p>${escapeHtml(evidenceText('unknown', state.lang))} · DID iHYDRO</p>`;
+  const copy = key => escapeHtml(evidenceText(key, state.lang));
+  return `<section class="water-evidence"><h3>${copy('observation')} · ${escapeHtml(w.name)}</h3>
+    <p><strong>${w.level == null ? '—' : num(w.level, 2) + ' m'}</strong> · ${escapeHtml(w.observedAt || '—')} MYT · ${copy(w.age.status)}${w.age.minutes == null ? '' : ' · ' + num(w.age.minutes) + ' ' + copy('age')}</p>
+    <p>${escapeHtml(w.source)} · ${copy('threshold')}: ${w.threshold == null ? '—' : num(w.threshold, 2) + ' m'} · ${copy('verify')}</p>
+    <p>${copy('gaugeLimit')}</p><a href="https://ihydro.sarawak.gov.my/" target="_blank" rel="noopener noreferrer">DID iHYDRO ↗</a></section>`;
+}
+
+function openEvidenceDialog(title, html) {
+  let dialog = $('evidenceDialog');
+  if (!dialog) {
+    dialog = document.createElement('dialog'); dialog.id = 'evidenceDialog'; dialog.className = 'evidence-dialog';
+    dialog.setAttribute('aria-labelledby', 'evidenceTitle'); document.body.appendChild(dialog);
+  }
+  dialog.innerHTML = `<header><h2 id="evidenceTitle">${escapeHtml(title)}</h2><button type="button" data-close>${escapeHtml(evidenceText('close', state.lang))}</button></header>${html}`;
+  dialog.querySelector('[data-close]').addEventListener('click', () => dialog.close());
+  if (!dialog.open) dialog.showModal();
+}
+
+function openLocalityEvidence(code) {
+  const item = state.payload?.mppLocalities?.items?.find(x => x.code === code);
+  const e = localityEvidence(item, state.payload, Date.now());
+  if (!e) return;
+  setActiveWard(e.ward);
+  state.activeLocality = e.code;
+  const copy = key => escapeHtml(evidenceText(key, state.lang));
+  openEvidenceDialog(evidenceText('title', state.lang), `<p><strong>${escapeHtml(e.name)}</strong> · ${escapeHtml(e.code)}</p>
+    <p>${e.ward ? 'MPP · ' + escapeHtml(e.ward) : copy('unknownWard')}${e.constituency ? ' · ' + escapeHtml(e.constituency) : ''}</p>
+    <p>${copy('noPoint')}</p><h3>${copy('regional')}</h3>${waterEvidenceHtml(state.payload)}
+    <p>Open-Meteo · ${copy(e.weather.status)} · ${escapeHtml(e.weather.observedAt || '—')} MYT</p><p>${copy('modelLimit')}</p>
+    <p>${copy('change')}</p><h3>${copy('news')}</h3>
+    ${e.news.length ? `<ul>${e.news.map(n => `<li><a href="${safeUrl(n.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(n.title)}</a> · ${escapeHtml(n.source || '')} · ${escapeHtml(n.publishedAt || '—')}</li>`).join('')}</ul>` : `<p>${copy('noNews')}</p>`}
+    <p>${copy(e.reportStatus !== 'live' ? 'noReports' : 'reports')}</p>
+    <h3>${copy('next')}</h3><p>${copy('nextText')}</p>
+    <p><a href="https://mpp.sarawak.gov.my/" target="_blank" rel="noopener noreferrer">MPP ↗</a> · <a href="https://talikhidmat.sarawak.gov.my/" target="_blank" rel="noopener noreferrer">Talikhidmat ↗</a></p>`);
 }
 
 function renderSourceMatrix(payload) {
@@ -3929,6 +3990,10 @@ function renderLocalityFilters(payload) {
     el.addEventListener(evt, () => {
       const key = el.dataset.filter;
       state.localityFilter = { ...state.localityFilter, [key]: el.value || null };
+      if (key === 'search') {
+        renderLocalityList(filterLocalities(state.payload?.mppLocalities?.items || [], state.localityFilter));
+        return;
+      }
       if (key === "ward") state.activeWard = el.value || null;
       renderMppLocalities(state.payload);
       renderMppCouncillors(state.payload);
@@ -3960,10 +4025,11 @@ function renderLocalityList(items) {
   const renderRow = (it) => {
     const color = WARD_COLOR_MAP[it.wardCode] || "#8aa2c8";
     return `
-      <article class="locality-row" data-ward="${escapeHtml(it.wardCode || "")}" style="border-left-color:${color}">
+      <article class="locality-row" data-code="${escapeHtml(it.code)}" data-ward="${escapeHtml(it.wardCode || "")}" style="border-left-color:${color}">
         <span class="locality-code">${escapeHtml(it.code)}</span>
         <span class="locality-name">${escapeHtml(it.name)}</span>
         <span class="locality-const">${escapeHtml(localityConstituencyBadge(it))}</span>
+        <button type="button" class="locality-evidence-open">${escapeHtml(evidenceText('open', state.lang))} · ${escapeHtml(it.code)}</button>
         <span class="locality-counts">
           ${propertyUsageWithheld()
             ? `<span class="c-res" title="Property-usage counts withheld">withheld</span>`
@@ -4003,8 +4069,7 @@ function renderLocalityList(items) {
 
   target.querySelectorAll(".locality-row").forEach(row => {
     row.addEventListener("click", () => {
-      const w = row.dataset.ward;
-      if (w) setActiveWard(w);
+      openLocalityEvidence(row.dataset.code);
     });
   });
   target.querySelectorAll(".locality-ward-header").forEach(hdr => {
@@ -4037,6 +4102,8 @@ function renderMppLocalities(payload) {
 // --- Shared cross-panel state: activeWard drives map + councillors + localities
 
 function setActiveWard(code) {
+  state.activeLocality = null;
+  $('evidenceDialog')?.close();
   state.activeWard = code || null;
   state.localityFilter = {
     ...(state.localityFilter || { ward: null, stateCode: null, parliamentCode: null, propertyType: null, search: "" }),
@@ -5230,6 +5297,8 @@ function renderTextScaleToggle() {
 
 // --- Language Toggle ---
 function setLang(lang) {
+  $('evidenceDialog')?.close();
+  state.activeLocality = null;
   state.lang = lang;
   document.documentElement.lang = lang === "zh" ? "zh-Hans" : lang;
   document.dispatchEvent(new CustomEvent("operator-language", { detail: lang }));
@@ -5336,6 +5405,8 @@ function cycleWard(direction) {
 // no full reload — just rewires the scope state, re-fits the map, and re-runs
 // renderDashboard() so the filtered data flows through the same renderers.
 function setScope(scope, { silent = false } = {}) {
+  $('evidenceDialog')?.close();
+  state.activeLocality = null;
   if (!VALID_SCOPES.includes(scope)) return;
   if (state.scope === scope) return;
   state.scope = scope;
@@ -5922,6 +5993,8 @@ function setupExport() {
 
 // --- Boot ---
 async function boot() {
+  document.documentElement.removeAttribute('data-board-ready');
+  document.documentElement.setAttribute('data-board-state', 'pending');
   try {
     const payload = await loadDashboardPayload();
     renderDashboard(payload);
@@ -5945,8 +6018,13 @@ async function boot() {
     // an optional commentary panel succeeding (and renderInsights itself
     // catches internally).
     renderInsights(payload);
-  } catch (err) { console.error("IOC SYNC FAILURE", err); }
-  finally { document.documentElement.setAttribute("data-board-ready", "1"); }
+    if (!boardContentReady(document)) throw new Error('Critical board content did not render');
+    document.documentElement.setAttribute('data-board-state', 'ready');
+    document.documentElement.setAttribute('data-board-ready', '1');
+  } catch (err) {
+    document.documentElement.setAttribute('data-board-state', 'error');
+    console.error("IOC SYNC FAILURE", err);
+  }
 }
 
 // --- Pin a problem: map spot -> Talikhidmat-ready report --------------------
@@ -6101,6 +6179,7 @@ function renderWaterSupply(payload) {
 let airPathCache = null;
 const AIR_PATH_KEY = "kch-ioc-air-path-v2";
 async function computeAirPath() {
+  if (__MEASURING__) throw new Error('Live wind completion disabled in measurement fixture');
   if (airPathCache && Date.now() - Date.parse(airPathCache.at) < 3600 * 1000) return airPathCache;
   // One hour cache survives reloads, so repeat visits don't re-bill Open-Meteo.
   try {
@@ -6285,7 +6364,7 @@ function renderTide(payload) {
   const el = $("tidePanel");
   if (!el) return;
   let tide = payload.tide;
-  if ((!tide || tide.status !== "live") && !tideClientTried) {
+  if (!__MEASURING__ && (!tide || tide.status !== "live") && !tideClientTried) {
     tideClientTried = true;
     fetch(TIDE_URL).then((r) => r.json()).then((json) => {
       const s2 = summariseTide(json);
@@ -6310,6 +6389,7 @@ function renderTide(payload) {
 // browser with the same classifier, using the server's baked cyclone inputs.
 let rainRegimeClientTried = false;
 async function completeRainRegimeInBrowser(payload) {
+  if (__MEASURING__) return;
   const rr = payload.rainRegime;
   if (rainRegimeClientTried || !rr || rr.inputs?.kuching) return;
   rainRegimeClientTried = true;

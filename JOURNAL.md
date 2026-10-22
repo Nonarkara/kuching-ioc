@@ -63,3 +63,9 @@ What: The spatial gate cannot be made to enforce on this board yet, and CI there
 Why: Two runs of the SAME build measure different geometry. The board renders wall-clock-relative strings — "10 min ago" becomes "12 min ago" — and completes weather live in the visitor's browser, so card heights and the whole page distribution move with the clock. A receipt that changes when nothing in the code changed is a receipt that lies, and a gate that blocks deploys on its own nondeterminism gets switched off.
 Diff: .github/workflows/cloudflare-pages.yml.
 Tags: MSH · determinism · honesty-in-tooling
+
+Date: 2026-10-23
+What: Added locality and metric evidence dialogs, a trilingual source-to-decision explanation and Taipei DOIT design references; retained all map and technical content.
+Why: A place-name match is not a verified event, a regional model is not a locality reading, and an empty board must never pass the spatial instrument.
+Diff: tasks/COMMUNICATION-EVIDENCE-PLAN.md; public/evidence.js; public/measurement.js; scripts/spatial/check-portable.mjs; tests/evidence.test.mjs.
+Tags: communication · locality · provenance · readiness · Taipei

@@ -115,3 +115,9 @@ The board now predicts and detects change, not just reports the present.
 ### Deferred (next increment)
 - JPS Infobanjir **rainfall** station scrape (state=SRK) alongside water level.
 - DOSM **district-level** population/income (Kuching/Padawan/Samarahan) in `loadGovStats`.
+
+### Evidence communication — 23 October 2026
+- Localities open a native evidence dialog, using directory ward codes only; no fabricated coordinates, nearest-gauge joins or citizen verification. Metrics have keyboard-accessible Why this actions.
+- Research retains the original technical material in disclosures and adds five source-to-decision stages with Taipei/W3C citations. Read method reuses the existing dialog so desktop prose is not trapped in the short tray. EN/BM/ZH new text awaits native review.
+- `measurement.js` supplies a module-local frozen clock; critical DOM structures, not text length or finally completion, control readiness. Linux CI enforces `check-portable.mjs`; font-dependent geometry remains advisory pending a reviewed Linux baseline.
+- Verification and remaining limits: `tasks/COMMUNICATION-EVIDENCE-PLAN.md`. Maps, Helvetica, source content and previous-agent attribution remain intact.

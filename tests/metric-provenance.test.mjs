@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { nrebObservationTime, nrebFreshness } from '../public/evidence.js';
 import { measureMetricEvidence } from '../public/measurement.js';
 import { portableFailures, REQUIRED_WIDTHS } from '../scripts/spatial/check-portable.mjs';
-import { withDeadline } from '../scripts/spatial/deadline.mjs';
+import { withDeadline, releaseBrowser } from '../scripts/spatial/deadline.mjs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -51,4 +51,10 @@ test('spatial watchdog returns timeout, propagates errors and does not hold a su
   const url=new URL('../scripts/spatial/deadline.mjs',import.meta.url).href;
   const {stdout}=await promisify(execFile)(process.execPath,['--input-type=module','-e',`import {withDeadline} from ${JSON.stringify(url)}; console.log(await withDeadline(Promise.resolve('done'),45000,'timeout'));`],{timeout:15000});
   assert.equal(stdout.trim(),'done');
+});
+
+test('audit browser teardown closes inherited output pipes as well as the parent',()=>{
+  const calls=[];
+  releaseBrowser({kill:signal=>calls.push(signal),stdout:{destroy:()=>calls.push('stdout')},stderr:{destroy:()=>calls.push('stderr')},unref:()=>calls.push('unref')});
+  assert.deepEqual(calls,['SIGKILL','stdout','stderr','unref']);
 });

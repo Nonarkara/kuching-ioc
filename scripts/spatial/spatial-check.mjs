@@ -70,7 +70,7 @@ import { tmpdir, homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { measureMetricEvidence } from '../../public/measurement.js';
-import { withDeadline } from './deadline.mjs';
+import { withDeadline, releaseBrowser } from './deadline.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -907,11 +907,7 @@ for (let attempt = 1; attempt <= 3; attempt++) {
   // measurement was fine.
   const timeout = Symbol("timeout");
   const got = await withDeadline(waiting, RUN_TIMEOUT_MS, timeout);
-  try {
-    child.kill("SIGKILL");
-  } catch {
-    /* already gone */
-  }
+  releaseBrowser(child);
   if (got !== timeout) {
     payload = got;
     chromeError = null;

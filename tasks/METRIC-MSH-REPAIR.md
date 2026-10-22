@@ -41,3 +41,7 @@ Full upstream settle/re-vendoring remains a separate deliberately scoped task.
 - Scoped hang repair: clear the watchdog timer in finally. The45-minute Promise
   race timer previously survived successful work; only report/update forcibly
   exited. Deadline tests cover timeout, rejection and actual child exit.
+- Follow-up: the full enforcing run printed PASS but retained browser output
+  pipes even after the browser parent died. Explicitly destroy this audit's
+  stdout/stderr streams and unref its killed child; no unrelated browser is
+  touched. Process completion is verified separately from the geometry verdict.

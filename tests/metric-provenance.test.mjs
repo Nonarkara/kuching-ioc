@@ -15,7 +15,7 @@ test('NREB age is observation age in MYT, never the more recent retrieval age',(
   assert.match(nrebFreshness(r,at).title,/8:00 P.M./);
   assert.equal(nrebFreshness({...r,fetchedAt:'2099-01-01'},at).label,'Obs 2h');
   assert.equal(nrebFreshness(r,at,'ms').label,'Cer 2j');
-  assert.equal(nrebFreshness(r,at,'zh').label,'观测 2时');
+  assert.equal(nrebFreshness(r,at,'zh').label,'2小时前');
 });
 test('NREB dates validate midnight, noon, impossible dates, unknown and future observations',()=>{
   assert.equal(nrebObservationTime('22 October 2026, Thursday 12:00 A.M.'),Date.parse('2026-10-21T16:00:00Z'));

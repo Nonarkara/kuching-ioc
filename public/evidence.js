@@ -63,11 +63,11 @@ export function nrebFreshness(reading, at, lang = 'en') {
   const prefix = ({en:'Obs', ms:'Cer', zh:'观测'})[lang] || 'Obs';
   let age = '?';
   if (minutes != null && minutes >= 0) {
-    const units = ({en:['m','h','d'], ms:['m','j','h'], zh:['分','时','天']})[lang] || ['m','h','d'];
+    const units = ({en:['m','h','d'], ms:['m','j','h'], zh:['分钟前','小时前','天前']})[lang] || ['m','h','d'];
     const n = minutes < 60 ? minutes : minutes < 1440 ? Math.floor(minutes / 60) : Math.floor(minutes / 1440);
     age = `${n}${units[minutes < 60 ? 0 : minutes < 1440 ? 1 : 2]}`;
   }
-  return { label: `${prefix} ${age}`, title: `${evidenceText('observation', lang)} · ${reading?.takenAt || evidenceText('unknown', lang)} MYT${minutes != null && minutes < 0 ? ' · ' + evidenceText('future', lang) : ''}` };
+  return { label: lang === 'zh' && age !== '?' ? age : `${prefix} ${age}`, title: `${evidenceText('observation', lang)} · ${reading?.takenAt || evidenceText('unknown', lang)} MYT${minutes != null && minutes < 0 ? ' · ' + evidenceText('future', lang) : ''}` };
 }
 
 export function readingAge(value, at = Date.now()) {

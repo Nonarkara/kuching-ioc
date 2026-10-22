@@ -36,7 +36,7 @@ Full upstream settle/re-vendoring remains a separate deliberately scoped task.
 - Actual rendered mutations: restoring positioned button detects108px² glyph
   overlap; restoring raw timestamp detects122px clipping. Neither can be blessed
   by an inherited baseline reason.
--186 tests passed. Complete frozen reports A and C are compared separately;
+- 187 tests passed. Complete frozen reports A and C are byte-identical (61,948 bytes);
   incomplete B (last two pages timed out) is explicitly excluded from approval.
 - Scoped hang repair: clear the watchdog timer in finally. The45-minute Promise
   race timer previously survived successful work; only report/update forcibly
@@ -45,3 +45,6 @@ Full upstream settle/re-vendoring remains a separate deliberately scoped task.
   pipes even after the browser parent died. Explicitly destroy this audit's
   stdout/stderr streams and unref its killed child; no unrelated browser is
   touched. Process completion is verified separately from the geometry verdict.
+- Final plain enforcing run completed all26 widths, printed PASS and exited0
+  after the stream teardown fix. The earlier PASS-with-open-process run was
+  terminated only by its exact audit PID and is not claimed as an exit pass.

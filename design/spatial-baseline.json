@@ -56,17 +56,25 @@
     "dead|div.gp-totals": "The totals line of a two-part ground-pulse lane header. The lane kicker beside it is 50x89 and fills the row; the totals are one line that has nothing else to say.",
     "dead|div#mapKicker": "The map's title line, in the map panel header. The tall thing in that row is the map panel below it, not empty space: re-measured with the disclosure open, the title-wrap is 38px and the kicker fills it. The 302px band only exists while the panel is closed.",
     "dead|div.hg-level": "The current gauge reading in a three-column haze row whose first column is the gauge drawing at 142x111. The drawing fills the row.",
-    "dead|div.hg-band": "The severity band label in the same three-column haze row \u2014 one word beside the gauge drawing that gives the band its meaning.",
+    "dead|div.hg-band": "The severity band label in the same three-column haze row — one word beside the gauge drawing that gives the band its meaning.",
     "clip|div.metric-label": "A KPI tile is a fixed cell in a six-across band: 115px at 1240px, 90px at 1041px. The label is a fixed i18n string ('Rain next 6h'), so its width is stable and one line with a title attribute is the honest answer. Widening the band to fit would make it two rows tall, which takes the map down with it.",
-    "clip|div.metric-context": "Truncation here is a measured trade, not an oversight. The context is DATA \u2014 'NREB official \u00b7 Moderate \u00b7 21 October 2026, Wednesday 15:45' \u2014 and a KPI tile is a fixed cell of a six-across band (90px at 1041px), so the qualifier does not fit on one line. It was changed to a two-line wrap on 22 Oct and reverted the same day: tests/anti-slop.test.mjs records the band regrowing to 118px, which took 118px off the map. The map is the product, so the qualifier truncates \u2014 and carries its full text in a title attribute, so hover recovers it.",
+    "clip|div.metric-context": "Truncation here is a measured trade, not an oversight. The context is DATA — 'NREB official · Moderate · 21 October 2026, Wednesday 15:45' — and a KPI tile is a fixed cell of a six-across band (90px at 1041px), so the qualifier does not fit on one line. It was changed to a two-line wrap on 22 Oct and reverted the same day: tests/anti-slop.test.mjs records the band regrowing to 118px, which took 118px off the map. The map is the product, so the qualifier truncates — and carries its full text in a title attribute, so hover recovers it.",
     "clip|span.src-fresh": "The observation time in the provenance row, revealed on hover by design. The source identity beside it never truncates; a timestamp is what abbreviates when the two compete for a 90px tile. Full text is in its title.",
-    "clip|div.metric-source": "The provenance row is not on screen at rest: opacity:0, max-height:0, revealed on hover inside a 30px box. At the narrowest tile (90px at 1041px) the name and its timestamp need two lines, so the row's scroll width exceeds its box. Nothing is hidden from a reader because nothing is shown until they ask for it."
+    "clip|div.metric-source": "The provenance row is not on screen at rest: opacity:0, max-height:0, revealed on hover inside a 30px box. At the narrowest tile (90px at 1041px) the name and its timestamp need two lines, so the row's scroll width exceeds its box. Nothing is hidden from a reader because nothing is shown until they ask for it.",
+    "clip|span.news-digest-title": "A news headline under a deliberate two-line clamp (reading.css, same clamp the ground pulse uses). A headline can be longer than two lines of a 254-340px rail; the clamp keeps the map's rail from growing, and the full headline is in the title attribute so hover recovers it. Truncation here is chosen and recoverable, not loss."
   },
   "exempt": [],
   "routes": {
     "/": {
       "390": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 153,
+            "detail": "div.metric-context hides 153px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -83,14 +91,21 @@
         },
         "hierarchy": {
           "h1": 0,
-          "largest": 14,
+          "largest": 22,
           "ratio": null,
           "peers": 0,
           "share": 0
         }
       },
       "479": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 108,
+            "detail": "div.metric-context hides 108px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -107,14 +122,21 @@
         },
         "hierarchy": {
           "h1": 0,
-          "largest": 14,
+          "largest": 22,
           "ratio": null,
           "peers": 0,
           "share": 0
         }
       },
       "480": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 108,
+            "detail": "div.metric-context hides 108px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -131,14 +153,21 @@
         },
         "hierarchy": {
           "h1": 0,
-          "largest": 14,
+          "largest": 22,
           "ratio": null,
           "peers": 0,
           "share": 0
         }
       },
       "481": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 107,
+            "detail": "div.metric-context hides 107px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -210,7 +239,14 @@
         }
       },
       "721": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 104,
+            "detail": "div.metric-context hides 104px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -234,7 +270,14 @@
         }
       },
       "722": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 104,
+            "detail": "div.metric-context hides 104px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -258,7 +301,14 @@
         }
       },
       "959": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 25,
+            "detail": "div.metric-context hides 25px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -282,7 +332,14 @@
         }
       },
       "960": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 24,
+            "detail": "div.metric-context hides 24px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -306,7 +363,14 @@
         }
       },
       "961": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 24,
+            "detail": "div.metric-context hides 24px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -323,14 +387,21 @@
         },
         "hierarchy": {
           "h1": 0,
-          "largest": 14,
+          "largest": 22,
           "ratio": null,
           "peers": 0,
           "share": 0
         }
       },
       "1024": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 3,
+            "detail": "div.metric-context hides 3px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -412,8 +483,8 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 194.15625,
-            "detail": "span.lang-badge.insights-bar-en leaves 194px empty beneath it in a 210px row"
+            "metric": 215,
+            "detail": "span.lang-badge.insights-bar-en leaves 215px empty beneath it in a 231px row"
           },
           {
             "kind": "dead",
@@ -430,14 +501,20 @@
           {
             "kind": "dead",
             "sel": "div.hg-level",
-            "metric": 106.703125,
-            "detail": "div.hg-level leaves 107px empty beneath it in a 132px row"
+            "metric": 86,
+            "detail": "div.hg-level leaves 86px empty beneath it in a 111px row"
           },
           {
             "kind": "dead",
             "sel": "div.hg-band",
-            "metric": 110,
-            "detail": "div.hg-band leaves 110px empty beneath it in a 132px row"
+            "metric": 89,
+            "detail": "div.hg-band leaves 89px empty beneath it in a 111px row"
+          },
+          {
+            "kind": "clip",
+            "sel": "span.news-digest-title",
+            "metric": 3,
+            "detail": "span.news-digest-title hides 3px of its own content"
           },
           {
             "kind": "clip",
@@ -447,15 +524,15 @@
           },
           {
             "kind": "clip",
-            "sel": "span.src-fresh",
-            "metric": 19,
-            "detail": "span.src-fresh hides 19px of its own content"
+            "sel": "div.metric-context",
+            "metric": 248,
+            "detail": "div.metric-context hides 248px of its own content"
           },
           {
             "kind": "clip",
-            "sel": "div.metric-context",
-            "metric": 33,
-            "detail": "div.metric-context hides 33px of its own content"
+            "sel": "span.src-fresh",
+            "metric": 24,
+            "detail": "span.src-fresh hides 24px of its own content"
           },
           {
             "kind": "clip",
@@ -497,8 +574,8 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 194.15625,
-            "detail": "span.lang-badge.insights-bar-en leaves 194px empty beneath it in a 210px row"
+            "metric": 215,
+            "detail": "span.lang-badge.insights-bar-en leaves 215px empty beneath it in a 231px row"
           },
           {
             "kind": "dead",
@@ -515,14 +592,20 @@
           {
             "kind": "dead",
             "sel": "div.hg-level",
-            "metric": 106.703125,
-            "detail": "div.hg-level leaves 107px empty beneath it in a 132px row"
+            "metric": 86,
+            "detail": "div.hg-level leaves 86px empty beneath it in a 111px row"
           },
           {
             "kind": "dead",
             "sel": "div.hg-band",
-            "metric": 110,
-            "detail": "div.hg-band leaves 110px empty beneath it in a 132px row"
+            "metric": 89,
+            "detail": "div.hg-band leaves 89px empty beneath it in a 111px row"
+          },
+          {
+            "kind": "clip",
+            "sel": "span.news-digest-title",
+            "metric": 3,
+            "detail": "span.news-digest-title hides 3px of its own content"
           },
           {
             "kind": "clip",
@@ -532,15 +615,15 @@
           },
           {
             "kind": "clip",
-            "sel": "span.src-fresh",
-            "metric": 19,
-            "detail": "span.src-fresh hides 19px of its own content"
+            "sel": "div.metric-context",
+            "metric": 248,
+            "detail": "div.metric-context hides 248px of its own content"
           },
           {
             "kind": "clip",
-            "sel": "div.metric-context",
-            "metric": 33,
-            "detail": "div.metric-context hides 33px of its own content"
+            "sel": "span.src-fresh",
+            "metric": 24,
+            "detail": "span.src-fresh hides 24px of its own content"
           },
           {
             "kind": "clip",
@@ -582,8 +665,8 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 194.15625,
-            "detail": "span.lang-badge.insights-bar-en leaves 194px empty beneath it in a 210px row"
+            "metric": 215,
+            "detail": "span.lang-badge.insights-bar-en leaves 215px empty beneath it in a 231px row"
           },
           {
             "kind": "dead",
@@ -598,16 +681,16 @@
             "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
           },
           {
-            "kind": "dead",
-            "sel": "div.hg-level",
-            "metric": 86,
-            "detail": "div.hg-level leaves 86px empty beneath it in a 111px row"
+            "kind": "clip",
+            "sel": "span.news-digest-title",
+            "metric": 3,
+            "detail": "span.news-digest-title hides 3px of its own content"
           },
           {
-            "kind": "dead",
-            "sel": "div.hg-band",
-            "metric": 89,
-            "detail": "div.hg-band leaves 89px empty beneath it in a 111px row"
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 217,
+            "detail": "div.metric-context hides 217px of its own content"
           },
           {
             "kind": "clip",
@@ -639,7 +722,50 @@
         }
       },
       "1240": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "dead",
+            "sel": "span.brief-index",
+            "metric": 87,
+            "detail": "span.brief-index leaves 87px empty beneath it in a 108px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "span.lang-badge.insights-bar-en",
+            "metric": 215,
+            "detail": "span.lang-badge.insights-bar-en leaves 215px empty beneath it in a 231px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.gp-totals",
+            "metric": 74,
+            "detail": "div.gp-totals leaves 74px empty beneath it in a 89px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div#mapKicker",
+            "metric": 284,
+            "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "clip",
+            "sel": "span.news-digest-title",
+            "metric": 3,
+            "detail": "span.news-digest-title hides 3px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 216,
+            "detail": "div.metric-context hides 216px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-label",
+            "metric": 12,
+            "detail": "div.metric-label hides 12px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -656,14 +782,57 @@
         },
         "hierarchy": {
           "h1": 0,
-          "largest": 14,
+          "largest": 22,
           "ratio": null,
           "peers": 0,
           "share": 0
         }
       },
       "1241": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "dead",
+            "sel": "span.brief-index",
+            "metric": 87,
+            "detail": "span.brief-index leaves 87px empty beneath it in a 108px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "span.lang-badge.insights-bar-en",
+            "metric": 215,
+            "detail": "span.lang-badge.insights-bar-en leaves 215px empty beneath it in a 231px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.gp-totals",
+            "metric": 74,
+            "detail": "div.gp-totals leaves 74px empty beneath it in a 89px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div#mapKicker",
+            "metric": 284,
+            "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "clip",
+            "sel": "span.news-digest-title",
+            "metric": 3,
+            "detail": "span.news-digest-title hides 3px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 216,
+            "detail": "div.metric-context hides 216px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-label",
+            "metric": 12,
+            "detail": "div.metric-label hides 12px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -680,14 +849,39 @@
         },
         "hierarchy": {
           "h1": 0,
-          "largest": 14,
+          "largest": 22,
           "ratio": null,
           "peers": 0,
           "share": 0
         }
       },
       "1399": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "dead",
+            "sel": "span.lang-badge.insights-bar-en",
+            "metric": 173,
+            "detail": "span.lang-badge.insights-bar-en leaves 173px empty beneath it in a 189px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.gp-totals",
+            "metric": 74,
+            "detail": "div.gp-totals leaves 74px empty beneath it in a 89px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div#mapKicker",
+            "metric": 284,
+            "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 199,
+            "detail": "div.metric-context hides 199px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -704,14 +898,39 @@
         },
         "hierarchy": {
           "h1": 0,
-          "largest": 14,
+          "largest": 22,
           "ratio": null,
           "peers": 0,
           "share": 0
         }
       },
       "1400": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "dead",
+            "sel": "span.lang-badge.insights-bar-en",
+            "metric": 173,
+            "detail": "span.lang-badge.insights-bar-en leaves 173px empty beneath it in a 189px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.gp-totals",
+            "metric": 74,
+            "detail": "div.gp-totals leaves 74px empty beneath it in a 89px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div#mapKicker",
+            "metric": 284,
+            "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 199,
+            "detail": "div.metric-context hides 199px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -728,14 +947,39 @@
         },
         "hierarchy": {
           "h1": 0,
-          "largest": 14,
+          "largest": 22,
           "ratio": null,
           "peers": 0,
           "share": 0
         }
       },
       "1401": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "dead",
+            "sel": "span.lang-badge.insights-bar-en",
+            "metric": 173,
+            "detail": "span.lang-badge.insights-bar-en leaves 173px empty beneath it in a 189px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.gp-totals",
+            "metric": 74,
+            "detail": "div.gp-totals leaves 74px empty beneath it in a 89px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div#mapKicker",
+            "metric": 284,
+            "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 199,
+            "detail": "div.metric-context hides 199px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -752,14 +996,39 @@
         },
         "hierarchy": {
           "h1": 0,
-          "largest": 14,
+          "largest": 22,
           "ratio": null,
           "peers": 0,
           "share": 0
         }
       },
       "1440": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "dead",
+            "sel": "span.lang-badge.insights-bar-en",
+            "metric": 173,
+            "detail": "span.lang-badge.insights-bar-en leaves 173px empty beneath it in a 189px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.gp-totals",
+            "metric": 74,
+            "detail": "div.gp-totals leaves 74px empty beneath it in a 89px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div#mapKicker",
+            "metric": 284,
+            "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 195,
+            "detail": "div.metric-context hides 195px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -776,7 +1045,7 @@
         },
         "hierarchy": {
           "h1": 0,
-          "largest": 14,
+          "largest": 22,
           "ratio": null,
           "peers": 0,
           "share": 0
@@ -787,14 +1056,20 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 131.15625,
-            "detail": "span.lang-badge.insights-bar-en leaves 131px empty beneath it in a 147px row"
+            "metric": 152,
+            "detail": "span.lang-badge.insights-bar-en leaves 152px empty beneath it in a 168px row"
           },
           {
             "kind": "dead",
             "sel": "div#mapKicker",
             "metric": 284,
             "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 189,
+            "detail": "div.metric-context hides 189px of its own content"
           }
         ],
         "firstAction": {
@@ -820,7 +1095,26 @@
         }
       },
       "1500": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "dead",
+            "sel": "span.lang-badge.insights-bar-en",
+            "metric": 152,
+            "detail": "span.lang-badge.insights-bar-en leaves 152px empty beneath it in a 168px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div#mapKicker",
+            "metric": 284,
+            "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 189,
+            "detail": "div.metric-context hides 189px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -837,14 +1131,33 @@
         },
         "hierarchy": {
           "h1": 0,
-          "largest": 14,
+          "largest": 22,
           "ratio": null,
           "peers": 0,
           "share": 0
         }
       },
       "1501": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "dead",
+            "sel": "span.lang-badge.insights-bar-en",
+            "metric": 152,
+            "detail": "span.lang-badge.insights-bar-en leaves 152px empty beneath it in a 168px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div#mapKicker",
+            "metric": 284,
+            "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 189,
+            "detail": "div.metric-context hides 189px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -861,7 +1174,7 @@
         },
         "hierarchy": {
           "h1": 0,
-          "largest": 14,
+          "largest": 22,
           "ratio": null,
           "peers": 0,
           "share": 0

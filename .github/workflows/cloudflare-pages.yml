@@ -37,26 +37,24 @@ jobs:
       # minimum acceptance threshold before bytes reach the live site.
       - name: Run tests
         run: node --test tests/*.test.mjs
-      # MSH (docs/MSH-LAW.md): spatial measurement, recorded NOT enforced.
+      # MSH (docs/MSH-LAW.md): the spatial gate ENFORCES.
       #
-      # This board renders wall-clock-relative strings ("10 min ago", "12 min
-      # ago") and completes weather live in the visitor's browser, so two runs
-      # of the SAME build measure different geometry. A gate over a moving
-      # target flaps, and a gate that blocks deploys on its own nondeterminism
-      # gets switched off. So it measures and uploads the receipt as an
-      # artifact; it does not fail the build yet.
-      #
-      # To make it enforce, the board needs a deterministic measurement mode:
-      # freeze the clock and serve a snapshot that never self-completes. Until
-      # then, run it locally with --baseline and read the diff by hand.
-      - name: Spatial measurement (MSH, advisory)
-        continue-on-error: true
+      # It used to be advisory because two runs of the same build measured
+      # different geometry. Two causes, both fixed at the source: (1) the gate
+      # declared the page settled while boot() was still between async stages
+      # and measured a skeleton; the page now says when it is ready
+      # (<meta name="spatial-ready"> + data-board-ready on <html>). (2) "N min
+      # ago" strings moved widths; under the gate's own __spatial token the
+      # board pins its clock to the snapshot build time and skips live weather
+      # self-completion. Verified: two full sweeps 7 minutes apart agree on
+      # every finding, container, chrome and first-action value.
+      - name: Spatial gate (MSH)
         run: >
           node scripts/spatial/spatial-check.mjs
           --dir public
           --baseline design/spatial-baseline.json
           --widths 390,479,480,481,719,720,721,722,959,960,961,1024,1039,1040,1041,1042,1239,1240,1241,1399,1400,1401,1440,1499,1500,1501
-          --report --json artifacts/spatial-report.json
+          --json artifacts/spatial-report.json
       - name: Upload spatial receipt
         if: always()
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4

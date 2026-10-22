@@ -159,11 +159,11 @@ test("NREB Sarawak API carries official Kuching reading when reachable", () => {
   assert.equal(n.worst.api, Math.max(...n.stations.map((s) => s.api)));
 });
 
-test("NREB haze directive fires at API 100+ and quotes the source", () => {
+test("NREB haze directive fires above API 100 (Unhealthy starts at 101) and quotes the source", () => {
   const n = d.nrebApi;
   const directives = d.operations || [];
   const triggered = directives.find((op) => op.owner === "Haze Watch" && /NREB API/.test(op.title || ""));
-  if (n?.status !== "ready" || !n.stations.some((s) => s.api >= 100)) {
+  if (n?.status !== "ready" || !n.stations.some((s) => s.api > 100)) {
     assert.equal(triggered, undefined, "no directive when network is below Unhealthy");
     return;
   }

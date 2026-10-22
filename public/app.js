@@ -1,3 +1,23 @@
+// MEASUREMENT MODE (spatial gate only). The gate loads each route with a
+// `__spatial=` token. Width of a KPI qualifier depends on strings like
+// "10 min ago", which changes between runs and moves the page, so the same
+// build failed the gate twice with no code change. Pin the clock to the
+// snapshot's own build time so "ago" strings are identical every run; and
+// below, skip the live weather self-completion. Layout is untouched — only
+// the clock and one network completion are frozen. Visitors never carry the token.
+const __MEASURING__ = /[?&]__spatial=/.test(location.search);
+if (__MEASURING__) {
+  const built = await fetch("./api/build-manifest.json").then((r) => r.json()).catch(() => null);
+  const t0 = Date.parse(built?.builtAt) + 5 * 60_000;
+  if (Number.isFinite(t0)) {
+    const RealDate = Date;
+    globalThis.Date = class extends RealDate {
+      constructor(...a) { a.length ? super(...a) : super(t0); }
+      static now() { return t0; }
+    };
+  }
+}
+
 // Dynamic versioned import of data.js — pulls the asset version from the
 // app.js <script> tag's ?v= query so that updating the script tag (which
 // build.mjs already does on every build) cache-busts data.js too. Without
@@ -729,6 +749,7 @@ function applyClimateToPayload(payload, weather, air) {
 }
 
 async function completeClimateInBrowser(payload) {
+  if (__MEASURING__) return;
   if (payload?.delivery?.mode !== "static-snapshot") return;
   // Ownership: boot installs a new payload every 60 s. A completion that
   // arrives after that belongs to a superseded board and must not paint it.
@@ -3037,7 +3058,7 @@ function renderNewsDigest(news) {
       ? items.map(i => `
           <div class="news-digest-item">
             <span class="news-digest-badge">${escapeHtml(i.source?.slice(0, 12) ?? code.toUpperCase())}</span>
-            <span class="news-digest-title">${escapeHtml(i.title)}</span>
+            <span class="news-digest-title" title="${escapeHtml(i.title)}">${escapeHtml(i.title)}</span>
             <span class="news-digest-time">${formatShortStamp(i.publishedAt)}</span>
           </div>`).join("")
       : `<div class="news-digest-item"><span class="news-digest-title" style="color:var(--soft)">No ${code.toUpperCase()} items in this cycle.</span></div>`;
@@ -5925,6 +5946,7 @@ async function boot() {
     // catches internally).
     renderInsights(payload);
   } catch (err) { console.error("IOC SYNC FAILURE", err); }
+  finally { document.documentElement.setAttribute("data-board-ready", "1"); }
 }
 
 // --- Pin a problem: map spot -> Talikhidmat-ready report --------------------

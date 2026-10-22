@@ -356,6 +356,14 @@ function loadPage(route, w, h, cb) {
       if (!d) return finish({ route: route, w: w, error: 'no document' });
       if (tries++ > 600) return finish({ route: route, w: w, error: 'timed out waiting for the page' });
       var mainEl = d && (d.querySelector('main#content') || d.querySelector('main') || d.body);
+      // A page that loads its content after 'complete' can say so:
+      // <meta name="spatial-ready" content="data-some-attribute"> makes the
+      // gate wait for that attribute on <html>. Without it the gate settles
+      // on a skeleton between two async stages and measures nothing real.
+      var rm = d.querySelector('meta[name="spatial-ready"]');
+      if (rm && !d.documentElement.hasAttribute(rm.getAttribute('content'))) {
+        return setTimeout(wait, 50);
+      }
       if (d.readyState === 'complete' && mainEl) {
         if (!d.__spatialInstalled) { d.__spatialInstalled = true; installProbe(d); }
         var wv = d.defaultView;

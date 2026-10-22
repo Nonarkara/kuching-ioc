@@ -1661,7 +1661,9 @@ body::before {
 .flood-spark-band { fill: var(--cyan, #00f3ff); fill-opacity: 0.18; stroke: none; }
 .flood-spark-line { stroke: var(--cyan, #00f3ff); stroke-width: 1.2; }
 .flood-spark-today { stroke: var(--soft); stroke-width: 0.5; stroke-dasharray: 1 1; }
-.flood-reaches { border-top: 1px solid var(--line, #d6d2c5); padding-top: 3px; }
+/* Reaches are peers: one row of equal columns, never a wrap that strands one
+   reach alone on a second line (MSH absolute: no orphan row). */
+.flood-days.flood-reaches { border-top: 1px solid var(--line, #d6d2c5); padding-top: 3px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
 .flood-spread-wide { color: var(--amber); }
 .flood-days {
   display: flex;

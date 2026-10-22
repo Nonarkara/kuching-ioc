@@ -51,3 +51,15 @@ What: Stopped the left column eating its own height. The News digest rendered fo
 Why: flex-shrink: 0 on a content-sized block in a fixed-height column is a claim that the column is always tall enough. At 1440x900 the brief took 736px of an 813px column, the insights bar 69px, and the rail computed to 0px — with no page scroll that would ever reach it.
 Diff: public/reading.css (.col-now .brief-strip / .col-now .news-rail); tests/news-rail.test.mjs.
 Tags: layout · flex · measurement · regression-test
+
+Date: 2026-10-22
+What: Adopted the MSH spatial law on this board and massacred what it found. Thirteen unjustified decisions at 26 widths, then ten, then one. The instrument itself was broken and had to be fixed at its source first.
+Why: The law's instrument had a `var band` inside `measure()` that hoisted over the outer `band(items)` helper, so the probe threw `band is not a function` on any page with a nested flex or grid container — which is every real page. It passed a trivial control page only because that page had no such container.
+Diff: docs/MSH-LAW.md; scripts/spatial/; design/spatial-baseline.json; public/reading.css; public/app.js; tests/; .github/workflows/cloudflare-pages.yml.
+Tags: MSH · spatial-hallucination · gate · measurement · regression-test
+
+Date: 2026-10-22
+What: The spatial gate cannot be made to enforce on this board yet, and CI therefore measures it rather than blocking on it.
+Why: Two runs of the SAME build measure different geometry. The board renders wall-clock-relative strings — "10 min ago" becomes "12 min ago" — and completes weather live in the visitor's browser, so card heights and the whole page distribution move with the clock. A receipt that changes when nothing in the code changed is a receipt that lies, and a gate that blocks deploys on its own nondeterminism gets switched off.
+Diff: .github/workflows/cloudflare-pages.yml.
+Tags: MSH · determinism · honesty-in-tooling

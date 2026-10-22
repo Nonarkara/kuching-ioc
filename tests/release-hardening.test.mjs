@@ -69,10 +69,16 @@ test("APIMS pollutant and station text cannot become markup in a tooltip", () =>
 });
 
 test("every fixed sink in app.js routes external strings through escapeHtml", () => {
-  // Structural guard: these exact sinks were the confirmed findings. If someone
-  // later "simplifies" one back to a raw interpolation, this fails.
+  // Structural guard: these sinks were the confirmed findings. If someone later
+  // "simplifies" one back to a raw interpolation, this fails.
+  //
+  // Matched on the escaping, not on the whole tag. These elements gained title
+  // attributes (so a truncated label is recoverable on hover) and an earlier
+  // version of this test failed on that shape change while the escaping was
+  // still correct — a test that breaks when a safe improvement lands will be
+  // deleted rather than fixed.
   const sinks = [
-    ['<div class="metric-context">${escapeHtml(m.context||\'\')}</div>', "metric context"],
+    [/<div class="metric-context"[^>]*>\$\{escapeHtml\(m\.context\|\|''\)\}<\/div>/, "metric context"],
     ['<div class="meta">${escapeHtml(w.heading || "Active warning")}</div>', "MET warning heading"],
     ["title=\"${escapeHtml(status)}\"", "glyph status tooltip"],
     ["Dominant: ${escapeHtml(s.dominant || \"—\")}", "APIMS pollutant"],
@@ -80,11 +86,17 @@ test("every fixed sink in app.js routes external strings through escapeHtml", ()
     ["<em style=\"opacity:.9\">${escapeHtml(s.humanBrief)}</em>", "hydro humanBrief"],
   ];
   for (const [snippet, name] of sinks) {
-    assert.ok(app.includes(snippet), `${name} must stay escaped — found no: ${snippet}`);
+    assert.ok(
+      typeof snippet === "string" ? app.includes(snippet) : snippet.test(app),
+      `${name} must stay escaped — found no: ${snippet}`,
+    );
   }
   // And the raw forms must be gone.
-  assert.ok(!app.includes('<div class="metric-context">${m.context'), "raw metric context returned");
+  assert.ok(!app.includes('<div class="metric-context" title="${m.context'), "raw metric context returned");
   assert.ok(!app.includes('<div class="meta">${w.heading'), "raw MET heading returned");
+  // A title attribute is an HTML sink like any other: it must be escaped too.
+  assert.ok(!app.includes('title="${prov.src}"'), "raw source name in a title attribute");
+  assert.ok(!app.includes('title="${m.context}"'), "raw metric context in a title attribute");
 });
 
 test("the local server survives a malformed Host header instead of exiting", async () => {

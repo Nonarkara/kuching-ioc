@@ -606,6 +606,11 @@ body::before { display: none !important; }
   .dashboard-shell #metricBand .metric-card { padding: 4px 8px 3px; }
   .dashboard-shell #metricBand .metric-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dashboard-shell #metricBand .metric-context { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Kept as one line after the 22 Oct MSH pass tried and reverted a two-line
+     wrap. tests/anti-slop.test.mjs records why: the band once regrew to 118px
+     when the context wrapped, which took 118px off the map. The map is the
+     product; a clipped qualifier is not worth it. The full text is in the
+     element's title attribute (added 22 Oct), so hover recovers it. */
   /* The whole point of the band is a scannable row of readings; six cards
      side by side at ~46px beats three rows of tall ones. */
   .dashboard-shell #metricBand { gap: 1px; }
@@ -922,4 +927,119 @@ body::before { display: none !important; }
      story in. The brief strip shrinks further to pay for it rather than
      letting the digest collapse again. */
   flex: 1 1 40%; min-height: 168px;
+}
+
+/* --- MSH, 22 Oct 2026: five clipped rows, repaired at the cause -------------
+   The spatial gate measured 9 "clip" findings across 26 widths (390 to 1501).
+   Every one was the same mistake: a single-line ellipsis in a box the layout
+   had already made too small, with no tooltip and therefore no way to read the
+   rest. Three of them sit inside collapsed disclosures, so the gate measured
+   them closed — re-measured with all 27 disclosures OPEN they are still wrong,
+   and that is the state a reader reaches by clicking.
+
+   1. Ground pulse — three language lanes across a 254-340px rail. Each lane got
+      ~80px, and inside a lane the `auto 1fr` item grid left the headline 5.6px
+      wide. A headline rendered six pixels across is not a headline. The phone
+      layout already stacks the lanes at <=1040px; the narrow desktop rail now
+      does the same, because the lane has to be able to hold a sentence. */
+.dashboard-shell .col-now .gp-lanes { grid-template-columns: 1fr; }
+
+/* The lane is readable now, so the headline inside it has to wrap — 642px of
+   text will not sit on one line in a 179px lane. Same two-line clamp the
+   board already uses for this element at wider breakpoints. */
+.dashboard-shell .gp-title {
+  white-space: normal;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  line-height: 1.3;
+}
+.dashboard-shell .gp-meta { white-space: normal; }
+
+/* 2. A headline IS the news. The digest gave the title 111px of a 234px row and
+      hid 393px of a 99-character headline, with no title attribute to recover
+      it. Two lines, using the same clamp the ground pulse already uses. */
+.dashboard-shell .news-digest-title {
+  white-space: normal;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  line-height: 1.3;
+}
+
+/* 3. The gauge name lost its tail in a 56px column of a five-column row.
+      "Aman 5 Bridge" rendered as "Aman 5 Bri…". */
+.dashboard-shell .ward-risk-row .wr-gauge {
+  white-space: normal; overflow: visible; text-overflow: clip;
+}
+
+/* 4. Leaflet's own attribution was ellipsised from 111px to 77px, cutting
+      "Leaflet | Tiles © Esri" mid-credit. An attribution you cannot read is
+      not an attribution. The row is revealed on hover by design, so only the
+      revealed state matters here — and there the name lost half its text.
+      Keep the source identity whole; a timestamp may abbreviate. */
+.dashboard-shell .metric-card .metric-source .src-name {
+  flex: 0 1 auto; white-space: nowrap; overflow: visible; text-overflow: clip;
+}
+.dashboard-shell .metric-card .metric-source .src-fresh {
+  flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* 5. The corner credit is not a headline and does not need to share a line.
+      Let it wrap instead of ellipsing. */
+.dashboard-shell .leaflet-control-attribution {
+  max-width: 90%; white-space: normal; overflow: visible; text-overflow: clip;
+}
+
+/* --- The three the first pass left behind ----------------------------------
+   Keeping the source name whole pushed the timestamp into the last few pixels
+   at 390px, so the two now wrap onto their own lines instead of competing for
+   one. The revealed row is 30px tall and two 8px lines fit inside it. */
+.dashboard-shell .metric-card .metric-source {
+  /* At the narrowest band (a 90px KPI tile at 1041px) the source name and the
+     timestamp cannot share one line. They stack instead of one cutting the
+     other off. The row is revealed on hover inside a 30px box, and two 8px
+     lines fit in it. */
+  flex-wrap: wrap; row-gap: 0;
+}
+.dashboard-shell .metric-card .metric-source .src-name { flex: 0 0 auto; }
+
+/* The ward area name hid 89px of itself at 390px for the same reason the
+   headline did. Two lines, same clamp. */
+.dashboard-shell .ward-risk-row .wr-area {
+  white-space: normal;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  line-height: 1.25;
+}
+
+/* "2 councillors" and "20 localities" wrapped into a 53px chip and left one
+   alone on the last row — the orphan row-wrap the law names as an absolute
+   failure. Stacked, each is its own row and there is no orphan. */
+.dashboard-shell .ward-chip-stats { flex-direction: column; align-items: center; }
+
+/* --- 22 Oct, round two: what the first repairs exposed ---------------------
+   Gate re-run at 26 widths. Nine clip findings gone, three gone; these are the
+   ones the changed geometry revealed underneath them. */
+
+/* The metric card is six equal columns of a ~115px band, and both its label
+   and its context were single-line ellipses: "Rain next 6h" lost 12px and
+   "1.5 mm expected today" lost 20px. A KPI's unit and its qualifier are the
+   reading, not decoration — let them wrap onto the second line the card
+   already has room for. */
+.dashboard-shell .metric-card .metric-label {
+  /* A label is a fixed i18n string ("Rain next 6h"), so its width is stable and
+     one line with a title attribute is the honest answer. */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dashboard-shell .metric-card .metric-context {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* The flood matrix header wrapped and left one span alone on the last row.
+   Stacked, each part is its own row and there is no orphan. */
+.dashboard-shell .fm-amc { flex-wrap: nowrap; align-items: flex-start; }
+.dashboard-shell .fm-amc-label { flex: 1 1 100%; }
+
+/* The district strip wrapped four chips into 3 + 1 and left one alone. Four
+   chips at their own 56px minimum fit a 251px row with room to spare, so the
+   strip was wrapping for no reason: a flexible grid fills the row it has
+   instead of stacking to leave an orphan. */
+.dashboard-shell .pulse-districts {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
 }

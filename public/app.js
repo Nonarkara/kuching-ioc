@@ -1309,13 +1309,13 @@ function renderMetrics(metrics) {
     const prov = METRIC_SOURCES[m.id];
     const fresh = prov ? metricFreshness(state.payload, m.id, prov.fresh) : "";
     const provHtml = prov
-      ? `<div class="metric-source"><span class="src-name">${escapeHtml(prov.src)}</span><span class="src-fresh">${escapeHtml(fresh)}</span></div>`
+      ? `<div class="metric-source"><span class="src-name" title="${escapeHtml(prov.src)}">${escapeHtml(prov.src)}</span><span class="src-fresh" title="${escapeHtml(fresh)}">${escapeHtml(fresh)}</span></div>`
       : "";
     return `
     <article class="metric-card" data-tone="${m.tone||'neutral'}" data-metric-id="${m.id}">
-      <div class="metric-label">${escapeHtml(tOr(`m_${m.id}`, m.label))}</div>
+      <div class="metric-label" title="${escapeHtml(tOr(`m_${m.id}`, m.label))}">${escapeHtml(tOr(`m_${m.id}`, m.label))}</div>
       <div class="metric-value">${m.value == null ? "—" : num(m.value,m.value%1===0?0:1)}<span class="metric-unit">${m.value == null ? "" : m.unit||''}</span></div>
-      <div class="metric-context">${escapeHtml(m.context||'')}</div>
+      <div class="metric-context" title="${escapeHtml(m.context||'')}">${escapeHtml(m.context||'')}</div>
       <div class="sparkline-shell">${m.history?sparkline(m.history,m.tone):''}</div>
       ${provHtml}
     </article>`;

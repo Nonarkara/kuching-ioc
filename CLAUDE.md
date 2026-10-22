@@ -1,6 +1,8 @@
 # Greater Kuching Intelligent Operation Center (IOC)
 
 > **Code playbook:** `BEST-PRACTICES.md` in this directory — 16 cross-project code rules every codebase follows. Read on first open.
+>
+> **Design law:** `docs/MSH-LAW.md` — MSH, Massacre Spatial Hallucination. Read before designing, building, or reviewing any interface here. **When you find SH, massacre.** The gate lives in `scripts/spatial/` and every spatial decision is recorded in `design/spatial-baseline.json` with a written reason.
 
 Daniel Goh's municipal intelligence dashboard for Greater Kuching, Sarawak. Demo-grade civic software for one named secretary — every panel shows a live reading, a baked snapshot, or a sourced fallback. No placeholders, no theatre.
 
@@ -254,6 +256,9 @@ Local nightly refresh (TimesFM, AlphaEarth) is on the M5 Max only — never CI. 
 
 - `README.md` — public landing, ethical-use paragraph, fork guidance
 - `context.md` — deployment cheat-sheet (URL, dev/build commands, env table)
+- `docs/MSH-LAW.md` — **the owner's design law.** Verbatim; do not rewrite the body
+- `design/spatial-baseline.json` — every measured spatial decision + the reason it exists
+- `scripts/spatial/` — the spatial gate. `--report` to look, no baseline to enforce
 - `tasks/lessons.md` — corrections log, read first each session
 - `tasks/todo.md` — current work + shipped milestones (rolling)
 - `ADMIN-AUDIT.md` — 25 Sep 2026 operator audit, scope + residual limits

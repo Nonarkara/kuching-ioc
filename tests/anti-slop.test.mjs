@@ -214,6 +214,10 @@ test("rule 1: the KPI card is micro type, so the band cannot regrow to 118px", (
   // ...and the band must be able to stay one row of cards, not three.
   assert.match(desktopBar, /#metricBand \.metric-context \{[^}]*text-overflow:\s*ellipsis/,
     "a long context must truncate rather than wrap the card taller");
+  // Truncation must not mean loss: the 22 Oct MSH pass added a title attribute
+  // so a clipped qualifier is recoverable on hover instead of simply gone.
+  assert.match(app, /<div class="metric-context" title="\$\{escapeHtml\(m\.context\|\|''\)\}">/,
+    "a truncated KPI qualifier must carry its full text in a title attribute");
 });
 
 test("rule 5: the verdict bar says its headline once, in statuses that add something", () => {

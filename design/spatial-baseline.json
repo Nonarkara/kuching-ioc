@@ -1,0 +1,872 @@
+{
+  "version": 2,
+  "tool": "spatial-law",
+  "widths": [
+    360,
+    480,
+    768,
+    1024,
+    1440,
+    1920
+  ],
+  "measuredWidths": [
+    390,
+    479,
+    480,
+    481,
+    719,
+    720,
+    721,
+    722,
+    959,
+    960,
+    961,
+    1024,
+    1039,
+    1040,
+    1041,
+    1042,
+    1239,
+    1240,
+    1241,
+    1399,
+    1400,
+    1401,
+    1440,
+    1499,
+    1500,
+    1501
+  ],
+  "limits": {
+    "deadGap": 72,
+    "orphanFill": 0.5,
+    "scatteredApart": 0.55,
+    "grownTolerance": 24,
+    "firstActionTolerance": 120,
+    "chromeTolerance": 16,
+    "firstAction": null,
+    "titleRatio": null,
+    "peerShare": null,
+    "chromeTopPct": null,
+    "allowedSizes": null
+  },
+  "reasons": {
+    "dead|span.brief-index": "The 01/02/03 index of a brief item, in a two-column row whose second column is the sentence itself (184x43 measured at 1241px). The index is 24px wide because a number is 24px wide; the row is full of text.",
+    "dead|span.lang-badge.insights-bar-en": "A 15px language tag beside the insight sentence it labels. That sentence is 169x168 and fills the row. A tag is short because a tag is short.",
+    "dead|div.gp-totals": "The totals line of a two-part ground-pulse lane header. The lane kicker beside it is 50x89 and fills the row; the totals are one line that has nothing else to say.",
+    "dead|div#mapKicker": "The map's title line, in the map panel header. The tall thing in that row is the map panel below it, not empty space: re-measured with the disclosure open, the title-wrap is 38px and the kicker fills it. The 302px band only exists while the panel is closed.",
+    "dead|div.hg-level": "The current gauge reading in a three-column haze row whose first column is the gauge drawing at 142x111. The drawing fills the row.",
+    "dead|div.hg-band": "The severity band label in the same three-column haze row \u2014 one word beside the gauge drawing that gives the band its meaning.",
+    "clip|div.metric-label": "A KPI tile is a fixed cell in a six-across band: 115px at 1240px, 90px at 1041px. The label is a fixed i18n string ('Rain next 6h'), so its width is stable and one line with a title attribute is the honest answer. Widening the band to fit would make it two rows tall, which takes the map down with it.",
+    "clip|div.metric-context": "Truncation here is a measured trade, not an oversight. The context is DATA \u2014 'NREB official \u00b7 Moderate \u00b7 21 October 2026, Wednesday 15:45' \u2014 and a KPI tile is a fixed cell of a six-across band (90px at 1041px), so the qualifier does not fit on one line. It was changed to a two-line wrap on 22 Oct and reverted the same day: tests/anti-slop.test.mjs records the band regrowing to 118px, which took 118px off the map. The map is the product, so the qualifier truncates \u2014 and carries its full text in a title attribute, so hover recovers it.",
+    "clip|span.src-fresh": "The observation time in the provenance row, revealed on hover by design. The source identity beside it never truncates; a timestamp is what abbreviates when the two compete for a 90px tile. Full text is in its title.",
+    "clip|div.metric-source": "The provenance row is not on screen at rest: opacity:0, max-height:0, revealed on hover inside a 30px box. At the narrowest tile (90px at 1041px) the name and its timestamp need two lines, so the row's scroll width exceeds its box. Nothing is hidden from a reader because nothing is shown until they ask for it."
+  },
+  "exempt": [],
+  "routes": {
+    "/": {
+      "390": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 48,
+          "topPct": 5.7,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 14,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "479": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 48,
+          "topPct": 5.7,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 14,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "480": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 48,
+          "topPct": 5.7,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 14,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "481": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 48,
+          "topPct": 4.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 22,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "719": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 48,
+          "topPct": 4.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 22,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "720": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 48,
+          "topPct": 4.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 22,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "721": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 48,
+          "topPct": 4.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 22,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "722": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 48,
+          "topPct": 4.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 22,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "959": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 48,
+          "topPct": 4.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 22,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "960": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 48,
+          "topPct": 4.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 22,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "961": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 48,
+          "topPct": 4.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 14,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "1024": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 48,
+          "topPct": 4.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 22,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "1039": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 48,
+          "topPct": 4.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 22,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "1040": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 48,
+          "topPct": 4.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 22,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "1041": {
+        "findings": [
+          {
+            "kind": "dead",
+            "sel": "span.brief-index",
+            "metric": 87,
+            "detail": "span.brief-index leaves 87px empty beneath it in a 108px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "span.lang-badge.insights-bar-en",
+            "metric": 194.15625,
+            "detail": "span.lang-badge.insights-bar-en leaves 194px empty beneath it in a 210px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.gp-totals",
+            "metric": 74,
+            "detail": "div.gp-totals leaves 74px empty beneath it in a 89px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div#mapKicker",
+            "metric": 284,
+            "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-level",
+            "metric": 106.703125,
+            "detail": "div.hg-level leaves 107px empty beneath it in a 132px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-band",
+            "metric": 110,
+            "detail": "div.hg-band leaves 110px empty beneath it in a 132px row"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-label",
+            "metric": 44,
+            "detail": "div.metric-label hides 44px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "span.src-fresh",
+            "metric": 19,
+            "detail": "span.src-fresh hides 19px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 33,
+            "detail": "div.metric-context hides 33px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-source",
+            "metric": 29,
+            "detail": "div.metric-source hides 29px of its own content"
+          }
+        ],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 34,
+          "topPct": 3.4,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 22,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "1042": {
+        "findings": [
+          {
+            "kind": "dead",
+            "sel": "span.brief-index",
+            "metric": 87,
+            "detail": "span.brief-index leaves 87px empty beneath it in a 108px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "span.lang-badge.insights-bar-en",
+            "metric": 194.15625,
+            "detail": "span.lang-badge.insights-bar-en leaves 194px empty beneath it in a 210px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.gp-totals",
+            "metric": 74,
+            "detail": "div.gp-totals leaves 74px empty beneath it in a 89px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div#mapKicker",
+            "metric": 284,
+            "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-level",
+            "metric": 106.703125,
+            "detail": "div.hg-level leaves 107px empty beneath it in a 132px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-band",
+            "metric": 110,
+            "detail": "div.hg-band leaves 110px empty beneath it in a 132px row"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-label",
+            "metric": 44,
+            "detail": "div.metric-label hides 44px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "span.src-fresh",
+            "metric": 19,
+            "detail": "span.src-fresh hides 19px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 33,
+            "detail": "div.metric-context hides 33px of its own content"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-source",
+            "metric": 29,
+            "detail": "div.metric-source hides 29px of its own content"
+          }
+        ],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 34,
+          "topPct": 3.4,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 22,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "1239": {
+        "findings": [
+          {
+            "kind": "dead",
+            "sel": "span.brief-index",
+            "metric": 87,
+            "detail": "span.brief-index leaves 87px empty beneath it in a 108px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "span.lang-badge.insights-bar-en",
+            "metric": 194.15625,
+            "detail": "span.lang-badge.insights-bar-en leaves 194px empty beneath it in a 210px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.gp-totals",
+            "metric": 74,
+            "detail": "div.gp-totals leaves 74px empty beneath it in a 89px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div#mapKicker",
+            "metric": 284,
+            "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-level",
+            "metric": 86,
+            "detail": "div.hg-level leaves 86px empty beneath it in a 111px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-band",
+            "metric": 89,
+            "detail": "div.hg-band leaves 89px empty beneath it in a 111px row"
+          },
+          {
+            "kind": "clip",
+            "sel": "div.metric-label",
+            "metric": 13,
+            "detail": "div.metric-label hides 13px of its own content"
+          }
+        ],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 34,
+          "topPct": 3.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 22,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "1240": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 34,
+          "topPct": 3.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 14,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "1241": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 34,
+          "topPct": 3.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 14,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "1399": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 34,
+          "topPct": 3.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 14,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "1400": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 34,
+          "topPct": 3.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 14,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "1401": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 34,
+          "topPct": 3.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 14,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "1440": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 34,
+          "topPct": 3.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 14,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "1499": {
+        "findings": [
+          {
+            "kind": "dead",
+            "sel": "span.lang-badge.insights-bar-en",
+            "metric": 131.15625,
+            "detail": "span.lang-badge.insights-bar-en leaves 131px empty beneath it in a 147px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div#mapKicker",
+            "metric": 284,
+            "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          }
+        ],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 34,
+          "topPct": 3.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 22,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "1500": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 34,
+          "topPct": 3.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 14,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "1501": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 34,
+          "topPct": 3.8,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.masthead",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 14,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      }
+    }
+  }
+}

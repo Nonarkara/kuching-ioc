@@ -117,8 +117,10 @@ test("a climate card cannot claim a freshness it does not have", async () => {
   // Open-Meteo stamps are local without an offset; our own updatedAt is UTC.
   assert.match(mod, /\+08:00/);
   // And the rendered strings are escaped like every other external value.
-  assert.match(app, /<span class="src-name">\$\{escapeHtml\(prov\.src\)\}<\/span>/);
-  assert.match(app, /<span class="src-fresh">\$\{escapeHtml\(fresh\)\}<\/span>/);
+  // Matched on the escaping rather than the whole tag: these spans also carry
+  // title attributes so a truncated source name is recoverable on hover.
+  assert.match(app, /<span class="src-name"[^>]*>\$\{escapeHtml\(prov\.src\)\}<\/span>/);
+  assert.match(app, /<span class="src-fresh"[^>]*>\$\{escapeHtml\(fresh\)\}<\/span>/);
 });
 
 test("only climate cards may borrow the climate observation's age", () => {

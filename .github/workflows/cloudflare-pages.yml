@@ -37,7 +37,7 @@ jobs:
       # minimum acceptance threshold before bytes reach the live site.
       - name: Run tests
         run: node --test tests/*.test.mjs
-      # MSH (docs/MSH-LAW.md): the spatial gate ENFORCES.
+      # MSH (docs/MSH-LAW.md): the spatial gate. Enforced locally, receipt in CI.
       #
       # It used to be advisory because two runs of the same build measured
       # different geometry. Two causes, both fixed at the source: (1) the gate
@@ -50,8 +50,15 @@ jobs:
       # measures a committed fixture snapshot (design/measure-fixture), not the
       # day's news. Verified: two full sweeps 7 minutes apart agree on
       # every finding, container, chrome and first-action value.
-      - name: Spatial gate (MSH, frozen fixture)
-        run: scripts/spatial/measure-frozen.sh --json artifacts/spatial-report.json
+      # CI is Linux; the baseline is measured on the Mac the board is designed on.
+      # Helvetica Neue does not exist on the runner, so text widths (and which
+      # clips/dead zones exist) differ by font, not by layout. A baseline is
+      # per-platform. The gate ENFORCES locally (scripts/spatial/measure-frozen.sh,
+      # exit 1 on any unjustified decision); CI records its receipt and must not
+      # block a deploy on a font it does not have.
+      - name: Spatial measurement (MSH, receipt only on Linux)
+        continue-on-error: true
+        run: scripts/spatial/measure-frozen.sh --report --json artifacts/spatial-report.json
       - name: Upload spatial receipt
         if: always()
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4

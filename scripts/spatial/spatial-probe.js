@@ -250,13 +250,40 @@
       }
 
       // The hole UNDER a short cell in a row of taller cells.
+      //
+      // The hole is measured in the cell's OWN COLUMN. A band is a group of
+      // children that overlap vertically, so in a two-column layout a short
+      // cell in the first column shares a band with the tall column beside
+      // it, and the band says the short cell leaves all that space empty.
+      // It does not: the space under it is filled by the next row of its own
+      // column. Measuring against the band made every two-column page look
+      // like it had a void, and a gate that cries wolf on every layout is a
+      // gate nobody reads.
+      //
+      // So: the space under a cell is empty only if no other child of the
+      // container occupies the same column below it. When one does, the hole
+      // ends where that child begins.
       for (var bi = 0; bi < bands.length; bi++) {
         var band1 = bands[bi];
         var bandH = band1.bottom - band1.top;
         if (bandH < DEAD) continue;
         for (var ii = 0; ii < band1.items.length; ii++) {
           var it = band1.items[ii];
-          var hole = band1.bottom - it.r.bottom;
+          // The next child below it in the same column — the one that ends
+          // the space under it, if there is one.
+          var next = null;
+          for (var q = 0; q < items.length; q++) {
+            var o = items[q];
+            if (o === it) continue;
+            // Same column: their horizontal ranges overlap.
+            var overlap = Math.min(o.r.right, it.r.right) - Math.max(o.r.left, it.r.left);
+            if (overlap <= 0) continue;
+            // Below it.
+            if (o.r.top < it.r.bottom - 4) continue;
+            if (!next || o.r.top < next.r.top) next = o;
+          }
+          var floor = next ? next.r.top : cont.getBoundingClientRect().bottom;
+          var hole = floor - it.r.bottom;
           if (hole < DEAD) continue;
           if (it.r.height >= bandH * SHORT) continue;
           var kind = hasMedia(it.el) ? "orphan" : "dead";
@@ -603,16 +630,36 @@
         if (oBottom <= oTop) continue;
         // A region only OBSCURES the work if it is painted on top of it.
         // The browser knows which is on top and the browser is asked.
-        var px = Math.round(rr.left + Math.min(rr.width, 40) / 2);
+        //
+        // WHERE it is asked matters. One sample at the content's left edge
+        // plus 20px misses every band that does not reach that point: a bar
+        // pinned to the RIGHT of the column covered the reading and the
+        // gate called it clean. So the question is asked across the width
+        // where the two actually meet, and the band is caught wherever it
+        // is on top.
+        var bandRect = pinBand.el.getBoundingClientRect();
+        var ix0 = Math.max(rr.left, bandRect.left);
+        var ix1 = Math.min(rr.right, bandRect.right);
+        if (ix1 <= ix0) continue;
         var py = Math.round((oTop + oBottom) / 2);
-        var onTop = null;
-        try {
-          onTop = d.elementFromPoint(px, py);
-        } catch (e) {
-          onTop = null;
+        var span = ix1 - ix0;
+        var samples = span > 120 ? 5 : 3;
+        var onTopAnywhere = false;
+        for (var si = 0; si < samples; si++) {
+          var px = Math.round(ix0 + (span * (si + 0.5)) / samples);
+          var onTop = null;
+          try {
+            onTop = d.elementFromPoint(px, py);
+          } catch (e) {
+            onTop = null;
+          }
+          if (!onTop) continue;
+          if (onTop === pinBand.el || pinBand.el.contains(onTop)) {
+            onTopAnywhere = true;
+            break;
+          }
         }
-        if (!onTop) continue;
-        if (onTop !== pinBand.el && !pinBand.el.contains(onTop)) continue;
+        if (!onTopAnywhere) continue;
         var oh = oBottom - oTop;
         if (oh > worst) {
           worst = oh;

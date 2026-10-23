@@ -6,8 +6,9 @@
  * ----------------
  * An interface invents a reason for things to occupy space when it arranges
  * itself around a grid instead of around how people read, choose and act.
- * The six modes are: unjustified gaps, orphan elements, scattered actions,
- * false hierarchy, accidental wrapping, spatially expensive information.
+ * The eight modes are: unjustified gaps, orphan elements, scattered actions,
+ * false hierarchy, accidental wrapping, spatially expensive information,
+ * chrome cost, overlapping chrome.
  *
  * The recurring question is "Why is this here, why this size, and why this
  * far from that?" — and the answer must never be "because the grid put it
@@ -69,8 +70,6 @@ import { execFileSync, spawn } from "node:child_process";
 import { tmpdir, homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { measureMetricEvidence } from '../../public/measurement.js';
-import { withDeadline, releaseBrowser } from './deadline.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -210,6 +209,10 @@ pre{font:11px/1.35 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:
 var WIDTHS = __WIDTHS__;
 var ROUTES = __ROUTES__;
 var PROBE = __PROBE__;
+// How many routes are already measured. Another agent on the same machine
+// can take this browser out from under the sweep; the gate then picks up
+// where it stopped instead of starting the whole thing again.
+var SKIP = __SKIP__;
 var f = document.getElementById('f');
 var out = document.getElementById('out');
 var TAG_OK = 'RESULT' + 'S:';
@@ -252,6 +255,43 @@ function signature(d) {
     d.getElementsByTagName('*').length + '|' + sw + '|' + text;
 }
 
+// A page that is still working changes its DOM.
+//
+// The settle used to infer stillness from the page's SHAPE, which is a
+// guess: a page whose map is drawn by a ResizeObserver looks perfectly
+// stable for the first hundred milliseconds — the map is simply not there
+// yet — and the measurement was taken of the page without it. Watching the
+// DOM directly removes the guess. The map arriving, React re-rendering, a
+// status line changing: all of them are mutations, and a mutation resets the
+// clock the settle is waiting on.
+function watch(d) {
+  if (d.__spatialWatcher) return d.__spatialWatcher;
+  var w = { last: Date.now(), mutations: 0 };
+  try {
+    var mo = new d.defaultView.MutationObserver(function () {
+      w.last = Date.now();
+      w.mutations++;
+    });
+    mo.observe(d.documentElement, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+    });
+    w.stop = function () {
+      try {
+        mo.disconnect();
+      } catch (e) {
+        /* already gone */
+      }
+    };
+  } catch (e) {
+    w.stop = function () {};
+  }
+  d.__spatialWatcher = w;
+  return w;
+}
+
 // Is everything that can arrive late here yet?
 function arrived(d) {
   try {
@@ -279,13 +319,17 @@ function arrived(d) {
 function settle(d, cb) {
   var tries = 0, last = null, stable = 0, start = Date.now();
   var verified = false;
+  var w = watch(d);
   function step() {
     var elapsed = Date.now() - start;
     if (tries++ > 600 || elapsed > 5000) return cb();
     var s;
     try { s = signature(d); } catch (e) { return cb(); }
     if (s === last) stable++; else { stable = 0; last = s; }
-    if (stable >= 3 && elapsed >= 100 && arrived(d)) {
+    // The page has to have been still for a beat, not merely shaped the same
+    // way twice. A change that has not landed yet looks like stillness.
+    var quiet = Date.now() - w.last >= 60;
+    if (stable >= 3 && elapsed >= 100 && quiet && arrived(d)) {
       if (verified) return cb();
       verified = true;
       // One more beat, then look again. If the page moved, it was still
@@ -314,23 +358,6 @@ function measureDoc(d, route, w, cb) {
   // down would be of a page nobody sees.
   try { wv.scrollTo(0, 0); } catch (e) { /* nothing to scroll */ }
   var rec = wv.__SPATIAL_MEASURE__(route, w, d);
-  if (d.querySelector('meta[name="spatial-ready"]')) {
-    rec.board = {
-      state: d.documentElement.getAttribute('data-board-state'),
-      metrics: d.querySelectorAll('#metricBand [data-metric-id]').length,
-      brief: d.querySelectorAll('#briefNow .brief-item').length,
-      funnel: d.querySelectorAll('#researchPanel .evidence-funnel .rp-step').length,
-      map: !!d.querySelector('#mapCanvas .leaflet-pane'),
-      font: wv.getComputedStyle(d.body).fontFamily
-    };
-    rec.board.metricEvidence = (__METRIC_PROBE__)(d);
-    for (var item of rec.board.metricEvidence) {
-      if (item.overlap > 0) rec.findings.push({ kind: 'overlap', sel: 'metric-evidence:' + item.id, metric: item.overlap, detail: 'Evidence control covers visible freshness glyphs' });
-    }
-    if (rec.board.state !== 'ready' || rec.board.metrics < 4 || rec.board.brief < 1 || rec.board.funnel !== 5 || !rec.board.map) {
-      return cb({ route: route, w: w, error: 'critical board content missing', board: rec.board });
-    }
-  }
   // Clear what this page left behind, so the NEXT measurement of this route
   // starts from an empty state. A receipt of a page that remembers the last
   // measurement is a receipt of the instrument, not of the product.
@@ -365,48 +392,69 @@ function loadPage(route, w, h, cb) {
   // The query string stops the browser from answering with a page it has
   // already laid out at another width.
   f.src = route + (route.indexOf('?') >= 0 ? '&' : '?') + '__spatial=' + token;
-  f.onload = function () {
+  // The page is WAITED FOR BY POLLING, not by listening for the load event.
+  //
+  // The load event fires when every subresource of the page has arrived, so
+  // one stalled request is enough to make it never fire — and the sweep
+  // then waits for a browser that is perfectly alive, for as long as the
+  // watchdog allows. That happened: a run sat for twenty-nine minutes on a
+  // page that was already measured, with the browser idle at 0% CPU.
+  //
+  // The DOM is what the probe reads, and the DOM is ready when the document
+  // has parsed it. So the harness polls for the document that belongs to
+  // THIS navigation — the one whose URL carries this navigation's token —
+  // and starts measuring as soon as it has parsed. The settle then waits for
+  // the fonts, the images and the last change.
+  //
+  // The budget is WALL CLOCK, not a count of tries. A try count is a
+  // proxy for time, and it stops being one the moment the browser starts
+  // holding the timers back — which is exactly what a hidden page in a
+  // headless browser does, and what a machine with four other browsers on
+  // it does. Two sweeps on a shared machine sat on ONE measurement for
+  // fourteen and thirty minutes with the renderer idle at 0.1% CPU: the
+  // page was never going to be ready, the try budget was being spent at a
+  // crawl, and nothing in the loop was watching the clock.
+  //
+  // A gate that hangs is a gate that protects nothing. Thirty seconds of
+  // wall clock, then the measurement is reported as an error, and the
+  // sweep says so out loud instead of waiting for a browser that will
+  // never report.
+  var tries = 0;
+  var waitStart = Date.now();
+  (function wait() {
     if (token !== TOKEN) return;
-    var tries = 0;
-    (function wait() {
-      if (token !== TOKEN) return;
-      var d;
-      try { d = f.contentDocument; } catch (e) { return finish({ route: route, w: w, error: 'cross-origin' }); }
-      if (!d) return finish({ route: route, w: w, error: 'no document' });
-      if (tries++ > 600) return finish({ route: route, w: w, error: 'timed out waiting for the page' });
-      var mainEl = d && (d.querySelector('main#content') || d.querySelector('main') || d.body);
-      // A page that loads its content after 'complete' can say so:
-      // <meta name="spatial-ready" content="data-some-attribute"> makes the
-      // gate wait for that attribute on <html>. Without it the gate settles
-      // on a skeleton between two async stages and measures nothing real.
-      var rm = d.querySelector('meta[name="spatial-ready"]');
-      if (rm && d.documentElement.getAttribute('data-board-state') === 'error') {
-        return finish({ route: route, w: w, error: 'board render failed' });
+    var d;
+    try { d = f.contentDocument; } catch (e) { return finish({ route: route, w: w, error: 'cross-origin' }); }
+    if (!d) return finish({ route: route, w: w, error: 'no document' });
+    if (Date.now() - waitStart > 30000 || tries++ > 1200)
+      return finish({ route: route, w: w, error: 'timed out waiting for the page' });
+    var here = false;
+    try {
+      here = !!(d.location && String(d.location.search).indexOf('__spatial=' + token) >= 0);
+    } catch (e) {
+      here = false;
+    }
+    var mainEl = here && (d.querySelector('main#content') || d.querySelector('main') || d.body);
+    if (mainEl && d.readyState !== 'loading') {
+      if (!d.__spatialInstalled) { d.__spatialInstalled = true; installProbe(d); }
+      var wv = d.defaultView;
+      if (wv && typeof wv.__SPATIAL_MEASURE__ === 'function') {
+        return settle(d, function () {
+          if (token !== TOKEN) return;
+          // The page may have navigated while we settled. If it did, the
+          // window we captured now belongs to a different document, and the
+          // probe is not there any more.
+          //
+          // The window proxy is REUSED across a same-origin navigation, so
+          // comparing defaultView cannot tell the two documents apart —
+          // the probe's presence is the only honest test.
+          if (typeof wv.__SPATIAL_MEASURE__ !== 'function') return wait();
+          measureDoc(d, route, w, finish);
+        });
       }
-      if (rm && !d.documentElement.hasAttribute(rm.getAttribute('content'))) {
-        return setTimeout(wait, 50);
-      }
-      if (d.readyState === 'complete' && mainEl) {
-        if (!d.__spatialInstalled) { d.__spatialInstalled = true; installProbe(d); }
-        var wv = d.defaultView;
-        if (wv && typeof wv.__SPATIAL_MEASURE__ === 'function') {
-          return settle(d, function () {
-            if (token !== TOKEN) return;
-            // The page may have navigated while we settled. If it did, the
-            // window we captured now belongs to a different document, and the
-            // probe is not there any more.
-            //
-            // The window proxy is REUSED across a same-origin navigation, so
-            // comparing defaultView cannot tell the two documents apart —
-            // the probe's presence is the only honest test.
-            if (typeof wv.__SPATIAL_MEASURE__ !== 'function') return wait();
-            measureDoc(d, route, w, finish);
-          });
-        }
-      }
-      setTimeout(wait, 25);
-    })();
-  };
+    }
+    setTimeout(wait, 25);
+  })();
 }
 
 // The FIRST-SCREEN SIZES the law names.
@@ -436,18 +484,41 @@ function post(payload) {
   } catch (e) { /* the dump below is the fallback */ }
 }
 
+// A sweep of thousands of measurements takes minutes. A gate that shows
+// nothing for its whole run is a gate nobody can tell from a hung one, so
+// the harness says where it is.
+function progress(done, total, route) {
+  try {
+    fetch('/__spatial-results', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ progress: done + '/' + total + ' routes', route: route, done: done })
+    });
+  } catch (e) { /* progress is a courtesy, not a result */ }
+}
+
 function run() {
   var results = [];
-  var i = 0, j = 0;
+  var i = SKIP, j = 0;
+  var routeStart = 0;
   function step() {
-    if (i >= ROUTES.length) { post({ measurements: results }); return; }
+    if (i >= ROUTES.length) { post({ measurements: results, done: true }); return; }
     var route = ROUTES[i];
     var W = WIDTHS[j];
     loadPage(route, W, heightFor(W), function (rec) {
       rec.route = route; rec.w = W;
       results.push(rec);
       j++;
-      if (j >= WIDTHS.length) { j = 0; i++; }
+      if (j >= WIDTHS.length) {
+        j = 0;
+        i++;
+        // The results of a finished route are sent on, so that a browser
+        // killed half way through leaves behind the work it had already
+        // done. A sweep that has to be thrown away is a sweep nobody runs.
+        post({ chunk: results.slice(routeStart), routes: i, done: i >= ROUTES.length });
+        routeStart = results.length;
+        progress(i, ROUTES.length, route);
+      }
       step();
     });
   }
@@ -458,10 +529,10 @@ function run() {
 run();
 </script></body></html>`;
 
-function harnessHtml(widths, routes) {
+function harnessHtml(widths, routes, skip) {
   return HARNESS.replace("__WIDTHS__", JSON.stringify(widths))
     .replace("__ROUTES__", JSON.stringify(routes))
-    .replace("__METRIC_PROBE__", measureMetricEvidence.toString())
+    .replace("__SKIP__", String(skip || 0))
     .replace("__PROBE__", JSON.stringify(PROBE_SRC));
 }
 
@@ -477,6 +548,15 @@ let port = 0;
 // dump cannot do. So the harness POSTS its measurements to the server that
 // served it, and the gate waits for that.
 let resultsResolve = null;
+// The measurements of the routes that are already done, carried from one
+// attempt to the next.
+let collected = [];
+// The status the upstream answered for each route's DOCUMENT, in --base
+// mode. A route that answers 404 or 500 renders an error page; an error
+// page has no spatial problems to find, so recording it as a clean page
+// would be a guarantee about nothing.
+const upstreamStatus = new Map();
+let completedRoutes = 0;
 function newResultsPromise() {
   return new Promise((resolve) => {
     resultsResolve = resolve;
@@ -494,6 +574,19 @@ function takeResults(req, res) {
     } catch (e) {
       payload = { error: "the harness posted something that is not JSON" };
     }
+    if (payload && payload.progress) {
+      process.stderr.write(`  · ${payload.progress}\n`);
+      return;
+    }
+    if (payload && payload.chunk) {
+      // The route count rides with the results it belongs to, so the two can
+      // never disagree: a progress line that arrived early must not make the
+      // gate skip a route whose measurements were never collected.
+      if (typeof payload.routes === "number") completedRoutes = payload.routes;
+      collected.push(...payload.chunk);
+      if (payload.done && resultsResolve) resultsResolve({ measurements: collected });
+      return;
+    }
     if (resultsResolve) resultsResolve(payload);
   });
 }
@@ -508,9 +601,10 @@ async function startServer(routes, widths) {
       const raw = decodeURIComponent((req.url || "/").split("?")[0]);
       if (raw === "/__spatial-harness") {
         res.writeHead(200, { "content-type": MIME[".html"] });
-        return res.end(harnessHtml(widths, routes));
+        return res.end(harnessHtml(widths, routes, completedRoutes));
       }
       if (raw === "/__spatial-results") return takeResults(req, res);
+      const q = (req.url || "").split("?")[1] || "";
       try {
         const target = new URL(raw, base + "/");
         const upstream = await fetch(target, {
@@ -518,6 +612,12 @@ async function startServer(routes, widths) {
           headers: { "user-agent": "spatial-law-probe", accept: "text/html,*/*" },
           redirect: "follow",
         });
+        // The status of the DOCUMENT the measurement came from is recorded,
+        // not the status of the asset that happened to be fetched last. A
+        // route that answers 404 or 500 renders an error page, and an error
+        // page has no spatial problems to find — so without this the gate
+        // certified a broken route as a clean one.
+        if (q.indexOf("__spatial=") >= 0) upstreamStatus.set(raw, upstream.status);
         const ct = upstream.headers.get("content-type") || "application/octet-stream";
         const body = Buffer.from(await upstream.arrayBuffer());
         // The proxy keeps every path, so the page's own relative URLs —
@@ -533,6 +633,10 @@ async function startServer(routes, widths) {
         res.writeHead(upstream.status, { "content-type": ct });
         res.end(body);
       } catch (e) {
+        // A route the proxy could not fetch at all. Record it as a failed
+        // fetch, so the measurement of it is reported as unreadable rather
+        // than as a clean page.
+        if (q.indexOf("__spatial=") >= 0) upstreamStatus.set(raw, 0);
         res.writeHead(502, { "content-type": "text/plain" });
         res.end("proxy error: " + e.message);
       }
@@ -543,7 +647,7 @@ async function startServer(routes, widths) {
       const raw = decodeURIComponent((req.url || "/").split("?")[0]);
       if (raw === "/__spatial-harness") {
         res.writeHead(200, { "content-type": MIME[".html"] });
-        return res.end(harnessHtml(widths, routes));
+        return res.end(harnessHtml(widths, routes, completedRoutes));
       }
       if (raw === "/__spatial-results") return takeResults(req, res);
       const url = path.posix.normalize(raw).replace(/\/+$/, "") || "/";
@@ -847,6 +951,7 @@ function cleanup() {
     // belongs to the runtime and is not in the same place on every machine,
     // so a shared instrument asks the environment first and falls back to the
     // standard location — it never carries one person's home directory.
+    if (!existsSync(prof)) return;
     const trash = process.env.MAVIS_TRASH || path.join(homedir(), ".minimax", "bin", "mavis-trash");
     if (existsSync(trash)) execFileSync(trash, ["--", prof]);
     else rmSync(prof, { recursive: true, force: true });
@@ -871,7 +976,13 @@ for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => { cleanup(); proc
 const RUN_TIMEOUT_MS = 45 * 60 * 1000;
 let payload = null;
 let chromeError = null;
-for (let attempt = 1; attempt <= 3; attempt++) {
+// Five attempts, not three. Another agent on the same machine can take this
+// gate's browser out from under it with a `pkill -f "Google Chrome"`, and a
+// sweep that is killed at the twentieth minute should try again rather than
+// report a failure that is really a collision.
+for (let attempt = 1; attempt <= 5; attempt++) {
+  // Pick up where the last attempt stopped.
+  if (attempt > 1) console.error(`  · resuming after ${completedRoutes} route(s)`);
   // A FRESH profile per attempt: a browser that was killed leaves a dirty
   // profile behind, and the next attempt would fail for the wrong reason.
   const attemptProf = attempt === 1 ? prof : `${prof}-${attempt}`;
@@ -905,16 +1016,47 @@ for (let attempt = 1; attempt <= 3; attempt++) {
   // LONGER than the job that runs this gate, or the browser is taken down
   // mid-sweep and the gate reports a failure that is really a timeout — the
   // measurement was fine.
+  //
+  // A browser that DIES is not a browser that is slow. Waiting out the whole
+  // watchdog for a process that has already exited is how a sweep turns into
+  // an hour of nothing: another agent on the same machine running
+  // `pkill -f "Google Chrome"` took this gate's browser out from under it,
+  // and the gate sat there for 45 minutes waiting for measurements that were
+  // never coming. So the browser's exit is a result, and it is a fast one.
   const timeout = Symbol("timeout");
-  const got = await withDeadline(waiting, RUN_TIMEOUT_MS, timeout);
-  releaseBrowser(child);
-  if (got !== timeout) {
+  const died = Symbol("died");
+  const gone = new Promise((r) => child.on("close", () => r(died)));
+  // The watchdog is a TIMER, and a live timer holds the event loop open. The
+  // browser usually wins the race, and the losing timer then kept the process
+  // alive for 45 minutes after the verdict had been printed: a PASSING run
+  // never exited, while a failing one exited at once. The gate that runs
+  // this timed out waiting for a verdict it had already been given, and the
+  // falsifier's clean-build check read that timeout as "the gate did not
+  // pass". The timer is cleared the moment the race is decided.
+  let watchdog = null;
+  const got = await Promise.race([
+    waiting,
+    gone,
+    new Promise((r) => {
+      watchdog = setTimeout(() => r(timeout), RUN_TIMEOUT_MS);
+    }),
+  ]);
+  if (watchdog) clearTimeout(watchdog);
+  try {
+    child.kill("SIGKILL");
+  } catch {
+    /* already gone */
+  }
+  if (got !== timeout && got !== died) {
     payload = got;
     chromeError = null;
     break;
   }
-  chromeError = new Error(`the browser did not finish within ${Math.round(RUN_TIMEOUT_MS / 60000)} minutes`);
-  console.error(`  · Chrome attempt ${attempt}/3 did not finish — retrying`);
+  chromeError =
+    got === died
+      ? new Error("the browser exited before it reported its measurements")
+      : new Error(`the browser did not finish within ${Math.round(RUN_TIMEOUT_MS / 60000)} minutes`);
+  console.error(`  · Chrome attempt ${attempt}/5 ${got === died ? "exited early" : "did not finish"} — retrying`);
   try {
     rmSync(attemptProf, { recursive: true, force: true });
   } catch {
@@ -972,6 +1114,22 @@ if (results.length !== expected || missingPairs.length || duplicatePairs.length)
   console.error(`  A page measured twice is the same count as a page never measured.\n`);
   process.exit(1);
 }
+// The status of the route's document, in --base mode. A route that answers
+// 404 or 500 renders an error page, and an error page cannot be certified:
+// it has no layout to find problems in. So the measurement is refused here,
+// rather than reported as a clean route.
+if (upstreamStatus.size) {
+  for (const r of results) {
+    if (r.error) continue;
+    const st = upstreamStatus.get(r.route);
+    if (st === undefined) continue;
+    if (st === 0) {
+      r.error = "the route could not be fetched";
+    } else if (st < 200 || st >= 400) {
+      r.error = `the route answered ${st}`;
+    }
+  }
+}
 const errored = results.filter((r) => r.error);
 if (errored.length) {
   console.error(`\nFAIL — the spatial gate could not read ${errored.length} page measurement(s):`);
@@ -997,6 +1155,20 @@ const baselineRoutes = (baseline && baseline.routes) || {};
 const reasons = (baseline && baseline.reasons) || {};
 
 const failures = [];
+// A receipt that says it is an assembly is held to that claim: every
+// carried-over cell is compared against a fresh measurement like any other,
+// and the reader is told which cells came from the earlier sweep.
+const provenance = (baseline && baseline.provenance) || null;
+if (provenance && Array.isArray(provenance.carriedOver) && provenance.carriedOver.length) {
+  notes.push(
+    `this receipt is an ASSEMBLY: ${provenance.carriedOver.length} of ${routes.length} route(s) carried cells over from an earlier sweep` +
+      (provenance.measuredAt ? ` (${provenance.measuredAt})` : "") +
+      ` — every carried cell was re-measured on this run and compared, so an assembly cannot hide a change`,
+  );
+  for (const r of provenance.carriedOver.slice(0, 60)) {
+    notes.push(`  · carried over from the earlier sweep: ${r}`);
+  }
+}
 if (cssNotFound) {
   notes.push(
     `the stylesheet was not found at ${cssNotFound} — the sweep fell back to the project's own widths, ` +
@@ -1480,6 +1652,26 @@ if (UPDATE) {  // A reason for a decision that is no longer there is not recorde
     // Written exceptions to the absolute limits, kept for the same reason:
     // an exception is a decision, and a decision is written down.
     exempt: keptExempts,
+    // What this receipt is a receipt OF. A receipt that does not say where
+    // it came from is a number with no source: nobody can check it, and
+    // nobody can know whether it has gone stale.
+    //
+    // A receipt written by one sweep says so. A receipt ASSEMBLED from two
+    // sweeps — the routes that did not change carried over from the earlier
+    // one, the changed route measured again — says that instead, and names
+    // the routes it carried over. The assembly is checked on every run: a
+    // carried-over cell is compared against a fresh measurement like any
+    // other, so an assembly cannot hide a change. But a reader has to be
+    // told, because a receipt that claims to be one sweep and is two is a
+    // receipt with a false claim in it.
+    provenance: {
+      measuredAt: new Date().toISOString(),
+      measurements: results.length,
+      routes: new Set(results.map((r) => r.route)).size,
+      widths: widths.length,
+      measuredTogether: true,
+      carriedOver: [],
+    },
     routes: {},
   };
   const signatureDetail = new Map();
@@ -1633,7 +1825,11 @@ if (REPORT) {
     for (const k of staleReasons) console.log(`  · ${k}`);
   }
   printNotes();
-  process.exit(0);
+  // The report is MORE output, not a way past the verdict. It used to end
+  // here with exit 0, which meant a run with --report could not fail: the
+  // findings were printed and the gate walked away green. A report that
+  // cannot fail is not evidence of anything. So the report falls through to
+  // the verdict below, which decides the exit code.
 }
 
 // ---------------------------------------------------------------- verdict
@@ -1665,3 +1861,8 @@ console.log(
   `  · spatial: every measurement was a fresh load at the width measured, on a real clock — ` +
     `the chrome of each page is recorded, and a chrome that changed is a change the receipt cannot hide`,
 );
+// The run is over, and it PASSED, so the process ends here. Falling off the
+// end of the file left the server's keep-alive sockets and whatever else the
+// runtime holds open to keep the process alive, and the gate waited on a
+// verdict it had already been given.
+process.exit(0);

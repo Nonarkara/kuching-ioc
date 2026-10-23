@@ -64,17 +64,18 @@
     "clip|span.news-digest-title": "A news headline under a deliberate two-line clamp (reading.css, same clamp the ground pulse uses). A headline can be longer than two lines of a 254-340px rail; the clamp keeps the map's rail from growing, and the full headline is in the title attribute so hover recovers it. Truncation here is chosen and recoverable, not loss."
   },
   "exempt": [],
+  "provenance": {
+    "measuredAt": "2026-10-23T00:16:13.364Z",
+    "measurements": 26,
+    "routes": 1,
+    "widths": 26,
+    "measuredTogether": true,
+    "carriedOver": []
+  },
   "routes": {
     "/": {
       "390": {
-        "findings": [
-          {
-            "kind": "clip",
-            "sel": "div.metric-context",
-            "metric": 153,
-            "detail": "div.metric-context hides 153px of its own content"
-          }
-        ],
+        "findings": [],
         "firstAction": {
           "y": null,
           "sel": null
@@ -91,7 +92,7 @@
         },
         "hierarchy": {
           "h1": 0,
-          "largest": 22,
+          "largest": 14,
           "ratio": null,
           "peers": 0,
           "share": 0
@@ -483,8 +484,8 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 215,
-            "detail": "span.lang-badge.insights-bar-en leaves 215px empty beneath it in a 231px row"
+            "metric": 222,
+            "detail": "span.lang-badge.insights-bar-en leaves 222px empty beneath it in a 231px row"
           },
           {
             "kind": "dead",
@@ -501,14 +502,14 @@
           {
             "kind": "dead",
             "sel": "div.hg-level",
-            "metric": 86,
-            "detail": "div.hg-level leaves 86px empty beneath it in a 111px row"
+            "metric": 94.703125,
+            "detail": "div.hg-level leaves 95px empty beneath it in a 111px row"
           },
           {
             "kind": "dead",
             "sel": "div.hg-band",
-            "metric": 89,
-            "detail": "div.hg-band leaves 89px empty beneath it in a 111px row"
+            "metric": 98,
+            "detail": "div.hg-band leaves 98px empty beneath it in a 111px row"
           },
           {
             "kind": "clip",
@@ -568,8 +569,8 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 215,
-            "detail": "span.lang-badge.insights-bar-en leaves 215px empty beneath it in a 231px row"
+            "metric": 222,
+            "detail": "span.lang-badge.insights-bar-en leaves 222px empty beneath it in a 231px row"
           },
           {
             "kind": "dead",
@@ -586,14 +587,14 @@
           {
             "kind": "dead",
             "sel": "div.hg-level",
-            "metric": 86,
-            "detail": "div.hg-level leaves 86px empty beneath it in a 111px row"
+            "metric": 94.703125,
+            "detail": "div.hg-level leaves 95px empty beneath it in a 111px row"
           },
           {
             "kind": "dead",
             "sel": "div.hg-band",
-            "metric": 89,
-            "detail": "div.hg-band leaves 89px empty beneath it in a 111px row"
+            "metric": 98,
+            "detail": "div.hg-band leaves 98px empty beneath it in a 111px row"
           },
           {
             "kind": "clip",
@@ -653,8 +654,8 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 215,
-            "detail": "span.lang-badge.insights-bar-en leaves 215px empty beneath it in a 231px row"
+            "metric": 222,
+            "detail": "span.lang-badge.insights-bar-en leaves 222px empty beneath it in a 231px row"
           },
           {
             "kind": "dead",
@@ -667,6 +668,18 @@
             "sel": "div#mapKicker",
             "metric": 284,
             "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-level",
+            "metric": 74,
+            "detail": "div.hg-level leaves 74px empty beneath it in a 90px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-band",
+            "metric": 77,
+            "detail": "div.hg-band leaves 77px empty beneath it in a 90px row"
           },
           {
             "kind": "clip",
@@ -720,8 +733,8 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 215,
-            "detail": "span.lang-badge.insights-bar-en leaves 215px empty beneath it in a 231px row"
+            "metric": 222,
+            "detail": "span.lang-badge.insights-bar-en leaves 222px empty beneath it in a 231px row"
           },
           {
             "kind": "dead",
@@ -734,6 +747,18 @@
             "sel": "div#mapKicker",
             "metric": 284,
             "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-level",
+            "metric": 74,
+            "detail": "div.hg-level leaves 74px empty beneath it in a 90px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-band",
+            "metric": 77,
+            "detail": "div.hg-band leaves 77px empty beneath it in a 90px row"
           },
           {
             "kind": "clip",
@@ -787,8 +812,8 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 215,
-            "detail": "span.lang-badge.insights-bar-en leaves 215px empty beneath it in a 231px row"
+            "metric": 222,
+            "detail": "span.lang-badge.insights-bar-en leaves 222px empty beneath it in a 231px row"
           },
           {
             "kind": "dead",
@@ -801,6 +826,18 @@
             "sel": "div#mapKicker",
             "metric": 284,
             "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-level",
+            "metric": 74,
+            "detail": "div.hg-level leaves 74px empty beneath it in a 90px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-band",
+            "metric": 77,
+            "detail": "div.hg-band leaves 77px empty beneath it in a 90px row"
           },
           {
             "kind": "clip",
@@ -848,8 +885,8 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 173,
-            "detail": "span.lang-badge.insights-bar-en leaves 173px empty beneath it in a 189px row"
+            "metric": 180,
+            "detail": "span.lang-badge.insights-bar-en leaves 180px empty beneath it in a 189px row"
           },
           {
             "kind": "dead",
@@ -862,6 +899,18 @@
             "sel": "div#mapKicker",
             "metric": 284,
             "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-level",
+            "metric": 74,
+            "detail": "div.hg-level leaves 74px empty beneath it in a 90px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-band",
+            "metric": 77,
+            "detail": "div.hg-band leaves 77px empty beneath it in a 90px row"
           },
           {
             "kind": "clip",
@@ -903,8 +952,8 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 173,
-            "detail": "span.lang-badge.insights-bar-en leaves 173px empty beneath it in a 189px row"
+            "metric": 180,
+            "detail": "span.lang-badge.insights-bar-en leaves 180px empty beneath it in a 189px row"
           },
           {
             "kind": "dead",
@@ -917,6 +966,18 @@
             "sel": "div#mapKicker",
             "metric": 284,
             "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-level",
+            "metric": 74,
+            "detail": "div.hg-level leaves 74px empty beneath it in a 90px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-band",
+            "metric": 77,
+            "detail": "div.hg-band leaves 77px empty beneath it in a 90px row"
           },
           {
             "kind": "clip",
@@ -958,8 +1019,8 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 173,
-            "detail": "span.lang-badge.insights-bar-en leaves 173px empty beneath it in a 189px row"
+            "metric": 180,
+            "detail": "span.lang-badge.insights-bar-en leaves 180px empty beneath it in a 189px row"
           },
           {
             "kind": "dead",
@@ -972,6 +1033,18 @@
             "sel": "div#mapKicker",
             "metric": 284,
             "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-level",
+            "metric": 74,
+            "detail": "div.hg-level leaves 74px empty beneath it in a 90px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-band",
+            "metric": 77,
+            "detail": "div.hg-band leaves 77px empty beneath it in a 90px row"
           },
           {
             "kind": "clip",
@@ -1013,8 +1086,8 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 173,
-            "detail": "span.lang-badge.insights-bar-en leaves 173px empty beneath it in a 189px row"
+            "metric": 180,
+            "detail": "span.lang-badge.insights-bar-en leaves 180px empty beneath it in a 189px row"
           },
           {
             "kind": "dead",
@@ -1027,6 +1100,18 @@
             "sel": "div#mapKicker",
             "metric": 284,
             "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-level",
+            "metric": 74,
+            "detail": "div.hg-level leaves 74px empty beneath it in a 90px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-band",
+            "metric": 77,
+            "detail": "div.hg-band leaves 77px empty beneath it in a 90px row"
           },
           {
             "kind": "clip",
@@ -1068,14 +1153,26 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 152,
-            "detail": "span.lang-badge.insights-bar-en leaves 152px empty beneath it in a 168px row"
+            "metric": 159,
+            "detail": "span.lang-badge.insights-bar-en leaves 159px empty beneath it in a 168px row"
           },
           {
             "kind": "dead",
             "sel": "div#mapKicker",
             "metric": 284,
             "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-level",
+            "metric": 74,
+            "detail": "div.hg-level leaves 74px empty beneath it in a 90px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-band",
+            "metric": 77,
+            "detail": "div.hg-band leaves 77px empty beneath it in a 90px row"
           },
           {
             "kind": "clip",
@@ -1117,14 +1214,26 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 152,
-            "detail": "span.lang-badge.insights-bar-en leaves 152px empty beneath it in a 168px row"
+            "metric": 159,
+            "detail": "span.lang-badge.insights-bar-en leaves 159px empty beneath it in a 168px row"
           },
           {
             "kind": "dead",
             "sel": "div#mapKicker",
             "metric": 284,
             "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-level",
+            "metric": 74,
+            "detail": "div.hg-level leaves 74px empty beneath it in a 90px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-band",
+            "metric": 77,
+            "detail": "div.hg-band leaves 77px empty beneath it in a 90px row"
           },
           {
             "kind": "clip",
@@ -1166,14 +1275,26 @@
           {
             "kind": "dead",
             "sel": "span.lang-badge.insights-bar-en",
-            "metric": 152,
-            "detail": "span.lang-badge.insights-bar-en leaves 152px empty beneath it in a 168px row"
+            "metric": 159,
+            "detail": "span.lang-badge.insights-bar-en leaves 159px empty beneath it in a 168px row"
           },
           {
             "kind": "dead",
             "sel": "div#mapKicker",
             "metric": 284,
             "detail": "div#mapKicker leaves 284px empty beneath it in a 302px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-level",
+            "metric": 74,
+            "detail": "div.hg-level leaves 74px empty beneath it in a 90px row"
+          },
+          {
+            "kind": "dead",
+            "sel": "div.hg-band",
+            "metric": 77,
+            "detail": "div.hg-band leaves 77px empty beneath it in a 90px row"
           },
           {
             "kind": "clip",

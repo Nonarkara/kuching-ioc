@@ -65,7 +65,7 @@
   },
   "exempt": [],
   "provenance": {
-    "measuredAt": "2026-10-23T00:16:13.364Z",
+    "measuredAt": "2026-10-24T16:43:51.851Z",
     "measurements": 26,
     "routes": 1,
     "widths": 26,
@@ -75,7 +75,14 @@
   "routes": {
     "/": {
       "390": {
-        "findings": [],
+        "findings": [
+          {
+            "kind": "clip",
+            "sel": "div.metric-context",
+            "metric": 153,
+            "detail": "div.metric-context hides 153px of its own content"
+          }
+        ],
         "firstAction": {
           "y": null,
           "sel": null
@@ -92,7 +99,7 @@
         },
         "hierarchy": {
           "h1": 0,
-          "largest": 14,
+          "largest": 22,
           "ratio": null,
           "peers": 0,
           "share": 0

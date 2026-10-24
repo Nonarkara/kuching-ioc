@@ -70,6 +70,13 @@ import { execFileSync, spawn } from "node:child_process";
 import { tmpdir, homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+// LOCAL PATCH (kuching-ioc) — NOT in the canonical instrument. Four hunks, all
+// marked "LOCAL PATCH". They emit rec.board (populated-board proof and the
+// evidence-vs-freshness overlap probe) that scripts/spatial/check-portable.mjs
+// requires. Re-vendoring the canonical copy without them silently disables that
+// guard end-to-end while the unit tests (which feed synthetic rows) stay green:
+// that happened in 55990af. tests/portable-receipt.test.mjs now fails if they go.
+import { measureMetricEvidence } from '../../public/measurement.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -358,6 +365,25 @@ function measureDoc(d, route, w, cb) {
   // down would be of a page nobody sees.
   try { wv.scrollTo(0, 0); } catch (e) { /* nothing to scroll */ }
   var rec = wv.__SPATIAL_MEASURE__(route, w, d);
+  // LOCAL PATCH (kuching-ioc): the board must be populated, and its evidence
+  // controls must not cover the freshness text they sit beside.
+  if (d.querySelector('meta[name="spatial-ready"]')) {
+    rec.board = {
+      state: d.documentElement.getAttribute('data-board-state'),
+      metrics: d.querySelectorAll('#metricBand [data-metric-id]').length,
+      brief: d.querySelectorAll('#briefNow .brief-item').length,
+      funnel: d.querySelectorAll('#researchPanel .evidence-funnel .rp-step').length,
+      map: !!d.querySelector('#mapCanvas .leaflet-pane'),
+      font: wv.getComputedStyle(d.body).fontFamily
+    };
+    rec.board.metricEvidence = (__METRIC_PROBE__)(d);
+    for (var item of rec.board.metricEvidence) {
+      if (item.overlap > 0) rec.findings.push({ kind: 'overlap', sel: 'metric-evidence:' + item.id, metric: item.overlap, detail: 'Evidence control covers visible freshness glyphs' });
+    }
+    if (rec.board.state !== 'ready' || rec.board.metrics < 4 || rec.board.brief < 1 || rec.board.funnel !== 5 || !rec.board.map) {
+      return cb({ route: route, w: w, error: 'critical board content missing ' + JSON.stringify({ state: rec.board.state, metrics: rec.board.metrics, brief: rec.board.brief, funnel: rec.board.funnel, map: rec.board.map }), board: rec.board });
+    }
+  }
   // Clear what this page left behind, so the NEXT measurement of this route
   // starts from an empty state. A receipt of a page that remembers the last
   // measurement is a receipt of the instrument, not of the product.
@@ -435,6 +461,17 @@ function loadPage(route, w, h, cb) {
       here = false;
     }
     var mainEl = here && (d.querySelector('main#content') || d.querySelector('main') || d.body);
+    // LOCAL PATCH (kuching-ioc): a page that fills in after parsing says so:
+    // <meta name="spatial-ready" content="data-some-attribute"> makes the gate
+    // wait for that attribute on <html> (30 s wall-clock budget above still
+    // applies). Without it the gate measures the skeleton and calls it a board.
+    var rm = mainEl && d.querySelector('meta[name="spatial-ready"]');
+    if (rm && d.documentElement.getAttribute('data-board-state') === 'error') {
+      return finish({ route: route, w: w, error: 'board render failed' });
+    }
+    if (rm && !d.documentElement.hasAttribute(rm.getAttribute('content'))) {
+      return setTimeout(wait, 50);
+    }
     if (mainEl && d.readyState !== 'loading') {
       if (!d.__spatialInstalled) { d.__spatialInstalled = true; installProbe(d); }
       var wv = d.defaultView;
@@ -533,7 +570,8 @@ function harnessHtml(widths, routes, skip) {
   return HARNESS.replace("__WIDTHS__", JSON.stringify(widths))
     .replace("__ROUTES__", JSON.stringify(routes))
     .replace("__SKIP__", String(skip || 0))
-    .replace("__PROBE__", JSON.stringify(PROBE_SRC));
+    .replace("__PROBE__", JSON.stringify(PROBE_SRC))
+    .replace("__METRIC_PROBE__", measureMetricEvidence.toString()); // LOCAL PATCH (kuching-ioc)
 }
 
 // ---------------------------------------------------------------- the server

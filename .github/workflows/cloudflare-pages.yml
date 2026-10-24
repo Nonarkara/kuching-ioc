@@ -57,6 +57,11 @@ jobs:
       # exit 1 on any unjustified decision); CI records its receipt and must not
       # block a deploy on a font it does not have.
       - name: Spatial measurement (MSH, receipt only on Linux)
+        # The canonical instrument fails --report on any baseline mismatch (a
+        # report that cannot fail is not evidence). On Linux that is font drift,
+        # not layout, so it must not stop the job; the blocking floor is the
+        # font-independent check in the next step, which reads this receipt.
+        continue-on-error: true
         run: scripts/spatial/measure-frozen.sh --report --json artifacts/spatial-report.json
       - name: Enforce populated board and portable spatial safety
         run: node scripts/spatial/check-portable.mjs artifacts/spatial-report.json

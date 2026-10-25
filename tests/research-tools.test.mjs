@@ -1,10 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const base = ['../public/', '../src/research/', '../'].map(p => new URL(p, import.meta.url)).find(p => existsSync(new URL('research-catalog.js', p)));
-const { RESEARCH_COPY, RESEARCH_TASKS, RESEARCH_TOOLS, toolsFor, researchUrl, researchContext, researchRecord } = await import(new URL('research-catalog.js', base));
+const { CATALOG_VERSION, RESEARCH_COPY, RESEARCH_TASKS, RESEARCH_TOOLS, toolsFor, researchUrl, researchContext, researchRecord } = await import(new URL('research-catalog.js', base));
 const { openResearchTools } = await import(new URL('research-tools.js', base));
+
+test('returning-browser cache keys version the full native module chain', () => {
+  const tools = readFileSync(new URL('research-tools.js', base), 'utf8');
+  const child = tools.match(/from ['"]([^'"]*research-catalog[^'"]*)['"]/)[1];
+  assert.equal(new URL(child, base).searchParams.get('v'), CATALOG_VERSION);
+  const entryFile = new URL('research-entry.js', base);
+  if (existsSync(entryFile)) {
+    const entry = readFileSync(entryFile, 'utf8').match(/from ['"]([^'"]*research-tools[^'"]*)['"]/)[1];
+    assert.equal(new URL(entry, base).searchParams.get('v'), CATALOG_VERSION);
+    const html = readFileSync(new URL('index.html', base), 'utf8');
+    const scripts = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(m => new URL(m[1], base));
+    for (const file of ['app.js', 'research-entry.js']) assert.equal(scripts.find(u => u.pathname.endsWith('/' + file))?.searchParams.get('v'), CATALOG_VERSION);
+  }
+});
 
 test('manual catalog is localized, relevant and never counted as a connected feed', () => {
   assert.equal(toolsFor('padawan').length, 6);

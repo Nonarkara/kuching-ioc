@@ -1,7 +1,7 @@
 // SIC: task taxonomy informed by OSINT4ALL (CC0); verification guidance by
 // Bellingcat's toolkit. Original descriptions below; no third-party feed code.
 const L = (en, ms, zh, th) => ({ en, ms, zh, th });
-export const CATALOG_VERSION = 'sic-2026-10-25-r2';
+export const CATALOG_VERSION = 'sic-2026-10-25-r3';
 export const RESEARCH_COPY = {
   open: L('Investigate', 'Semak bukti', '核查资料', 'ตรวจสอบข้อมูล'),
   title: L('Check the evidence', 'Semak bukti dan sumber', '核查证据与来源', 'ตรวจสอบหลักฐานและแหล่งข้อมูล'),

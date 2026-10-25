@@ -1,4 +1,4 @@
-import { CATALOG_VERSION, RESEARCH_TASKS, researchText, researchUrl, researchContext, researchRecord, toolsFor } from './research-catalog.js';
+import { CATALOG_VERSION, RESEARCH_TASKS, researchText, researchUrl, researchContext, researchRecord, toolsFor } from './research-catalog.js?v=sic-2026-10-25-r3';
 
 // A native modal is created only on request. No fetches, frames, geolocation,
 // storage or external scripts; the catalog is separate from feed health.

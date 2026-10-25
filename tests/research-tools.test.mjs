@@ -22,6 +22,14 @@ test('outbound allowlist rejects injected, credentialed and query-bearing destin
   for (const url of ['javascript:alert(1)', 'https://www.openstreetmap.org/?q=private-report', 'https://www.openstreetmap.org.evil.test/', 'https://user:secret@www.openstreetmap.org/', '//www.openstreetmap.org/', 'https://example.org/']) assert.equal(researchUrl(url), null);
 });
 
+test('event dates and Date-valued times retain their meaning through the exported record', () => {
+  const context = researchContext({ label: 'Event', eventAt: '2026-10-23', publishedAt: new Date('2026-10-25T01:00:00Z'), observedAt: new Date('invalid') });
+  const record = researchRecord('mem', context);
+  assert.equal(record.context.eventAt, '2026-10-23');
+  assert.equal(record.context.publishedAt, '2026-10-25T01:00:00.000Z');
+  assert.equal(record.context.observedAt, null);
+});
+
 test('research records retain supplied times separately without forwarding coordinates or arbitrary fields', () => {
   const raw = { label: 'Public report', observedAt: '2026-10-23T10:00:00Z', publishedAt: '2026-10-24T01:00:00Z', lat: 1.23456, secret: 'do not export' };
   const record = researchRecord('padawan', raw, '2026-10-25T02:00:00Z');

@@ -45,7 +45,7 @@ export function openResearchTools({ system = 'padawan', lang = 'en', context = n
     if (selected) {
       const p = node('p', null, body); p.className = 'research-tools-context';
       node('span', t('context') + ': ', p); node('strong', selected.label, p);
-      for (const [field, label] of [['observedAt', 'observed'], ['publishedAt', 'published']]) if (selected[field]) node('p', t(label) + ': ' + selected[field], body);
+      for (const [field, label] of [['observedAt', 'observed'], ['publishedAt', 'published'], ['eventAt', 'event']]) if (selected[field]) node('p', t(label) + ': ' + selected[field], body);
       node('p', t('locationLimit'), body);
     } else node('p', t('noContext'), body);
     node('p', t('manual'), body);

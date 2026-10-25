@@ -1,7 +1,7 @@
 // SIC: task taxonomy informed by OSINT4ALL (CC0); verification guidance by
 // Bellingcat's toolkit. Original descriptions below; no third-party feed code.
 const L = (en, ms, zh, th) => ({ en, ms, zh, th });
-export const CATALOG_VERSION = 'sic-2026-10-25';
+export const CATALOG_VERSION = 'sic-2026-10-25-r2';
 export const RESEARCH_COPY = {
   open: L('Investigate', 'Semak bukti', '核查资料', 'ตรวจสอบข้อมูล'),
   title: L('Check the evidence', 'Semak bukti dan sumber', '核查证据与来源', 'ตรวจสอบหลักฐานและแหล่งข้อมูล'),
@@ -29,6 +29,7 @@ export const RESEARCH_COPY = {
   copied: L('Copied locally', 'Disalin secara setempat', '已复制到本地剪贴板', 'คัดลอกแล้ว'),
   copyFailed: L('Clipboard unavailable. Select and copy the context text instead.', 'Papan keratan tidak tersedia. Pilih dan salin teks konteks.', '剪贴板不可用，请选择并复制背景文字。', 'ใช้คลิปบอร์ดไม่ได้ โปรดเลือกและคัดลอกข้อความแทน'),
   observed: L('Observation time supplied by dashboard', 'Masa pemerhatian daripada papan', '看板提供的观测时间', 'เวลาสังเกตจากแดชบอร์ด'),
+  event: L('Event date supplied by dashboard', 'Tarikh kejadian daripada papan', '看板提供的事件日期', 'วันที่เหตุการณ์จากแดชบอร์ด'),
   published: L('Publication time supplied by dashboard', 'Masa penerbitan daripada papan', '看板提供的发布时间', 'เวลาเผยแพร่จากแดชบอร์ด'),
 };
 export const RESEARCH_TASKS = {
@@ -74,7 +75,8 @@ export function researchUrl(value) {
 export function researchContext(value) {
   if (!value || typeof value.label !== 'string' || !value.label.trim()) return null;
   const text = v => typeof v === 'string' ? v.trim().slice(0, 240) : null;
-  return { label: text(value.label), observedAt: text(value.observedAt), publishedAt: text(value.publishedAt) };
+  const time = v => v instanceof Date ? (Number.isFinite(v.getTime()) ? v.toISOString() : null) : text(v);
+  return { label: text(value.label), observedAt: time(value.observedAt), publishedAt: time(value.publishedAt), eventAt: time(value.eventAt) };
 }
 export function researchRecord(system, context, at = new Date().toISOString()) {
   return { catalogVersion: CATALOG_VERSION, system, recordedAt: at, context: researchContext(context),

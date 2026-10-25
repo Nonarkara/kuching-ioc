@@ -9,6 +9,8 @@ Release brief, 25 October 2026:
 
 The shared `research-catalog.js`, `research-tools.js` and `research-tools.css` assets are maintained as identical copies in Padawan, GlobeWatch, AsiaWatch and MEM. The React copies live in `src/research/`; Padawan's in `public/`; MEM's in its static root. Keep the version and regression tests together when updating them. Catalog entries do not join source-health statistics or imply new feed/API access.
 
+For a native-module release, rotate the catalog revision and every dependency URL together, including MEM's app/entry scripts and stylesheet. Versioning only HTML or the entry script leaves cached child imports active. The cache-chain regression enforces the JS revision links. Keep event dates (`eventAt`), observation times and publication times distinct; do not relabel one as another to make the display tidy.
+
 Selected labels and supplied observation/publication times remain local. Links are allowlisted canonical HTTPS destinations without selection queries, and opening the panel does not load provider scripts, images or frames. Copy context uses the local clipboard only. Context is explicitly unverified; no coordinates are invented or exported. Missing timestamps stay absent, and link availability is not claimed as tested.
 
 ## Sources and credits

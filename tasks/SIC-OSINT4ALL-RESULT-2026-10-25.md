@@ -1,5 +1,7 @@
 # SIC research tools: implementation evidence
 
+Subsequent audit: [confirmed defects, corrections and current release receipts](SIC-RE-AUDIT-2026-10-25.md). The original report below is historical; its test total does not establish open-dialog coverage.
+
 25 October 2026. Approved scope: contextual research links in Padawan, Globalmonitor, AsiaWatch and MEM. No new API feeds, scraping or subscriptions.
 
 ## Changed

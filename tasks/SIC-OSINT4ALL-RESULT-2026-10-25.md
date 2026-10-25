@@ -18,7 +18,7 @@ More importantly, old panel state could select the wrong research subject. Padaw
 
 ## Local verification
 
-- Padawan: 195/195 tests; Globalmonitor: 77/77; AsiaWatch: 107/107; MEM: 4/4 new catalog/dialog tests.
+- Padawan: 195/195 tests; Globalmonitor: 77/77; AsiaWatch: 108/108 (including the release repair below); MEM: 4/4 new catalog/dialog tests.
 - Both React production builds pass. New research source scan: zero Non-Slop findings. Existing bundle-size advisories remain.
 - Padawan frozen spatial gate exits successfully; portable floor reports 26 populated boards, no overflow or evidence-button overlap. Baseline unchanged. This measures the normal dashboard, not the new open dialog.
 - Root exercised actual browser flows in all four local previews: menus/disclosures, task changes, language changes, Escape and return path. Padawan selection carried “8th Mile” into research. Phone and tablet checks show 16px body text, content-sized controls and no dialog horizontal overflow. Screenshots are local evidence in `/tmp/sic-ui/`; capture dimensions must be confirmed in the DOM, not inferred from filenames or a stale compositor frame.
@@ -37,4 +37,29 @@ Cloudflare deployment history, rather than branch names alone, identifies the cu
 
 Globalmonitor's newer deployed lineage is on `origin/codex/oracle-openrouter-fallback`, not the older `v3/main` snapshot; release must preserve that deployed lineage. AsiaWatch's original checkout has a separate unpushed commit and dirty work, and MEM has dirty app.js changes. These original checkouts were not modified. A later agent should merge the released research additions into those working copies without resetting or discarding their work.
 
-Production deployment and live interaction evidence will be appended after publishing. This document does not claim that a local pass is a completed release.
+## Published and verified
+
+| Site | Released revision | Deployment / CI receipt |
+|---|---|---|
+| [Padawan](https://kuching.nonarkara.org/) | `0a753c8` | [CI 40163972674](https://github.com/Nonarkara/kuching-ioc/actions/runs/40163972674), success; build manifest carries `0a753c8f8e7a9d94afb955e4ed9f0a42` |
+| [Globalmonitor](https://globalmonitor.nonarkara.org/) | `95a60db1` | [Deployment](https://129f1313.globalmonitor.pages.dev), [CI 40165127965](https://github.com/Nonarkara/globalmonitor/actions/runs/40165127965), success |
+| [AsiaWatch](https://asia.nonarkara.org/) | `82d97283` | [Deployment](https://ee952173.asiawatch.pages.dev), [CI](https://github.com/Nonarkara/globalmonitor/actions/runs/40165105530) and [deployment workflow](https://github.com/Nonarkara/globalmonitor/actions/runs/40165105521), both success |
+| [MEM](https://mem.nonarkara.org/) | `da5c6c2` | [Deployment](https://26481386.mem-by-non.pages.dev); staged only the eight public runtime files, excluding Git metadata, docs and tests |
+
+Padawan and MEM serve catalog bytes matching the local SHA-256 hashes. The live React entry bundles contain both the research workflow and `sic-2026-10-25` catalog identifier; Cloudflare confirms the released source revisions. Globalmonitor's entry also matched the locally built bytes. AsiaWatch's release is built in CI, so local bundle-byte identity is not claimed. The three common source assets are byte-identical across all four checkouts.
+
+Local browser reproduction after the selection repair: chose PANGKALAN EMPAT (A001), closed evidence, chose 8th Mile, then Tools → Investigate. The panel showed 8th Mile, not the old locality, and retained the supplied observation time with MYT (UTC+08).
+
+The browser bridge initially disconnected, then recovered during the final audit. Actual **live** workflows subsequently passed in all four systems: Globalmonitor Tools → shipping research → Escape and focus return; AsiaWatch Tools → organization records; MEM Map layers → research → Chinese → Escape; Padawan Tools → Bahasa imagery research and Chinese. A visible live Padawan tab was checked at actual DOM dimensions of 390×844 (366px dialog) and 1440×900 (660px dialog), both with 16px body text and no dialog horizontal overflow. Final live screenshots: `tmp/sic-ui/padawan-live-phone.png` and `tmp/sic-ui/padawan-live-desktop.png` (local, gitignored).
+
+**Verification boundary:** no fluent-speaker review is claimed for the newly written translations. Some earlier screenshot filenames describe the requested size, not the actual size: the browser viewport capability affects the active visible tab, and a background-tab capture can retain a different viewport or stale compositor frame. The final live captures used the visible tab and checked DOM dimensions before capture. Do not infer a viewport from a filename alone.
+
+## Release-check repairs
+
+AsiaWatch's independent CI exposed pre-existing lint errors in the starting revision: a CityWall initial probe invoked from an effect and two unused source-label values. The initial probe now uses a cancellable zero-delay timer (with a behavioral unmount test); the existing labels appear as source tooltips without changing layout or removing provenance. Lint passes with one pre-existing unused-disable warning.
+
+The subsequent audit found GHSA-mrhx-c7xc-m3w5 in Zod. Both React lockfiles now pin the compatible development dependency to 4.6.7. Each update changes only the package version, resolved tarball and integrity entry; npm reports zero vulnerabilities. Fresh CI test/lint/build/audit passes for both release revisions. This development-only patch does not change Globalmonitor's runtime bundle, so its re-deployment uploaded zero changed static files while recording the patched source revision.
+
+The live MEM check also found its depa logo pointed to the retired `Logo%20depa-01.png` asset and disappeared on error. Both header/About references now use the existing `depa-logo.png` asset, verified HTTP 200; no logo or attribution was removed.
+
+Verified selection lesson: [shared Markdown source](</Users/nonarkara/Documents/SecondBrain/Scars/Debug-Logs/2026-10-25-contextual-research-must-follow-the-latest-explicit-selection-not-panel-state-priority.md>).

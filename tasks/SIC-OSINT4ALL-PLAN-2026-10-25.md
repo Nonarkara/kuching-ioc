@@ -1,6 +1,6 @@
 # SIC: contextual research across Padawan and geopolitical dashboards
 
-Date: 2026-10-25. Status: approved by the owner; implementation and release verification in progress.
+Date: 2026-10-25. Status: approved and released; see [implementation evidence](SIC-OSINT4ALL-RESULT-2026-10-25.md) for checks and remaining verification limits.
 
 ## Question and finding
 

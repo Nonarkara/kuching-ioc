@@ -50,6 +50,9 @@ const { windowComplete, seriesContinuous, observationWindow, metricFreshness: re
 const metricFreshness = (p, id, fallback) => readingFreshness(p, id, fallback, Date.now());
 const { PIPELINE, DICTIONARY, RECIPES, OMISSIONS, SYSTEM_BLUEPRINT, buildRecord, DICT_SOURCE_IDS } = await import(`./research-data.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { evidenceText, localityEvidence, waterEvidence, dictionaryArtifact, nrebFreshness, FUNNEL, RESEARCH_REFERENCES } = await import(`./evidence.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { openResearchTools } = await import(`./research-tools.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { researchText } = await import(`./research-catalog.js?v=${encodeURIComponent(__ASSET_VER__)}`);
+const { padawanResearchContext } = await import(`./research-selection.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { isValidCoord, isValidSarawakCoord, isValidKuchingCoord, detectInvertedCoord, sanitizeMarkerCoord, clampRegionBounds, filterViewportSamples } = await import(`./spatial-guard.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupBuildings3D } = await import(`./buildings-3d.js?v=${encodeURIComponent(__ASSET_VER__)}`);
 const { setupRegionalBuildings } = await import(`./regional-buildings.js?v=${encodeURIComponent(__ASSET_VER__)}`);
@@ -1470,6 +1473,7 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function openWaterPath(station, bandColor) {
   if (!station) return;
+  state.researchSelection = { kind: 'gauge', id: station.id };
   renderCatchmentStory({ ...station, catchment: { status: "loading" } });
   if (!state.drainageFeatures?.length) {
     const drainage = URBAN_LAYERS.find((layer) => layer.id === "drainage");
@@ -2832,6 +2836,15 @@ function dictStatus(payload, ids) {
 function renderResearch(payload) {
   const el = $("researchPanel");
   if (!el || !payload) return;
+  const researchButton = $('researchToolsOpen');
+  if (researchButton) {
+    researchButton.textContent = researchText('open', state.lang);
+    researchButton.onclick = () => {
+      $('viewTools').open = false;
+      const context = padawanResearchContext(state.researchSelection, payload);
+      openResearchTools({ system: 'padawan', lang: state.lang, context, returnFocus: $('viewToolsLabel') });
+    };
+  }
   const record = buildRecord(payload, {
     assetVersion: payload?.delivery?.assetVersion,
     builtAt: payload?.delivery?.snapshotBuiltAt,
@@ -2989,6 +3002,7 @@ function openLocalityEvidence(code) {
   if (!e) return;
   setActiveWard(e.ward);
   state.activeLocality = e.code;
+  state.researchSelection = { kind: 'locality', id: e.code };
   const copy = key => escapeHtml(evidenceText(key, state.lang));
   openEvidenceDialog(evidenceText('title', state.lang), `<p><strong>${escapeHtml(e.name)}</strong> · ${escapeHtml(e.code)}</p>
     <p>${e.ward ? 'MPP · ' + escapeHtml(e.ward) : copy('unknownWard')}${e.constituency ? ' · ' + escapeHtml(e.constituency) : ''}</p>
@@ -2999,6 +3013,10 @@ function openLocalityEvidence(code) {
     <p>${copy(e.reportStatus !== 'live' ? 'noReports' : 'reports')}</p>
     <h3>${copy('next')}</h3><p>${copy('nextText')}</p>
     <p><a href="https://mpp.sarawak.gov.my/" target="_blank" rel="noopener noreferrer">MPP ↗</a> · <a href="https://talikhidmat.sarawak.gov.my/" target="_blank" rel="noopener noreferrer">Talikhidmat ↗</a></p>`);
+  const investigate = document.createElement('button');
+  investigate.type = 'button'; investigate.textContent = researchText('open', state.lang);
+  investigate.addEventListener('click', () => openResearchTools({ system: 'padawan', lang: state.lang, context: { label: e.name } }));
+  $('evidenceDialog').appendChild(investigate);
 }
 
 function renderSourceMatrix(payload) {
@@ -4105,6 +4123,7 @@ function renderMppLocalities(payload) {
 // --- Shared cross-panel state: activeWard drives map + councillors + localities
 
 function setActiveWard(code) {
+  state.researchSelection = code ? { kind: 'ward', id: code } : null;
   state.activeLocality = null;
   $('evidenceDialog')?.close();
   state.activeWard = code || null;
@@ -4812,6 +4831,7 @@ function renderWardRisk(payload) {
 // the card never pretends otherwise.
 
 function closeCatchmentStory() {
+  if (state.researchSelection?.kind === 'gauge') state.researchSelection = null;
   const el = $("catchmentStory");
   if (!el) return;
   el.hidden = true;

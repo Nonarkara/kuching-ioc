@@ -282,12 +282,14 @@ body::before {
 .partner-row { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; }
 .partner-row img {
   height: 22px; width: auto; object-fit: contain;
-  background: rgba(255, 255, 255, 0.92); padding: 2px 4px; border-radius: 2px;
+  background: none; padding: 0; border: 0; border-radius: 0; box-shadow: none;
   opacity: 0.95;
   transition: opacity 0.25s, transform 0.25s;
 }
 .partner-row img:hover { opacity: 1; transform: translateY(-1px); }
-[data-theme="light"] .partner-row img { background: rgba(255, 255, 255, 1); opacity: 0.95; border: 1px solid rgba(0, 60, 110, 0.08); }
+.partner-row .axiom-on-dark { display: none; }
+[data-theme="dark"] .partner-row .axiom-on-light { display: none; }
+[data-theme="dark"] .partner-row .axiom-on-dark { display: inline; }
 
 /* === Ticker === */
 .ticker-bar {
@@ -2145,7 +2147,7 @@ body::before {
   }
   .eyebrow { font-size: 8px; letter-spacing: 0.16em; }
   .summary-lead { font-size: 8px; display: none; }
-  .partner-row img { height: 18px; padding: 2px 3px; }
+  .partner-row img { height: 18px; padding: 0; }
   .partner-row { gap: 5px; }
   .runtime-detail { font-size: 8px; }
   .micro-badge { font-size: 8px; padding: 1px 6px; }
@@ -3766,7 +3768,7 @@ body {
 .runtime-badge { min-height: 28px; padding: 4px 8px; }
 .runtime-detail { font-size: 12px; line-height: 1.4; }
 .partner-row { gap: 10px; }
-.partner-row img { height: 30px; padding: 3px 5px; }
+.partner-row img { height: 30px; padding: 0; }
 
 .ticker-bar { min-height: 36px; height: auto; flex-basis: 36px; }
 .section-stamp { font-size: 12px; line-height: 36px; letter-spacing: 0.06em; }
@@ -4630,7 +4632,7 @@ input[type="range"]#aeTimeSlider::-webkit-slider-thumb:hover {
   .runtime-detail { font-size: 11px; min-width: 0; }
   .status-pill { min-height: 20px; padding: 0 8px; font-size: 11px; }
   .partner-row { gap: 6px; }
-  .partner-row img { height: 24px; padding: 2px 4px; border-radius: 0; }
+  .partner-row img { height: 24px; padding: 0; border-radius: 0; }
 
   /* --- Ticker + verdict: one line each --- */
   .ticker-bar { height: 26px; min-height: 26px; }

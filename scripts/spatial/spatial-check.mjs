@@ -1018,7 +1018,11 @@ let chromeError = null;
 // gate's browser out from under it with a `pkill -f "Google Chrome"`, and a
 // sweep that is killed at the twentieth minute should try again rather than
 // report a failure that is really a collision.
-for (let attempt = 1; attempt <= 5; attempt++) {
+// LOCAL PATCH (kuching-ioc): the canonical budget is 12; this copy had 5
+// hard-coded, and on a loaded machine five consecutive browser deaths
+// exhausted it and failed a measurement that was fine.
+const MAX_ATTEMPTS = 12;
+for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
   // Pick up where the last attempt stopped.
   if (attempt > 1) console.error(`  · resuming after ${completedRoutes} route(s)`);
   // A FRESH profile per attempt: a browser that was killed leaves a dirty
@@ -1039,7 +1043,14 @@ for (let attempt = 1; attempt <= 5; attempt++) {
       `--user-data-dir=${attemptProf}`,
       `http://127.0.0.1:${port}/__spatial-harness`,
     ],
-    { stdio: ["ignore", "pipe", "pipe"] },
+    // LOCAL PATCH (kuching-ioc): detached, so the browser leads its own
+    // process group and the group can be killed as a unit. Chrome's renderers,
+    // GPU and utility helpers are separate processes; SIGKILL to the browser
+    // alone leaves them running, and every failed attempt then leaks another
+    // browser's worth of helpers. The leak makes the NEXT attempt likelier to
+    // die, which is how five consecutive attempts all fail. The canonical
+    // instrument kills the parent only, so this hunk is NOT in it.
+    { stdio: ["ignore", "pipe", "pipe"], detached: true },
   );
   let out = "";
   let err = "";
@@ -1080,10 +1091,17 @@ for (let attempt = 1; attempt <= 5; attempt++) {
     }),
   ]);
   if (watchdog) clearTimeout(watchdog);
+  // LOCAL PATCH (kuching-ioc): kill the whole process group, not just the
+  // browser process. Chrome's helpers outlive a SIGKILL to the parent, and a
+  // gate that leaks a browser per failed attempt fails itself.
   try {
-    child.kill("SIGKILL");
+    process.kill(-child.pid, "SIGKILL");
   } catch {
-    /* already gone */
+    try {
+      child.kill("SIGKILL");
+    } catch {
+      /* already gone */
+    }
   }
   if (got !== timeout && got !== died) {
     payload = got;
@@ -1094,7 +1112,7 @@ for (let attempt = 1; attempt <= 5; attempt++) {
     got === died
       ? new Error("the browser exited before it reported its measurements")
       : new Error(`the browser did not finish within ${Math.round(RUN_TIMEOUT_MS / 60000)} minutes`);
-  console.error(`  · Chrome attempt ${attempt}/5 ${got === died ? "exited early" : "did not finish"} — retrying`);
+  console.error(`  · Chrome attempt ${attempt}/${MAX_ATTEMPTS} ${got === died ? "exited early" : "did not finish"} — retrying`);
   try {
     rmSync(attemptProf, { recursive: true, force: true });
   } catch {

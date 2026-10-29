@@ -1067,3 +1067,15 @@ body::before { display: none !important; }
 @media (max-width: 720px) {
   .locality-evidence-open { min-height: 32px; margin-block: 4px; }
 }
+
+/* WCAG 2.2 target-size floor (24px), MSH-compliant: label plus padding, never a
+   slab. Measured on the live board at 1440px: the coordinate buttons were 21px,
+   the keyboard-help hint 20px, the news-language tabs 20px, the disclosure
+   summaries 15-20px, and the tap-to-call links 15px. Touch (<=720px) already
+   clears 24px; this closes the desktop gap. */
+.dashboard-shell .coord-copy,
+.dashboard-shell .help-hint,
+.dashboard-shell .news-digest-tab { min-height: 24px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
+.dashboard-shell summary { padding-block: 5px; }
+.dashboard-shell .councillor-phone,
+.dashboard-shell .mpp-contact-link { display: inline-block; padding-block: 5px; }

@@ -90,8 +90,22 @@ jobs:
           AQICN_TOKEN: ${{ secrets.AQICN_TOKEN }}
           VISITOR_BEACON_URL: ${{ secrets.VISITOR_BEACON_URL }}
         run: node build.mjs
-      - name: Deploy to Cloudflare Pages
+      - name: Compare baked snapshot hash with live health.json
+        id: snapshot_diff
         if: github.event_name != 'pull_request'
+        run: |
+          NEW_HASH="$(node -e 'console.log(JSON.parse(require("fs").readFileSync("public/health.json","utf8")).snapshot_hash || "")')"
+          LIVE_HASH="$(curl -fsSL --max-time 10 https://kuching.nonarkara.org/health.json 2>/dev/null | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{try{console.log(JSON.parse(d).snapshot_hash||"")}catch{console.log("")}})' || true)"
+          echo "Baked snapshot hash: ${NEW_HASH:-none}"
+          echo "Live snapshot hash:  ${LIVE_HASH:-none}"
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ -n "$NEW_HASH" ] && [ "$NEW_HASH" = "$LIVE_HASH" ]; then
+            echo "skip_deploy=true" >> "$GITHUB_OUTPUT"
+            echo "Scheduled re-bake matches live snapshot; skipping deploy."
+          else
+            echo "skip_deploy=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Deploy to Cloudflare Pages
+        if: github.event_name != 'pull_request' && steps.snapshot_diff.outputs.skip_deploy != 'true'
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -4673,9 +4673,34 @@ function renderVerdict(payload) {
   // TODAY" — so the board was saying one sentence twice, 30px apart, and the
   // top line paid 21px for the privilege. tests/anti-slop.test.mjs pins that
   // the bar carries the headline and its statuses, and nothing else.
+  const metUrl = safeUrl(met.sourceUrl || "https://www.met.gov.my/en/cuaca/amaran/");
+  const metLinkLabel = state.lang === "ms" ? "Buletin MET" : state.lang === "zh" ? "气象局公告" : "MET bulletin";
+  const metLinkHtml = (weatherUnknown || met.activeCount > 0) && metUrl
+    ? `<a class="verdict-met-link" href="${escapeHtml(metUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(metLinkLabel)} ↗</a>`
+    : "";
+  const sheetLabel = state.lang === "ms"
+    ? `${chips.length} status`
+    : state.lang === "zh"
+      ? `${chips.length} 项`
+      : `${chips.length} checks`;
+  const wasOpen = el.dataset.sheetOpen === "true";
   el.innerHTML = `
-    <span class="verdict-verb">${escapeHtml(verb || payload.summary?.posture || "—")}</span>
-    <div class="verdict-chips">${chips.join("")}</div>`;
+    <div class="verdict-head">
+      <span class="verdict-verb">${escapeHtml(verb || payload.summary?.posture || "—")}</span>
+      ${metLinkHtml}
+      <button type="button" class="verdict-sheet-toggle" aria-expanded="${wasOpen ? "true" : "false"}" aria-controls="verdictChips">${escapeHtml(sheetLabel)} <span class="verdict-sheet-caret" aria-hidden="true">${wasOpen ? "▴" : "▾"}</span></button>
+    </div>
+    <div id="verdictChips" class="verdict-chips">${chips.join("")}</div>`;
+  const toggleBtn = el.querySelector(".verdict-sheet-toggle");
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      const next = el.dataset.sheetOpen !== "true";
+      el.dataset.sheetOpen = next ? "true" : "false";
+      toggleBtn.setAttribute("aria-expanded", next ? "true" : "false");
+      const caret = toggleBtn.querySelector(".verdict-sheet-caret");
+      if (caret) caret.textContent = next ? "▴" : "▾";
+    });
+  }
 }
 
 // Zone 2 — the causal chain. Rain lands in a catchment, the gauge sees it

@@ -20,7 +20,7 @@ It is demo-grade civic software that still has to tell the truth: every panel sh
 
 Three delivery modes:
 
-1. **Static snapshot** (production) — Cloudflare Pages at `kuching.nonarkara.org`, JSON baked by `build.mjs` on each push to `main`.
+1. **Static snapshot** (production) — Cloudflare Pages at `kuching.nonarkara.org`, JSON baked by `build.mjs` on each push to `main`. Machine-readable bake health is published at `/health.json` (`{ service, build_id, baked_at, snapshot_hash, sources }`).
 2. **Live API** (local / bake) — `node server.mjs` serves `/api/dashboard`, `/api/health`, and `/api/layers/:id`.
 3. **Client fallback** — browser-only path using `public/data.js` plus CORS-friendly APIs when the snapshot is missing.
 

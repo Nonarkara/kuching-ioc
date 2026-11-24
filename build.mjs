@@ -44,6 +44,7 @@ const REQUIRED_ARTIFACTS = [
   join(PUBLIC_DIR, "api", "layers", "flood_risk.json"),
   join(PUBLIC_DIR, "api", "layers", "flood_zones.json"),
   HEALTH_OUTPUT_PATH,
+  join(PUBLIC_DIR, "404.html"),
   INDEX_OUTPUT_PATH,
 ];
 

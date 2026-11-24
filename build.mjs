@@ -14,9 +14,11 @@
 // ---------------------------------------------------------------------------
 
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { access, mkdir, rename, stat, writeFile } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   DEFAULT_LIVE_URL,
   DEFAULT_PAGES_URL,
@@ -26,9 +28,11 @@ import {
   writeRenderedIndex,
 } from "./site-build.mjs";
 import { fetchGroundPulseHistory } from "./scripts/sheets-read.mjs";
+import { buildHealthPayload } from "./public/data-health.js";
 
 const BUILD_PORT = 9876;
 const LAYERS_DIR = join(PUBLIC_DIR, "api", "layers");
+const HEALTH_OUTPUT_PATH = join(PUBLIC_DIR, "health.json");
 const BASE = `http://127.0.0.1:${BUILD_PORT}`;
 const MAX_WAIT_MS = 180_000; // 3 minutes total budget for the build
 const REQUIRED_ARTIFACTS = [
@@ -39,8 +43,42 @@ const REQUIRED_ARTIFACTS = [
   join(PUBLIC_DIR, "api", "layers", "land_use.json"),
   join(PUBLIC_DIR, "api", "layers", "flood_risk.json"),
   join(PUBLIC_DIR, "api", "layers", "flood_zones.json"),
+  HEALTH_OUTPUT_PATH,
   INDEX_OUTPUT_PATH,
 ];
+
+/**
+ * Deterministic content hash of the baked snapshot + GIS layer digests + commit SHA.
+ * Volatile per-run timestamps (generatedAt, timeSignal, and source.generatedAt when
+ * equal to the bake's generatedAt) are excluded so an unchanged scheduled re-bake
+ * produces the same hash and lets CI skip a redundant Cloudflare Pages deploy.
+ */
+export function computeSnapshotHash(parsedPayload, layerDigests = {}, commitSha = "") {
+  const normalizedSources = Array.isArray(parsedPayload?.sources)
+    ? parsedPayload.sources.map(({ generatedAt: _g, ...rest }) => rest)
+    : [];
+  const canonical = {
+    commitSha: String(commitSha || ""),
+    payload: {
+      ...parsedPayload,
+      generatedAt: null,
+      timeSignal: null,
+      sources: normalizedSources,
+    },
+    layers: Object.keys(layerDigests)
+      .sort()
+      .map((k) => [k, layerDigests[k]]),
+  };
+  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
+}
+
+export async function writeHealthArtifact(parsedPayload, { buildId, bakedAt, snapshotHash, outputPath = HEALTH_OUTPUT_PATH } = {}) {
+  const health = buildHealthPayload(parsedPayload, { buildId, bakedAt, snapshotHash });
+  const tmpPath = `${outputPath}.tmp`;
+  await writeFile(tmpPath, `${JSON.stringify(health, null, 2)}\n`);
+  await rename(tmpPath, outputPath);
+  return health;
+}
 
 async function fetchWithRetry(url, retries = 3, timeout = 120_000) {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -177,8 +215,9 @@ async function main() {
         const tmpPath = `${path}.tmp`;
         await writeFile(tmpPath, body);
         await rename(tmpPath, path);
+        const digest = createHash("sha256").update(body).digest("hex");
         console.log(`  → ${id}: ${fc.features.length} features (${(body.length / 1024).toFixed(1)} KB)`);
-        return { id, features: fc.features.length };
+        return { id, features: fc.features.length, digest };
       }),
     );
     const failed = results.filter((r) => r.status === "rejected");
@@ -187,13 +226,18 @@ async function main() {
       failed.forEach((r) => console.warn(`    ${r.reason?.message || r.reason}`));
     }
 
-    // 4. Write a build manifest so the client can show "data as of...".
+    // 4. Write build manifest and machine-readable /health.json from baked data (no new upstream calls).
     const builtAt = new Date().toISOString();
+    const layerDigests = Object.fromEntries(
+      results.map((r, i) => [layerIds[i], r.status === "fulfilled" ? r.value.digest : null]),
+    );
+    const snapshotHash = computeSnapshotHash(parsed, layerDigests, process.env.GITHUB_SHA || "");
     const manifest = {
       builtAt,
       buildDurationMs: Date.now() - started,
       dashboardSizeKb: Math.round(dashboard.length / 1024),
       assetVersion,
+      snapshotHash,
       deploymentMode: "pages-static",
       boardLabel: "SNAPSHOT BOARD",
       pagesUrl: process.env.PAGES_PUBLIC_URL || DEFAULT_PAGES_URL,
@@ -207,6 +251,13 @@ async function main() {
     const manifestPath = join(PUBLIC_DIR, "api", "build-manifest.json");
     await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
     console.log(`  → ${manifestPath}`);
+
+    const health = await writeHealthArtifact(parsed, {
+      buildId: assetVersion,
+      bakedAt: builtAt,
+      snapshotHash,
+    });
+    console.log(`  → ${HEALTH_OUTPUT_PATH} (${health.sources.length} sources, hash ${snapshotHash.slice(0, 12)})`);
 
     // 5. Render the static entrypoint with the current asset version and route metadata.
     await writeRenderedIndex({
@@ -237,4 +288,6 @@ async function main() {
   process.exit(exitCode);
 }
 
-main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}
